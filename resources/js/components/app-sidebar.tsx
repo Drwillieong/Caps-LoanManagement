@@ -21,12 +21,18 @@ import AppLogo from './app-logo';
 const mainNavItems: NavItem[] = [
     {
         title: 'Dashboard',
-        href: dashboard(),
+        href: '/dashboard',
         icon: LayoutGrid,
     },
       {
         title: 'Members',
         href: '/users',
+        icon: UsersRound,
+    },
+
+    {
+        title: 'buset',
+        href: '/dashboard',
         icon: UsersRound,
     },
 ];

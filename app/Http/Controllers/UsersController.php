@@ -3,11 +3,12 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class UsersController extends Controller
 {
     public function index ()
     {
-        return inertia::render('Users/Index',[]);
+        return Inertia::render('Users/index', []);
     }
 }

@@ -25,7 +25,7 @@ export default function Login({
     return (
         <AuthLayout
             title="Log in to your account"
-            description="Enter your email and password below to log in"
+            description="Enter your User and password below to log in"
         >
             <Head title="Log in" />
 
@@ -38,7 +38,7 @@ export default function Login({
                     <>
                         <div className="grid gap-6">
                             <div className="grid gap-2">
-                                <Label htmlFor="email">Email address</Label>
+                                <Label htmlFor="email">User </Label>
                                 <Input
                                     id="email"
                                     type="email"
@@ -100,9 +100,9 @@ export default function Login({
 
                         {canRegister && (
                             <div className="text-center text-sm text-muted-foreground">
-                                Don't have an account?{' '}
+                              {' '}
                                 <TextLink href={register()} tabIndex={5}>
-                                    Sign up
+                                   
                                 </TextLink>
                             </div>
                         )}

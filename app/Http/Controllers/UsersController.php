@@ -11,4 +11,9 @@ class UsersController extends Controller
     {
         return Inertia::render('Users/index', []);
     }
+
+    public function create()
+    {
+        return Inertia::render('Users/Create');
+    }
 }

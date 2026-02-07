@@ -1,5 +1,8 @@
 import { Head, Link } from '@inertiajs/react'
+import { Plus } from 'lucide-react'
+
 import AppLayout from '@/layouts/app-layout'
+import { Button } from '@/components/ui/button'
 import { type BreadcrumbItem } from '@/types'
 
 
@@ -19,16 +22,20 @@ export default function Index() {
                 {/* Header */}
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                        <h1 className="text-2xl font-semibold text-gray-900">
+                        <h1 className="text-2xl font-semibold text-gray-900  px-2">
                             Members
                         </h1>
-                        <p className="text-sm text-gray-500">
+                        <p className="text-sm text-gray-500 px-2">
                             Manage all registered members
                         </p>
                     </div>
-                 
-                
-                    
+
+                    <Button asChild>
+                        <Link href="/users/create">
+                            <Plus className="mr-2 h-4 w-4" />
+                            Create member
+                        </Link>
+                    </Button>
                 </div>
 
                 {/* Filters */}

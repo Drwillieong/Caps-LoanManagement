@@ -1,6 +1,7 @@
-import { Head } from '@inertiajs/react'
+import { Head, Link } from '@inertiajs/react'
 import AppLayout from '@/layouts/app-layout'
 import { type BreadcrumbItem } from '@/types'
+
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -25,10 +26,9 @@ export default function Index() {
                             Manage all registered members
                         </p>
                     </div>
-
-                    <button className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90">
-                        + Add Member
-                    </button>
+                 
+                
+                    
                 </div>
 
                 {/* Filters */}
@@ -39,11 +39,7 @@ export default function Index() {
                         className="w-full sm:max-w-xs rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                     />
 
-                    <select className="w-full sm:w-40 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary">
-                        <option>All roles</option>
-                        <option>Admin</option>
-                        <option>Member</option>
-                    </select>
+                  
                 </div>
 
                 {/* Table */}

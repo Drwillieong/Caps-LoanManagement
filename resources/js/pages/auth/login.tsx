@@ -24,8 +24,8 @@ export default function Login({
 }: Props) {
     return (
         <AuthLayout
-            title="Log in to your account"
-            description="Enter your User and password below to log in"
+            title="Welcome Back"
+            description="Sign in to your account to continue"
         >
             <Head title="Log in" />
 
@@ -38,7 +38,12 @@ export default function Login({
                     <>
                         <div className="grid gap-6">
                             <div className="grid gap-2">
-                                <Label htmlFor="email">User </Label>
+                                <Label 
+                                    htmlFor="email" 
+                                    className="text-green-700 font-medium"
+                                >
+                                    Email Address
+                                </Label>
                                 <Input
                                     id="email"
                                     type="email"
@@ -47,18 +52,24 @@ export default function Login({
                                     autoFocus
                                     tabIndex={1}
                                     autoComplete="email"
-                                    placeholder="email@example.com"
+                                    placeholder="Enter your email"
+                                    className="border-green-200 focus:border-green-500 focus:ring-green-500/20 placeholder:text-green-300/70"
                                 />
                                 <InputError message={errors.email} />
                             </div>
 
                             <div className="grid gap-2">
                                 <div className="flex items-center">
-                                    <Label htmlFor="password">Password</Label>
+                                    <Label 
+                                        htmlFor="password"
+                                        className="text-green-700 font-medium"
+                                    >
+                                        Password
+                                    </Label>
                                     {canResetPassword && (
                                         <TextLink
                                             href={request()}
-                                            className="ml-auto text-sm"
+                                            className="ml-auto text-sm text-green-600 hover:text-green-700 hover:underline transition-colors"
                                             tabIndex={5}
                                         >
                                             Forgot password?
@@ -72,7 +83,8 @@ export default function Login({
                                     required
                                     tabIndex={2}
                                     autoComplete="current-password"
-                                    placeholder="Password"
+                                    placeholder="Enter your password"
+                                    className="border-green-200 focus:border-green-500 focus:ring-green-500/20 placeholder:text-green-300/70"
                                 />
                                 <InputError message={errors.password} />
                             </div>
@@ -82,27 +94,39 @@ export default function Login({
                                     id="remember"
                                     name="remember"
                                     tabIndex={3}
+                                    className="border-green-300 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
                                 />
-                                <Label htmlFor="remember">Remember me</Label>
+                                <Label 
+                                    htmlFor="remember" 
+                                    className="text-green-600 text-sm cursor-pointer"
+                                >
+                                    Remember me
+                                </Label>
                             </div>
 
                             <Button
                                 type="submit"
-                                className="mt-4 w-full"
+                                className="mt-4 w-full bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 text-white font-semibold shadow-lg shadow-green-600/25 border-0 transition-all duration-300 hover:shadow-xl hover:shadow-green-600/30 hover:scale-[1.02]"
                                 tabIndex={4}
                                 disabled={processing}
                                 data-test="login-button"
                             >
-                                {processing && <Spinner />}
-                                Log in
+                                {processing && <Spinner className="text-white" />}
+                                <span className={processing ? 'opacity-80' : ''}>
+                                    Sign In
+                                </span>
                             </Button>
                         </div>
 
                         {canRegister && (
-                            <div className="text-center text-sm text-muted-foreground">
+                            <div className="text-center text-sm text-green-600/80">
                                 Don't have an account?{' '}
-                                <TextLink href={register()} tabIndex={5}>
-                                    Sign up
+                                <TextLink 
+                                    href={register()} 
+                                    tabIndex={5}
+                                    className="text-green-700 font-medium hover:text-green-800 hover:underline transition-all"
+                                >
+                                    Create Account
                                 </TextLink>
                             </div>
                         )}
@@ -111,10 +135,11 @@ export default function Login({
             </Form>
 
             {status && (
-                <div className="mb-4 text-center text-sm font-medium text-green-600">
+                <div className="mb-4 text-center text-sm font-medium text-green-600 bg-green-50/80 py-2 px-3 rounded-lg border border-green-200/50">
                     {status}
                 </div>
             )}
         </AuthLayout>
     );
 }
+

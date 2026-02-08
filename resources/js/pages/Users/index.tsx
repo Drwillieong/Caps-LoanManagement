@@ -1,6 +1,10 @@
-import { Head } from '@inertiajs/react'
+import { Head, Link } from '@inertiajs/react'
+import { Plus } from 'lucide-react'
+
 import AppLayout from '@/layouts/app-layout'
+import { Button } from '@/components/ui/button'
 import { type BreadcrumbItem } from '@/types'
+
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -18,17 +22,20 @@ export default function Index() {
                 {/* Header */}
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                        <h1 className="text-2xl font-semibold text-gray-900">
+                        <h1 className="text-2xl font-semibold text-gray-900  px-2">
                             Members
                         </h1>
-                        <p className="text-sm text-gray-500">
+                        <p className="text-sm text-gray-500 px-2">
                             Manage all registered members
                         </p>
                     </div>
 
-                    <button className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90">
-                        + Add Member
-                    </button>
+                    <Button asChild>
+                        <Link href="/users/create">
+                            <Plus className="mr-2 h-4 w-4" />
+                            Create member
+                        </Link>
+                    </Button>
                 </div>
 
                 {/* Filters */}
@@ -39,11 +46,7 @@ export default function Index() {
                         className="w-full sm:max-w-xs rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                     />
 
-                    <select className="w-full sm:w-40 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary">
-                        <option>All roles</option>
-                        <option>Admin</option>
-                        <option>Member</option>
-                    </select>
+                  
                 </div>
 
                 {/* Table */}

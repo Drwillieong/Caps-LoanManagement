@@ -12,6 +12,10 @@ use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
 use Laravel\Fortify\Fortify;
+use App\Models\User;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\ValidationException;
+
 
 class FortifyServiceProvider extends ServiceProvider
 {
@@ -31,6 +35,23 @@ class FortifyServiceProvider extends ServiceProvider
         $this->configureActions();
         $this->configureViews();
         $this->configureRateLimiting();
+
+        Fortify::authenticateUsing(function (Request $request) {
+    $user = User::where('email', $request->email)->first();
+
+    if (! $user || ! Hash::check($request->password, $user->password)) {
+        return null;
+    }
+
+    if (! $user->is_active) {
+        throw ValidationException::withMessages([
+            'email' => ['This account is inactive.'],
+        ]);
+    }
+
+    return $user;
+});
+
     }
 
     /**

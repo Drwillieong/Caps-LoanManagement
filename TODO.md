@@ -1,6 +1,5 @@
-- [x] Import Transition from @headlessui/react and HeadingSmall from @/components/heading-small
-- [x] Replace h2 with HeadingSmall component for title and description
-- [x] Change Form className to "space-y-6"
-- [x] Add recentlySuccessful to Form render prop destructuring
-- [x] Change field containers className from "grid gap-6" to "grid gap-2"
-- [x] Adjust Button container to "flex items-center gap-4" and add Transition for success message
+- [x] Add 'role' to User model fillable
+- [x] Update create method to pass roles
+- [x] Add role select field to Create.tsx form
+- [x] Remove disableWhileProcessing to fix inert warning
+- [ ] Test account creation

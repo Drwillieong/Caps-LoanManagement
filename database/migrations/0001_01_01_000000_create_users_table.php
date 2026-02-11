@@ -19,7 +19,7 @@ return new class extends Migration
                 'member',
                 'gm',
                 'secretary',
-                'treasurer',
+                'hr',
                 'chairman',
             ])->default('member');
 

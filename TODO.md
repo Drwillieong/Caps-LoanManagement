@@ -1,0 +1,6 @@
+- [x] Import Transition from @headlessui/react and HeadingSmall from @/components/heading-small
+- [x] Replace h2 with HeadingSmall component for title and description
+- [x] Change Form className to "space-y-6"
+- [x] Add recentlySuccessful to Form render prop destructuring
+- [x] Change field containers className from "grid gap-6" to "grid gap-2"
+- [x] Adjust Button container to "flex items-center gap-4" and add Transition for success message

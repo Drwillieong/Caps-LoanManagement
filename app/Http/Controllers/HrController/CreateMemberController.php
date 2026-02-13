@@ -1,14 +1,15 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\HrController;
 
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
+use App\Http\Controllers\Controller;
 
-class UsersController extends Controller
+class CreateMemberController extends Controller
 {
     public function index(Request $request)
     {
@@ -44,7 +45,7 @@ class UsersController extends Controller
             ->paginate(10)
             ->withQueryString();
 
-        return Inertia::render('HR/index', [
+        return Inertia::render('dashboards/HR/SeeUsers', [
             'users' => $users,
             'filters' => [
                 'search' => $search,
@@ -63,7 +64,7 @@ class UsersController extends Controller
 
     public function create()
     {
-        return Inertia::render('HR/Create', [
+        return Inertia::render('dashboards/HR/Create', [
             'roles' => [
                 'member',
                 'gm',
@@ -89,6 +90,8 @@ class UsersController extends Controller
             'role' => $request->role,
             'password' => Hash::make($request->password),
         ]);
+
+        return redirect()->route('users')->with('success', 'User created successfully.');
 
        
     }

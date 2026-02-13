@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Controllers\UsersController;
+use App\Http\Controllers\HrController\CreateMemberController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
@@ -13,13 +13,33 @@ Route::get('/', function () {
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', function () {
-        return Inertia::render('dashboard');
+        $roleComponents = [
+            'member' => 'dashboards/Member/MemberDashboard',
+            'gm' => 'dashboards/Gm/GmDashboard',
+            'secretary' => 'dashboards/Secretary/SecretaryDashboard',
+            'hr' => 'dashboards/HR/SeeUsers',
+            'chairman' => 'dashboards/ChairMan/ChairManDashboard',
+        ];
+
+        $role = auth()->user()->role;
+
+        if (!array_key_exists($role, $roleComponents)) {
+            abort(403, 'Unauthorized role.');
+        }
+
+        if ($role === 'hr') {
+            return app(CreateMemberController::class)->index(request());
+        }
+
+        return Inertia::render($roleComponents[$role]);
     })->name('dashboard');
 
-    Route::get('/users', [UsersController::class, 'index'])->name('users');
+    Route::get('dashboards/HR/SeeUsers', [CreateMemberController::class, 'index'])->name('users');
 
-    Route::get('/users/create', [UsersController::class, 'create'])->name('users.create');
-    Route::post('/users', [UsersController::class, 'store'])->name('users.store');
+    Route::get('/HR', [CreateMemberController::class, 'index'])->name('hr');
+
+    Route::get('dashboards/HR/create', [CreateMemberController::class, 'create'])->name('users.create');
+    Route::post('dashboards/HR/SeeUsers', [CreateMemberController::class, 'store'])->name('users.store');
 
 });
 

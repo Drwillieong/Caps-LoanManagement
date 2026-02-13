@@ -35,21 +35,17 @@ interface Props {
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Members', href: '/users' },
+    { title: 'Members', href: '/dashboards/HR/SeeUsers' },
 ]
 
-export default function Index({ users, filters, roles }: Props) {
+export default function SeeUsers({ users, filters, roles }: Props) {
     const [search, setSearch] = useState(filters.search || '')
     const [filter, setFilter] = useState(filters.filter || 'all')
     const [role, setRole] = useState(filters.role || 'all')
 
     useEffect(() => {
         const timeout = setTimeout(() => {
-            router.get(
-                '/users',
-                { search, filter, role },
-                { preserveState: true, replace: true }
-            )
+            router.reload({ data: { search, filter, role } })
         }, 300)
 
         return () => clearTimeout(timeout)
@@ -80,7 +76,7 @@ export default function Index({ users, filters, roles }: Props) {
             </div>
 
             <Button asChild>
-                <Link href="/users/create">
+                <Link href="/dashboards/HR/create">
                     <Plus className="mr-2 h-4 w-4" />
                     Create Member
                 </Link>

@@ -16,8 +16,8 @@ interface Props {
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Members', href: '/users' },
-    { title: 'Create', href: '/users/create' },
+    { title: 'Members', href: '/dashboards/HR/SeeUsers' },
+    { title: 'Create', href: '/dashboards/HR/create' },
 ];
 
 export default function Create({ roles }: Props) {
@@ -26,7 +26,7 @@ export default function Create({ roles }: Props) {
             <Head title="Create User" />
 
             <div className="py-6">
-                <div className="mx-auto max-w-4xl px-6">
+                <div className="mx-auto max-w-7xl px-6">
                     <div className="rounded-2xl border bg-background shadow-sm">
 
                         {/* Header */}
@@ -83,7 +83,7 @@ export default function Create({ roles }: Props) {
                                                     required
                                                     autoFocus
                                                     autoComplete="name"
-                                                    placeholder="John Doe"
+                                                    placeholder="Kayleen Minor"
                                                 />
                                                 <InputError message={errors.name} />
                                             </div>
@@ -97,7 +97,7 @@ export default function Create({ roles }: Props) {
                                                     type="email"
                                                     required
                                                     autoComplete="email"
-                                                    placeholder="john@example.com"
+                                                    placeholder="kay@example.com"
                                                 />
                                                 <InputError message={errors.email} />
                                             </div>

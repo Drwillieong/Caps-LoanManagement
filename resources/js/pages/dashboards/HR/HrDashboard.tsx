@@ -7,12 +7,12 @@ import { type BreadcrumbItem } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'Dashboard',
+        title: 'HR Dashboard',
         href: dashboard().url,
     },
 ];
 
-export default function Dashboard() {
+export default function HrDashboard() {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Dashboard" />

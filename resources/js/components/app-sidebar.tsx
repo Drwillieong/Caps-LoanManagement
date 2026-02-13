@@ -26,7 +26,7 @@ const mainNavItems: NavItem[] = [
     },
       {
         title: 'Members',
-        href: '/users',
+        href: '/dashboards/HR/SeeUsers',
         icon: UsersRound,
     },
 

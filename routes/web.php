@@ -34,12 +34,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render($roleComponents[$role]);
     })->name('dashboard');
 
-    Route::get('dashboards/HR/SeeUsers', [CreateMemberController::class, 'index'])->name('users');
+    Route::get('dashboards/HR/SeeUsers', [CreateMemberController::class, 'index'])->middleware('role:hr')->name('users');
 
-    Route::get('/HR', [CreateMemberController::class, 'index'])->name('hr');
+    Route::get('/HR', [CreateMemberController::class, 'index'])->middleware('role:hr')->name('hr');
 
-    Route::get('dashboards/HR/create', [CreateMemberController::class, 'create'])->name('users.create');
-    Route::post('dashboards/HR/SeeUsers', [CreateMemberController::class, 'store'])->name('users.store');
+    Route::get('dashboards/HR/create', [CreateMemberController::class, 'create'])->middleware('role:hr')->name('users.create');
+    Route::post('dashboards/HR/SeeUsers', [CreateMemberController::class, 'store'])->middleware('role:hr')->name('users.store');
+
+    Route::get('dashboards/HR/dashboard', function () {
+        return Inertia::render('dashboards/HR/HrDashboard');
+    })->middleware('role:hr')->name('hr.dashboard');
 
 });
 

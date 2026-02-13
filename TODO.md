@@ -3,4 +3,8 @@
 - [x] Add role to User type
 - [x] Add route for HrDashboard with protection
 - [x] Add HR Dashboard link in sidebar for HR
+- [x] Update dashboard route to render HrDashboard for HR
+- [x] Add routes for other roles' pages (e.g., Member ApplyLoan)
+- [x] Make sidebar dynamic based on user role
+- [x] Run wayfinder and dev server
 - [ ] Test with different roles

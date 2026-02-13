@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid, UsersRound } from 'lucide-react';
+import { BookOpen, Folder, LayoutGrid, Plus, UsersRound } from 'lucide-react';
 
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
@@ -28,15 +28,31 @@ const mainNavItems: NavItem[] = [
 
 const hrNavItems: NavItem[] = [
     {
-        title: 'HR Dashboard',
-        href: '/dashboards/HR/dashboard',
-        icon: LayoutGrid,
-    },
-    {
         title: 'Members',
         href: '/dashboards/HR/SeeUsers',
         icon: UsersRound,
     },
+ 
+];
+
+const memberNavItems: NavItem[] = [
+    {
+        title: 'Apply Loan',
+        href: '/dashboards/Member/ApplyLoan',
+        icon: BookOpen,
+    },
+];
+
+const gmNavItems: NavItem[] = [
+    // Add GM specific items if any
+];
+
+const secretaryNavItems: NavItem[] = [
+    // Add Secretary specific items if any
+];
+
+const chairmanNavItems: NavItem[] = [
+    // Add Chairman specific items if any
 ];
 
 const footerNavItems: NavItem[] = [
@@ -52,9 +68,30 @@ export function AppSidebar() {
     const { auth } = usePage<SharedData>().props;
     const userRole = auth.user.role;
 
+    let roleNavItems: NavItem[] = [];
+    switch (userRole) {
+        case 'hr':
+            roleNavItems = hrNavItems;
+            break;
+        case 'member':
+            roleNavItems = memberNavItems;
+            break;
+        case 'gm':
+            roleNavItems = gmNavItems;
+            break;
+        case 'secretary':
+            roleNavItems = secretaryNavItems;
+            break;
+        case 'chairman':
+            roleNavItems = chairmanNavItems;
+            break;
+        default:
+            roleNavItems = [];
+    }
+
     const allNavItems = [
         ...mainNavItems,
-        ...(userRole === 'hr' ? hrNavItems : []),
+        ...roleNavItems,
     ];
 
     return (

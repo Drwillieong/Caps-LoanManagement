@@ -8,6 +8,8 @@ use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
 use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\SendMembersPass;
 
 class CreateMemberController extends Controller
 {
@@ -90,6 +92,9 @@ class CreateMemberController extends Controller
             'role' => $request->role,
             'password' => Hash::make($request->password),
         ]);
+
+        // Send email with credentials
+        Mail::to($request->email)->send(new SendMembersPass($request->email, $request->password));
 
         return redirect()->route('users')->with('success', 'User created successfully.');
 

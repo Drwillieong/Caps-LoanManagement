@@ -18,6 +18,7 @@ const breadcrumbs: BreadcrumbItem[] = [
         title: 'User Profile',
         href: member.userProfile.url(),
     },
+    
 ];
 
 interface Beneficiary {
@@ -163,6 +164,7 @@ export default function UserProfile({ memberProfile, beneficiaries, isNewUser }:
                 <Form
                     method="post"
                     action={member.userProfile.store.url()}
+                    transform={() => formData as any}
                     className="space-y-8"
                 >
                     {({ processing, recentlySuccessful, errors }) => (

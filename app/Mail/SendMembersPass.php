@@ -15,8 +15,6 @@ class SendMembersPass extends Mailable
     public $email;
     public $password;
     public $name;
-    public $LeimcoLogo;
-   
 
     public function __construct($email, $password, $name = null)
     {
@@ -37,15 +35,6 @@ class SendMembersPass extends Mailable
         return new Content(
             view: 'emails.send-members-pass',
         );
-    }
-
-    public function build()
-    {
-        return $this->withSymfonyMessage(function ($message) {
-            $this->LeimcoLogo = $message->embedFromPath(
-                public_path('LEIMCO.png')
-            );
-        });
     }
 
     public function attachments(): array

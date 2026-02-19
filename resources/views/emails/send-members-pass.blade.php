@@ -2,61 +2,63 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Welcome to LEIMCO</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Arial', sans-serif;
             background-color: #f4f4f4;
             margin: 0;
             padding: 0;
+            color: #333333;
         }
-
         .email-container {
             max-width: 600px;
             margin: 40px auto;
             background-color: #ffffff;
             padding: 40px;
             border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
         }
-
         .header {
             text-align: center;
+            margin-bottom: 30px;
             padding-bottom: 20px;
             border-bottom: 1px solid #eeeeee;
-            margin-bottom: 30px;
         }
-
         .header img {
             max-width: 150px;
             height: auto;
         }
-
         h1 {
             color: #2c3e50;
+            font-size: 24px;
+            margin-bottom: 20px;
             text-align: center;
         }
-
         p {
-            font-size: 15px;
+            color: #555555;
+            font-size: 16px;
             line-height: 1.6;
-            color: #555;
+            margin-bottom: 15px;
         }
-
         .credentials {
-            background: #f8f9fa;
+            background-color: #f8f9fa;
             padding: 20px;
-            border-left: 4px solid #3490dc;
-            margin: 25px 0;
             border-radius: 6px;
+            margin: 25px 0;
+            border-left: 4px solid #3490dc;
         }
-
+        .credentials p {
+            margin: 8px 0;
+            font-size: 16px;
+        }
         .btn-container {
             text-align: center;
-            margin: 30px 0;
+            margin: 35px 0;
         }
-
         .btn {
-            background: #3490dc;
+            background-color: #3490dc;
             color: #ffffff;
             padding: 12px 30px;
             text-decoration: none;
@@ -64,56 +66,64 @@
             font-weight: bold;
             display: inline-block;
         }
-
+        .btn:hover {
+            background-color: #2779bd;
+        }
         .footer {
             text-align: center;
             font-size: 13px;
-            color: #999;
+            color: #999999;
             margin-top: 40px;
+            border-top: 1px solid #eeeeee;
             padding-top: 20px;
-            border-top: 1px solid #eee;
         }
     </style>
 </head>
 <body>
-<div class="email-container">
+    <div class="email-container">
+        <!-- Logo -->
+        <div class="header">
+     <img src="{{ $message->embed(public_path('LEIMCO.png')) }}" alt="LEIMCO Logo" style="max-width:250px;">
 
-    <!-- HEADER LOGO -->
-    <div class="header">
-        <img src="{{ asset('public\LEIMCO.png') }}" alt="LEIMCO Logo">
+
+        </div>
+
+        <!-- Greeting -->
+        <h1>Welcome to LEIMCO!</h1>
+      
+        <p>Hello {{ $name ?? 'Member' }},</p>
+
+        <!-- Main message -->
+        <p>
+            Your account has been successfully created. We are excited to have you on board.
+            Below are your login credentials to access the system:
+        </p>
+
+        <!-- Credentials box -->
+        <div class="credentials">
+            <p><strong>Email:</strong> {{ $email }}</p>
+            <p><strong>Password:</strong> {{ $password }}</p>
+        </div>
+
+        <p>
+            For security reasons, please keep this information confidential. We recommend changing your password after your first login.
+        </p>
+
+        <div class="btn-container">
+            <a href="{{ url('/login') }}" class="btn">Login to Portal</a>
+        </div>
+
+        <p>
+            Thank you for joining <strong>LEIMCO</strong>! We look forward to serving you.
+        </p>
+         <p>
+            This is an automated email. Please do not reply.
+        </p>
+
+        <!-- Footer -->
+        <div class="footer">
+            &copy; {{ date('Y') }} LEIMCO. All rights reserved.
+        </div>
     </div>
-
-    <h1>Welcome to LEIMCO!</h1>
-
-    <p>Hello {{ $name }},</p>
-
-    <p>
-        Your account has been successfully created. Below are your login credentials:
-    </p>
-
-    <div class="credentials">
-        <p><strong>Email:</strong> {{ $email }}</p>
-        <p><strong>Password:</strong> {{ $password }}</p>
-    </div>
-
-    <p>
-        For security reasons, please change your password after your first login.
-    </p>
-
-    <div class="btn-container">
-        <a href="{{ url('/login') }}" class="btn">Login to Portal</a>
-    </div>
-
-    <p>
-        Thank you for joining <strong>LEIMCO</strong>. We look forward to serving you.
-    </p>
-
-    <p>This is an automated email. Please do not reply.</p>
-
-    <div class="footer">
-        &copy; {{ date('Y') }} LEIMCO. All rights reserved.
-    </div>
-
-</div>
 </body>
 </html>

@@ -9,6 +9,6 @@
     <p><strong>Email:</strong> {{ $email }}</p>
     <p><strong>Password:</strong> {{ $password }}</p>
     <p>Please log in and change your password for security.</p>
-    <p>Best regards,<br>The Team</p>
+    <p>Best regards,<br>Laguna Electronics Inc. Multi-Purpose Cooperative</p>
 </body>
 </html>

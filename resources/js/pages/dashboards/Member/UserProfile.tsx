@@ -13,10 +13,7 @@ import member from '@/routes/member';
 import { type BreadcrumbItem, type SharedData } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'Dashboard',
-        href: dashboard().url,
-    },
+  
     {
         title: 'User Profile',
         href: member.userProfile.url(),
@@ -114,32 +111,58 @@ export default function UserProfile({ memberProfile, beneficiaries, isNewUser }:
         'date_hired', 'basic_salary'
     ] : [];
 
-    const isRequired = (field: string) => requiredFields.includes(field);
+    const [isEditing, setIsEditing] = useState(isNewUser);
 
+    const formatDate = (date?: string) => {
+    if (!date) return '';
+    return new Date(date).toLocaleDateString('en-US', {
+        month: 'short',
+        day: '2-digit',
+        year: 'numeric',
+    });
+};
+
+
+
+    const isRequired = (field: string) => requiredFields.includes(field);
+    
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="User Profile" />
 
             <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <HeadingSmall
-                            title="Personal Information"
-                            description={isNewUser 
-                                ? "Please complete your profile information. All fields marked with * are required." 
-                                : "View and update your personal information"}
-                        />
-                    </div>
-                    {isNewUser && (
-                        <span className="rounded-full bg-amber-100 px-3 py-1 text-sm font-medium text-amber-800">
-                            New User - Profile Required
-                        </span>
-                    )}
-                </div>
+              <div className="flex items-center justify-between">
+    <HeadingSmall
+        title="Personal Information"
+        description={
+            isEditing
+                ? 'You can now edit your profile details'
+                : 'View your personal information'
+        }
+    />
+
+    {!isNewUser && (
+        <div className="flex gap-2">
+            {!isEditing ? (
+                <Button onClick={() => setIsEditing(true)}>
+                    Edit Profile
+                </Button>
+            ) : (
+                <Button
+                    variant="outline"
+                    onClick={() => setIsEditing(false)}
+                >
+                    Cancel
+                </Button>
+            )}
+        </div>
+    )}
+</div>
+
 
                 <Form
                     method="post"
-                    action={member.userProfile.url()}
+                    action={member.userProfile.store.url()}
                     className="space-y-8"
                 >
                     {({ processing, recentlySuccessful, errors }) => (
@@ -159,6 +182,8 @@ export default function UserProfile({ memberProfile, beneficiaries, isNewUser }:
                                             onChange={(e) => setFormData({ ...formData, employee_id: e.target.value })}
                                             required={isRequired('employee_id')}
                                             placeholder="e.g., EMP-001"
+                                            disabled={!isEditing}
+
                                         />
                                         <InputError message={errors.employee_id} />
                                     </div>
@@ -174,6 +199,8 @@ export default function UserProfile({ memberProfile, beneficiaries, isNewUser }:
                                             onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
                                             required={isRequired('first_name')}
                                             placeholder="First name"
+                                            disabled={!isEditing}
+
                                         />
                                         <InputError message={errors.first_name} />
                                     </div>
@@ -186,6 +213,7 @@ export default function UserProfile({ memberProfile, beneficiaries, isNewUser }:
                                             value={formData.middle_name}
                                             onChange={(e) => setFormData({ ...formData, middle_name: e.target.value })}
                                             placeholder="Middle name"
+                                            disabled={!isEditing}
                                         />
                                         <InputError message={errors.middle_name} />
                                     </div>
@@ -201,24 +229,32 @@ export default function UserProfile({ memberProfile, beneficiaries, isNewUser }:
                                             onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
                                             required={isRequired('last_name')}
                                             placeholder="Last name"
+                                            disabled={!isEditing}
                                         />
                                         <InputError message={errors.last_name} />
                                     </div>
 
                                     <div className="grid gap-2">
-                                        <Label htmlFor="date_of_birth">
-                                            Date of Birth <span className="text-red-500">*</span>
-                                        </Label>
-                                        <Input
-                                            id="date_of_birth"
-                                            type="date"
-                                            name="date_of_birth"
-                                            value={formData.date_of_birth}
-                                            onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })}
-                                            required={isRequired('date_of_birth')}
-                                        />
-                                        <InputError message={errors.date_of_birth} />
-                                    </div>
+    <Label>Date of Birth</Label>
+
+    {!isEditing ? (
+        <div className="rounded-md border bg-muted px-3 py-2 text-sm">
+            {formatDate(formData.date_of_birth)}
+        </div>
+    ) : (
+        <Input
+            type="date"
+            name="date_of_birth"
+            value={formData.date_of_birth}
+            onChange={(e) =>
+                setFormData({ ...formData, date_of_birth: e.target.value })
+            }
+        />
+    )}
+
+    <InputError message={errors.date_of_birth} />
+</div>
+
 
                                     <div className="grid gap-2">
                                         <Label htmlFor="sex">
@@ -230,6 +266,8 @@ export default function UserProfile({ memberProfile, beneficiaries, isNewUser }:
                                             value={formData.sex}
                                             onChange={(e) => setFormData({ ...formData, sex: e.target.value })}
                                             required={isRequired('sex')}
+                                           disabled={!isEditing}
+
                                             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                                         >
                                             <option value="">Select sex</option>
@@ -249,6 +287,8 @@ export default function UserProfile({ memberProfile, beneficiaries, isNewUser }:
                                             value={formData.civil_status}
                                             onChange={(e) => setFormData({ ...formData, civil_status: e.target.value })}
                                             required={isRequired('civil_status')}
+                                            disabled={!isEditing}
+
                                             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                                         >
                                             <option value="">Select civil status</option>
@@ -268,6 +308,8 @@ export default function UserProfile({ memberProfile, beneficiaries, isNewUser }:
                                             value={formData.spouse_name}
                                             onChange={(e) => setFormData({ ...formData, spouse_name: e.target.value })}
                                             placeholder="Spouse name (if married)"
+                                            disabled={!isEditing}
+
                                         />
                                         <InputError message={errors.spouse_name} />
                                     </div>
@@ -290,6 +332,7 @@ export default function UserProfile({ memberProfile, beneficiaries, isNewUser }:
                                             onChange={(e) => setFormData({ ...formData, mobile_number: e.target.value })}
                                             required={isRequired('mobile_number')}
                                             placeholder="e.g., 09123456789"
+                                            disabled={!isEditing}
                                         />
                                         <InputError message={errors.mobile_number} />
                                     </div>
@@ -302,6 +345,7 @@ export default function UserProfile({ memberProfile, beneficiaries, isNewUser }:
                                             value={formData.tin_number}
                                             onChange={(e) => setFormData({ ...formData, tin_number: e.target.value })}
                                             placeholder="e.g., 123-456-789"
+                                            disabled={!isEditing}
                                         />
                                         <InputError message={errors.tin_number} />
                                     </div>
@@ -316,6 +360,7 @@ export default function UserProfile({ memberProfile, beneficiaries, isNewUser }:
                                             value={formData.present_address}
                                             onChange={(e) => setFormData({ ...formData, present_address: e.target.value })}
                                             required={isRequired('present_address')}
+                                            disabled={!isEditing}
                                             placeholder="Present address"
                                             rows={3}
                                             className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
@@ -332,6 +377,7 @@ export default function UserProfile({ memberProfile, beneficiaries, isNewUser }:
                                             onChange={(e) => setFormData({ ...formData, permanent_address: e.target.value })}
                                             placeholder="Permanent address (optional)"
                                             rows={3}
+                                            disabled={!isEditing}
                                             className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                                         />
                                         <InputError message={errors.permanent_address} />
@@ -354,6 +400,7 @@ export default function UserProfile({ memberProfile, beneficiaries, isNewUser }:
                                             onChange={(e) => setFormData({ ...formData, position: e.target.value })}
                                             required={isRequired('position')}
                                             placeholder="e.g., Software Engineer"
+                                            disabled={!isEditing}
                                         />
                                         <InputError message={errors.position} />
                                     </div>
@@ -369,6 +416,7 @@ export default function UserProfile({ memberProfile, beneficiaries, isNewUser }:
                                             value={formData.date_hired}
                                             onChange={(e) => setFormData({ ...formData, date_hired: e.target.value })}
                                             required={isRequired('date_hired')}
+                                            disabled={!isEditing}
                                         />
                                         <InputError message={errors.date_hired} />
                                     </div>
@@ -386,6 +434,7 @@ export default function UserProfile({ memberProfile, beneficiaries, isNewUser }:
                                             onChange={(e) => setFormData({ ...formData, basic_salary: e.target.value })}
                                             required={isRequired('basic_salary')}
                                             placeholder="e.g., 50000.00"
+                                            disabled={!isEditing}
                                         />
                                         <InputError message={errors.basic_salary} />
                                     </div>
@@ -400,6 +449,7 @@ export default function UserProfile({ memberProfile, beneficiaries, isNewUser }:
                                             value={formData.share_capital_balance}
                                             onChange={(e) => setFormData({ ...formData, share_capital_balance: e.target.value })}
                                             placeholder="e.g., 10000.00"
+                                            disabled={!isEditing}
                                         />
                                         <InputError message={errors.share_capital_balance} />
                                     </div>
@@ -412,6 +462,7 @@ export default function UserProfile({ memberProfile, beneficiaries, isNewUser }:
                                             value={formData.bank_account_number}
                                             onChange={(e) => setFormData({ ...formData, bank_account_number: e.target.value })}
                                             placeholder="e.g., 1234567890"
+                                            disabled={!isEditing}
                                         />
                                         <InputError message={errors.bank_account_number} />
                                     </div>
@@ -422,14 +473,14 @@ export default function UserProfile({ memberProfile, beneficiaries, isNewUser }:
                             <div className="rounded-lg border bg-card p-6 shadow-sm">
                                 <div className="mb-4 flex items-center justify-between">
                                     <h3 className="text-lg font-semibold">Beneficiaries</h3>
-                                    <Button
+                                   {isEditing && ( <Button
                                         type="button"
                                         variant="outline"
                                         size="sm"
                                         onClick={addBeneficiary}
                                     >
                                         Add Beneficiary
-                                    </Button>
+                                    </Button> )}
                                 </div>
                                 
                                 <div className="space-y-4">
@@ -460,6 +511,7 @@ export default function UserProfile({ memberProfile, beneficiaries, isNewUser }:
                                                         value={beneficiary.full_name}
                                                         onChange={(e) => updateBeneficiary(index, 'full_name', e.target.value)}
                                                         placeholder="Full name"
+                                                        disabled={!isEditing}
                                                     />
                                                 </div>
                                                 <div className="grid gap-2">
@@ -472,6 +524,7 @@ export default function UserProfile({ memberProfile, beneficiaries, isNewUser }:
                                                         value={beneficiary.relationship}
                                                         onChange={(e) => updateBeneficiary(index, 'relationship', e.target.value)}
                                                         placeholder="e.g., Wife, Daughter"
+                                                        disabled={!isEditing}
                                                     />
                                                 </div>
                                                 <div className="grid gap-2">
@@ -483,6 +536,7 @@ export default function UserProfile({ memberProfile, beneficiaries, isNewUser }:
                                                         name={`beneficiaries[${index}][date_of_birth]`}
                                                         type="date"
                                                         value={beneficiary.date_of_birth}
+                                                        disabled={!isEditing}
                                                         onChange={(e) => updateBeneficiary(index, 'date_of_birth', e.target.value)}
                                                     />
                                                 </div>
@@ -494,12 +548,19 @@ export default function UserProfile({ memberProfile, beneficiaries, isNewUser }:
 
                             {/* Submit Button */}
                             <div className="flex items-center gap-4">
-                                <Button
-                                    disabled={processing}
-                                    type="submit"
-                                >
-                                    {isNewUser ? 'Complete Profile' : 'Save Changes'}
-                                </Button>
+                              {isEditing && (
+    <div className="flex items-center gap-4">
+        <Button disabled={processing} type="submit">
+            Save Changes
+        </Button>
+
+        <Transition show={recentlySuccessful}>
+            <p className="text-sm text-green-600">
+                Saved successfully!
+            </p>
+        </Transition>
+    </div>
+)}
 
                                 <Transition
                                     show={recentlySuccessful}

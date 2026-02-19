@@ -52,9 +52,6 @@ class User extends Authenticatable
         ];
     }
 
-<<<<<<< HEAD
-    
-=======
     /**
      * Get the member profile associated with the user.
      */
@@ -78,5 +75,5 @@ class User extends Authenticatable
     {
         return $this->role === 'member';
     }
->>>>>>> origin/main
 }
+

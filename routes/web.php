@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\HrController\CreateMemberController;
+use App\Http\Controllers\Member\MemberProfileController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
@@ -42,6 +43,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboards/Member/ApplyLoan', function () {
         return Inertia::render('dashboards/Member/ApplyLoan');
     })->middleware('role:member')->name('member.apply-loan');
+
+    Route::get('dashboards/Member/UserProfile', [MemberProfileController::class, 'show'])->middleware('role:member')->name('member.user-profile');
+    Route::post('dashboards/Member/UserProfile', [MemberProfileController::class, 'store'])->middleware('role:member')->name('member.user-profile.store');
+
 
 });
 

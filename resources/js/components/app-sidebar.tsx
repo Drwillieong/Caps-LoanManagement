@@ -32,6 +32,7 @@ const hrNavItems: NavItem[] = [
         href: '/dashboards/HR/SeeUsers',
         icon: UsersRound,
     },
+      
  
 ];
 
@@ -41,6 +42,12 @@ const memberNavItems: NavItem[] = [
         href: '/dashboards/Member/ApplyLoan',
         icon: BookOpen,
     },
+      {
+        title: 'User Profile',
+        href: '/dashboards/Member/UserProfile',
+        icon: UsersRound,
+    },
+
 ];
 
 const gmNavItems: NavItem[] = [

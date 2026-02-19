@@ -3,7 +3,6 @@
 namespace App\Mail;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
@@ -15,31 +14,24 @@ class SendMembersPass extends Mailable
 
     public $email;
     public $password;
+    public $name;
+    public $LeimcoLogo;
+   
 
-    /**
-     * Create a new message instance.
-     */
-    public function __construct($email, $password)
+    public function __construct($email, $password, $name = null)
     {
         $this->email = $email;
         $this->password = $password;
+        $this->name = $name;
     }
 
-    /**
-     * Get the message envelope.
-     */
     public function envelope(): Envelope
     {
         return new Envelope(
-           
-          
             subject: 'Your Account Credentials',
         );
     }
 
-    /**
-     * Get the message content definition.
-     */
     public function content(): Content
     {
         return new Content(
@@ -47,11 +39,15 @@ class SendMembersPass extends Mailable
         );
     }
 
-    /**
-     * Get the attachments for the message.
-     *
-     * @return array<int, \Illuminate\Mail\Mailables\Attachment>
-     */
+    public function build()
+    {
+        return $this->withSymfonyMessage(function ($message) {
+            $this->LeimcoLogo = $message->embedFromPath(
+                public_path('LEIMCO.png')
+            );
+        });
+    }
+
     public function attachments(): array
     {
         return [];

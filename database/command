@@ -1,0 +1,13 @@
+use App\Models\User;
+use Illuminate\Support\Facades\Hash;
+
+User::create([
+    'name' => 'HR',
+    'email' => 'hradmin@gmail.com',
+    'password' => Hash::make('admin123'),
+    'role' => 'hr',
+    'is_active' => true,
+]);
+
+// delete user
+App\Models\User::where('email', 'kcbolado@ccc.edu.ph')->delete(); 

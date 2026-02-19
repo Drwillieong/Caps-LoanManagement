@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
@@ -49,5 +50,29 @@ class User extends Authenticatable
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Get the member profile associated with the user.
+     */
+    public function memberProfile(): HasOne
+    {
+        return $this->hasOne(MemberProfile::class);
+    }
+
+    /**
+     * Check if the user has completed their profile.
+     */
+    public function hasCompletedProfile(): bool
+    {
+        return $this->memberProfile()->exists();
+    }
+
+    /**
+     * Check if the user is a member role.
+     */
+    public function isMember(): bool
+    {
+        return $this->role === 'member';
     }
 }

@@ -153,8 +153,13 @@ export default function SeeUsers({ users, filters, roles }: Props) {
                                     #{user.id}
                                 </td>
 
-                                <td className="px-6 py-4">
-                                    {user.name}
+<td className="px-6 py-4">
+                                    <Link 
+                                        href={`/dashboards/HR/MembersProfile/${user.id}`}
+                                        className="text-primary hover:underline cursor-pointer font-medium"
+                                    >
+                                        {user.name}
+                                    </Link>
                                 </td>
 
                                 <td className="px-6 py-4 text-muted-foreground">

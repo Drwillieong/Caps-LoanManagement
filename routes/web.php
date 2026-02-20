@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\HrController\CreateMemberController;
+use App\Http\Controllers\HrController\MemberProfileViewController;
 use App\Http\Controllers\Member\MemberProfileController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -31,7 +32,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render($roleComponents[$role]);
     })->name('dashboard');
 
-    Route::get('dashboards/HR/SeeUsers', [CreateMemberController::class, 'index'])->middleware('role:hr')->name('users');
+Route::get('dashboards/HR/SeeUsers', [CreateMemberController::class, 'index'])->middleware('role:hr')->name('users');
+
+    Route::get('dashboards/HR/MembersProfile/{userId}', [MemberProfileViewController::class, 'show'])->middleware('role:hr')->name('users.profile');
 
     Route::get('dashboards/HR/create', [CreateMemberController::class, 'create'])->middleware('role:hr')->name('users.create');
     Route::post('dashboards/HR/SeeUsers', [CreateMemberController::class, 'store'])->middleware('role:hr')->name('users.store');

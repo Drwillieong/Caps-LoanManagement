@@ -27,12 +27,12 @@
             border-bottom: 1px solid #eeeeee;
         }
         .header img {
-            max-width: 150px;
+            max-width: 250px;
             height: auto;
         }
         h1 {
             color: #2c3e50;
-            font-size: 24px;
+            font-size: 22px;
             margin-bottom: 20px;
             text-align: center;
         }
@@ -49,10 +49,6 @@
             margin: 25px 0;
             border-left: 4px solid #3490dc;
         }
-        .credentials p {
-            margin: 8px 0;
-            font-size: 16px;
-        }
         .btn-container {
             text-align: center;
             margin: 35px 0;
@@ -66,9 +62,6 @@
             font-weight: bold;
             display: inline-block;
         }
-        .btn:hover {
-            background-color: #2779bd;
-        }
         .footer {
             text-align: center;
             font-size: 13px;
@@ -80,50 +73,46 @@
     </style>
 </head>
 <body>
-    <div class="email-container">
-        <!-- Logo -->
-        <div class="header">
-     <img src="{{ $message->embed(public_path('LEIMCO.png')) }}" alt="LEIMCO Logo" style="max-width:250px;">
 
+<div class="email-container">
 
-        </div>
-
-        <!-- Greeting -->
-        <h1>Welcome to Laguna Electronics Inc. Multi-Purpose Cooperative</h1>
-      
-        <p>Hello {{ $name ?? 'Member' }},</p>
-
-        <!-- Main message -->
-        <p>
-            Your account has been successfully created. We are excited to have you on board.
-            Below are your login credentials to access the system:
-        </p>
-
-        <!-- Credentials box -->
-        <div class="credentials">
-            <p><strong>Email:</strong> {{ $email }}</p>
-            <p><strong>Password:</strong> {{ $password }}</p>
-        </div>
-
-        <p>
-            For security reasons, please keep this information confidential. We recommend changing your password after your first login.
-        </p>
-
-        <div class="btn-container">
-            <a href="{{ url('/login') }}" class="btn">Login to Portal</a>
-        </div>
-
-        <p>
-            Thank you for joining <strong>LEIMCO</strong>! We look forward to serving you.
-        </p>
-         <p>
-            This is an automated email. Please do not reply.
-        </p>
-
-        <!-- Footer -->
-        <div class="footer">
-            &copy; {{ date('Y') }} LEIMCO. All rights reserved.
-        </div>
+    <!-- HEADER LOGO -->
+    <div class="header">
+        <img src="{{ $message->embed(public_path('LEIMCO.png')) }}" alt="LEIMCO Logo">
     </div>
+
+    <h1>Welcome to Laguna Electronics Inc. Multi-Purpose Cooperative</h1>
+
+    <p>Hello {{ $name ?? 'Member' }},</p>
+
+    <p>
+        Your account has been successfully created. Below are your login credentials:
+    </p>
+
+    <div class="credentials">
+        <p><strong>Email:</strong> {{ $email }}</p>
+        <p><strong>Password:</strong> {{ $password }}</p>
+    </div>
+
+    <p>
+        For security reasons, please change your password after your first login.
+    </p>
+
+    <div class="btn-container">
+        <a href="{{ url('/login') }}" class="btn">Login to Portal</a>
+    </div>
+
+    <p>
+        Thank you for joining <strong>LEIMCO</strong>. We look forward to serving you.
+    </p>
+
+    <p>This is an automated email. Please do not reply.</p>
+
+    <div class="footer">
+        &copy; {{ date('Y') }} LEIMCO. All rights reserved.
+    </div>
+
+</div>
+
 </body>
 </html>

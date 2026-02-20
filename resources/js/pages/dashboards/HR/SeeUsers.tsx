@@ -12,6 +12,7 @@ interface User {
     name: string
     email: string
     role: string
+    is_active: boolean
     created_at: string
     updated_at: string
 }
@@ -135,6 +136,7 @@ export default function SeeUsers({ users, filters, roles }: Props) {
                         <th className="px-6 py-3 text-left font-medium">Name</th>
                         <th className="px-6 py-3 text-left font-medium">Email</th>
                         <th className="px-6 py-3 text-left font-medium">Role</th>
+                        <th className="px-6 py-3 text-left font-medium">Status</th>
                         <th className="px-6 py-3 text-left font-medium">Joined</th>
                         <th className="px-6 py-3 text-right font-medium">Actions</th>
                     </tr>
@@ -151,8 +153,13 @@ export default function SeeUsers({ users, filters, roles }: Props) {
                                     #{user.id}
                                 </td>
 
-                                <td className="px-6 py-4">
-                                    {user.name}
+<td className="px-6 py-4">
+                                    <Link 
+                                        href={`/dashboards/HR/MembersProfile/${user.id}`}
+                                        className="text-primary hover:underline cursor-pointer font-medium"
+                                    >
+                                        {user.name}
+                                    </Link>
                                 </td>
 
                                 <td className="px-6 py-4 text-muted-foreground">
@@ -162,6 +169,18 @@ export default function SeeUsers({ users, filters, roles }: Props) {
                                 <td className="px-6 py-4">
                                     <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary capitalize">
                                         {user.role}
+                                    </span>
+                                </td>
+
+                                <td className="px-6 py-4">
+                                    <span
+                                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${
+                                            user.is_active
+                                                ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                                                : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                                        }`}
+                                    >
+                                        {user.is_active ? 'Active' : 'Inactive'}
                                     </span>
                                 </td>
 
@@ -179,7 +198,7 @@ export default function SeeUsers({ users, filters, roles }: Props) {
                     ) : (
                         <tr>
                             <td
-                                colSpan={6}
+                                colSpan={7}
                                 className="py-12 text-center text-muted-foreground"
                             >
                                 <div className="flex flex-col items-center gap-2">

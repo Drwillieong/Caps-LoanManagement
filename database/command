@@ -2,8 +2,8 @@ use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 
 User::create([
-    'name' => 'HR',
-    'email' => 'hradmin@gmail.com',
+    'name' => 'kay',
+    'email' => 'kayhleenminor@gmail.com',
     'password' => Hash::make('admin123'),
     'role' => 'hr',
     'is_active' => true,

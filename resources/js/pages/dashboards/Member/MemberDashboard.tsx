@@ -1,5 +1,6 @@
 import { Head } from '@inertiajs/react';
 
+import { LiveClock } from '@/components/live-clock';
 import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
@@ -14,7 +15,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 export default function MemberDashboard() {
     return (
-        <AppLayout breadcrumbs={breadcrumbs}>
+        <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
             <Head title="Dashboard" />
             <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
                 <div className="grid auto-rows-min gap-4 md:grid-cols-3">

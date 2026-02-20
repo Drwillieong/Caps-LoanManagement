@@ -89,7 +89,7 @@
         </div>
 
         <!-- Greeting -->
-        <h1>Welcome to LEIMCO!</h1>
+        <h1>Welcome to Laguna Electronics Inc. Multi-Purpose Cooperative</h1>
       
         <p>Hello {{ $name ?? 'Member' }},</p>
 

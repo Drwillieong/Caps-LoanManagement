@@ -129,19 +129,19 @@ export default function UserProfile({ memberProfile, beneficiaries, isNewUser }:
     const isRequired = (field: string) => requiredFields.includes(field);
     
     return (
-        <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
-            <Head title="User Profile" />
+    <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
+        <Head title="User Profile" />
 
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-    <HeadingSmall
-        title="Personal Information"
-        description={
-            isEditing
-                ? 'You can now edit your profile details'
-                : 'View your personal information'
-        }
-    />
+        <div className="space-y-5 px-6">
+            <div className="flex items-center justify-between">
+                <HeadingSmall
+                    title="Personal Information"
+                    description={
+                        isEditing
+                            ? 'You can now edit your profile details'
+                            : 'View your personal information'
+                    }
+                />
 
     {!isNewUser && (
         <div className="flex gap-2">
@@ -550,7 +550,7 @@ export default function UserProfile({ memberProfile, beneficiaries, isNewUser }:
                             </div>
 
                             {/* Submit Button */}
-                            <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-4 pb-8">
                               {isEditing && (
     <div className="flex items-center gap-4">
         <Button disabled={processing} type="submit">

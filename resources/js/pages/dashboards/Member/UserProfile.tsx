@@ -4,6 +4,7 @@ import { useState } from 'react';
 
 import HeadingSmall from '@/components/heading-small';
 import InputError from '@/components/input-error';
+import { LiveClock } from '@/components/live-clock';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -128,7 +129,7 @@ export default function UserProfile({ memberProfile, beneficiaries, isNewUser }:
     const isRequired = (field: string) => requiredFields.includes(field);
     
     return (
-        <AppLayout breadcrumbs={breadcrumbs}>
+        <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
             <Head title="User Profile" />
 
             <div className="space-y-6">

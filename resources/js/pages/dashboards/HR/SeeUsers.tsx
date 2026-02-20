@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 
 import AppLayout from '@/layouts/app-layout'
 import { Button } from '@/components/ui/button'
+import { LiveClock } from '@/components/live-clock'
 import { type BreadcrumbItem } from '@/types'
 
 interface User {
@@ -60,7 +61,7 @@ export default function SeeUsers({ users, filters, roles }: Props) {
         })
 
     return (
-       <AppLayout breadcrumbs={breadcrumbs}>
+       <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
     <Head title="Members" />
 
     <div className="space-y-8 px-6 py-8">

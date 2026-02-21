@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Transition } from '@headlessui/react';
 import AppLayout from '@/layouts/app-layout';
 import { Form, Head } from '@inertiajs/react';
@@ -21,7 +22,25 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Create', href: '/dashboards/HR/create' },
 ];
 
+// 🔐 Secure Password Generator
+function generatePassword(length: number = 10) {
+    const chars =
+        'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+    let password = '';
+    for (let i = 0; i < length; i++) {
+        password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return password;
+}
+
 export default function Create({ roles }: Props) {
+    const [password, setPassword] = useState('Member@123'); // ✅ Default Password
+
+    const handleGenerate = () => {
+        const newPass = generatePassword(12);
+        setPassword(newPass);
+    };
+
     return (
         <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
             <Head title="Create User" />
@@ -46,7 +65,7 @@ export default function Create({ roles }: Props) {
                             >
                                 {({ processing, errors, recentlySuccessful }) => (
                                     <>
-                                        {/* ✅ Success Label */}
+                                        {/* Success Message */}
                                         <Transition
                                             show={recentlySuccessful}
                                             enter="transition ease-out duration-300"
@@ -83,7 +102,6 @@ export default function Create({ roles }: Props) {
                                                     type="text"
                                                     required
                                                     autoFocus
-                                                    autoComplete="name"
                                                     placeholder="Kayleen Minor"
                                                 />
                                                 <InputError message={errors.name} />
@@ -97,7 +115,6 @@ export default function Create({ roles }: Props) {
                                                     name="email"
                                                     type="email"
                                                     required
-                                                    autoComplete="email"
                                                     placeholder="kay@example.com"
                                                 />
                                                 <InputError message={errors.email} />
@@ -124,15 +141,31 @@ export default function Create({ roles }: Props) {
 
                                             {/* Password */}
                                             <div className="space-y-2">
-                                                <Label htmlFor="password">Password</Label>
-                                                <Input
-                                                    id="password"
-                                                    name="password"
-                                                    type="password"
-                                                    required
-                                                    autoComplete="new-password"
-                                                    placeholder="Enter password"
-                                                />
+                                                <Label htmlFor="password">
+                                                    Password
+                                                </Label>
+
+                                                <div className="flex gap-2">
+                                                    <Input
+                                                        id="password"
+                                                        name="password"
+                                                        type="text"
+                                                        required
+                                                        value={password}
+                                                        onChange={(e) =>
+                                                            setPassword(e.target.value)
+                                                        }
+                                                        className="flex-1"
+                                                    />
+                                                    <Button
+                                                        type="button"
+                                                        variant="secondary"
+                                                        onClick={handleGenerate}
+                                                    >
+                                                        Generate
+                                                    </Button>
+                                                </div>
+
                                                 <InputError message={errors.password} />
                                             </div>
 
@@ -144,10 +177,12 @@ export default function Create({ roles }: Props) {
                                                 <Input
                                                     id="password_confirmation"
                                                     name="password_confirmation"
-                                                    type="password"
+                                                    type="text"
                                                     required
-                                                    autoComplete="new-password"
-                                                    placeholder="Confirm password"
+                                                    value={password}
+                                                    onChange={(e) =>
+                                                        setPassword(e.target.value)
+                                                    }
                                                 />
                                                 <InputError message={errors.password_confirmation} />
                                             </div>
@@ -160,7 +195,9 @@ export default function Create({ roles }: Props) {
                                                 disabled={processing}
                                                 className="min-w-[160px]"
                                             >
-                                                {processing && <Spinner className="mr-2" />}
+                                                {processing && (
+                                                    <Spinner className="mr-2" />
+                                                )}
                                                 Create Member
                                             </Button>
                                         </div>

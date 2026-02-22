@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid, Plus, UsersRound } from 'lucide-react';
+import { BookOpen, Folder, LayoutGrid, Plus, UsersRound, FileCheck } from 'lucide-react';
 
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
@@ -55,6 +55,11 @@ const gmNavItems: NavItem[] = [
 ];
 
 const secretaryNavItems: NavItem[] = [
+    {
+        title: 'Verify Member Profile',
+        href: '/dashboards/Secretary/VerifyMemberProfile',
+        icon: FileCheck,
+    },
     // Add Secretary specific items if any
 ];
 

@@ -50,6 +50,9 @@ Route::get('dashboards/Member/ApplyLoan', function () {
     Route::get('dashboards/Member/UserProfile', [MemberProfileController::class, 'show'])->middleware('role:member')->name('member.user-profile');
     Route::post('dashboards/Member/UserProfile', [MemberProfileController::class, 'store'])->middleware('role:member')->name('member.user-profile.store');
 
+    Route::get('dashboards/Secretary/VerifyMemberProfile', function () {
+        return Inertia::render('dashboards/Secretary/VerifyMemberProfile');
+    })->middleware('role:secretary')->name('secretary.verify-member-profile');
 
 });
 

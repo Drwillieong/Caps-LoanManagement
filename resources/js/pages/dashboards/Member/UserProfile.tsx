@@ -117,7 +117,7 @@ export default function UserProfile({ memberProfile, beneficiaries, isNewUser, i
     const [isEditing, setIsEditing] = useState(isNewUser);
 
     // Determine if user can edit employment - admins can always edit, members only when isEditing
-    const canEditEmployment = isAdmin || isEditing;
+  const canEditEmployment = isAdmin;
 
     const formatDate = (date?: string) => {
     if (!date) return '';

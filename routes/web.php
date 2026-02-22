@@ -54,6 +54,10 @@ Route::get('dashboards/Member/ApplyLoan', function () {
         return Inertia::render('dashboards/Secretary/VerifyMemberProfile');
     })->middleware('role:secretary')->name('secretary.verify-member-profile');
 
+    Route::get('dashboards/Gm/ValidateLoan', function () {
+        return Inertia::render('dashboards/Gm/ValidateLoan');
+    })->middleware('role:gm')->name('gm.validate-loan');
+
 });
 
 require __DIR__.'/settings.php';

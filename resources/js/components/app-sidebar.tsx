@@ -51,6 +51,11 @@ const memberNavItems: NavItem[] = [
 ];
 
 const gmNavItems: NavItem[] = [
+    {
+        title: 'Validate Loan Application',
+        href: '/dashboards/Gm/ValidateLoan',
+        icon: FileCheck,
+    },
     // Add GM specific items if any
 ];
 

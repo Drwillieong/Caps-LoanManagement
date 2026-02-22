@@ -1,0 +1,23 @@
+import { Head } from '@inertiajs/react';
+
+import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
+import AppLayout from '@/layouts/app-layout';
+import { LiveClock } from '@/components/live-clock';
+import { dashboard } from '@/routes';
+import { type BreadcrumbItem } from '@/types';
+
+const breadcrumbs: BreadcrumbItem[] = [
+    {
+        title: 'Validate Loan Application',
+        href: dashboard().url,
+    },
+];
+
+export default function ValidateLoan() {
+    return (
+        <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
+            <Head title="Validate Loan Application" />
+         
+        </AppLayout>
+    );
+}

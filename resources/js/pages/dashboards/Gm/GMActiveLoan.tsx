@@ -8,15 +8,15 @@ import { type BreadcrumbItem } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'Application Form',
+        title: 'Active Loan',
         href: dashboard().url,
     },
 ];
 
-export default function ApplyLoan() {
+export default function GMActiveLoan() {
     return (
         <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
-            <Head title="Application Form" />
+            <Head title="Active Loan" />
          
         </AppLayout>
     );

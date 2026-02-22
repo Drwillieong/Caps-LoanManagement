@@ -34,7 +34,7 @@ function generatePassword(length: number = 10) {
 }
 
 export default function Create({ roles }: Props) {
-    const [password, setPassword] = useState('Member@123'); // ✅ Default Password
+    const [password, setPassword] = useState('admin123'); // ✅ Default Password
 
     const handleGenerate = () => {
         const newPass = generatePassword(12);

@@ -30,7 +30,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         }
 
         return Inertia::render($roleComponents[$role]);
-    })->name('dashboard');
+    })->name('dashboard')->middleware('ensure.profile.completed');
 
 Route::get('dashboards/HR/SeeUsers', [CreateMemberController::class, 'index'])->middleware('role:hr')->name('users');
 
@@ -43,9 +43,9 @@ Route::get('dashboards/HR/SeeUsers', [CreateMemberController::class, 'index'])->
         return Inertia::render('dashboards/HR/HrDashboard');
     })->middleware('role:hr')->name('hr.dashboard');
 
-    Route::get('dashboards/Member/ApplyLoan', function () {
+Route::get('dashboards/Member/ApplyLoan', function () {
         return Inertia::render('dashboards/Member/ApplyLoan');
-    })->middleware('role:member')->name('member.apply-loan');
+    })->middleware(['role:member', 'ensure.profile.completed'])->name('member.apply-loan');
 
     Route::get('dashboards/Member/UserProfile', [MemberProfileController::class, 'show'])->middleware('role:member')->name('member.user-profile');
     Route::post('dashboards/Member/UserProfile', [MemberProfileController::class, 'store'])->middleware('role:member')->name('member.user-profile.store');

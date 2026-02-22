@@ -11,3 +11,6 @@ User::create([
 
 // delete user
 App\Models\User::where('email', 'kcbolado@ccc.edu.ph')->delete(); 
+
+// delete all the users account except the hr
+App\Models\User::where('role', '!=', 'hr')->delete();   

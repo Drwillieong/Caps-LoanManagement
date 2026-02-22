@@ -63,11 +63,7 @@ const chairmanNavItems: NavItem[] = [
 ];
 
 const footerNavItems: NavItem[] = [
-    {
-        title: '',
-        href: '',
-      
-    },
+   
    
 ];
 

@@ -412,15 +412,21 @@ export default function UserProfile({ memberProfile, beneficiaries, isNewUser }:
                                         <Label htmlFor="date_hired">
                                             Date Hired <span className="text-red-500">*</span>
                                         </Label>
-                                        <Input
-                                            id="date_hired"
-                                            type="date"
-                                            name="date_hired"
-                                            value={formData.date_hired}
-                                            onChange={(e) => setFormData({ ...formData, date_hired: e.target.value })}
-                                            required={isRequired('date_hired')}
-                                            disabled={!isEditing}
-                                        />
+                                        {!isEditing ? (
+                                            <div className="rounded-md border bg-muted px-3 py-2 text-sm">
+                                                {formatDate(formData.date_hired)}
+                                            </div>
+                                        ) : (
+                                            <Input
+                                                id="date_hired"
+                                                type="date"
+                                                name="date_hired"
+                                                value={formData.date_hired}
+                                                onChange={(e) => setFormData({ ...formData, date_hired: e.target.value })}
+                                                required={isRequired('date_hired')}
+                                                disabled={!isEditing}
+                                            />
+                                        )}
                                         <InputError message={errors.date_hired} />
                                     </div>
 
@@ -534,14 +540,20 @@ export default function UserProfile({ memberProfile, beneficiaries, isNewUser }:
                                                     <Label htmlFor={`beneficiaries[${index}][date_of_birth]`}>
                                                         Date of Birth
                                                     </Label>
-                                                    <Input
-                                                        id={`beneficiaries[${index}][date_of_birth]`}
-                                                        name={`beneficiaries[${index}][date_of_birth]`}
-                                                        type="date"
-                                                        value={beneficiary.date_of_birth}
-                                                        disabled={!isEditing}
-                                                        onChange={(e) => updateBeneficiary(index, 'date_of_birth', e.target.value)}
-                                                    />
+                                                    {!isEditing ? (
+                                                        <div className="rounded-md border bg-muted px-3 py-2 text-sm">
+                                                            {formatDate(beneficiary.date_of_birth)}
+                                                        </div>
+                                                    ) : (
+                                                        <Input
+                                                            id={`beneficiaries[${index}][date_of_birth]`}
+                                                            name={`beneficiaries[${index}][date_of_birth]`}
+                                                            type="date"
+                                                            value={beneficiary.date_of_birth}
+                                                            disabled={!isEditing}
+                                                            onChange={(e) => updateBeneficiary(index, 'date_of_birth', e.target.value)}
+                                                        />
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>

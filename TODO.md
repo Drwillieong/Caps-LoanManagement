@@ -1,14 +1,9 @@
-# Implementation TODO
+# TODO - Member Profile Completion Feature
 
-## Step 1: Add Route in web.php
-- [x] Create new route for MembersProfile page
+## Plan Steps:
 
-## Step 2: Create Controller
-- [x] Create MemberProfileViewController to fetch user data with memberProfile and beneficiaries
-
-## Step 3: Update SeeUsers.tsx
-- [x] Make user row clickable to redirect to MembersProfile
-
-## Step 4: Update MembersProfile.tsx
-- [x] Display member profile personal information
-- [x] Display beneficiaries information
+- [ ] 1. Create middleware `EnsureProfileCompleted.php`
+- [ ] 2. Update HandleInertiaRequests middleware to share profile completion status
+- [ ] 3. Update web.php to apply the new middleware to member routes
+- [ ] 4. Modify MemberProfileController to redirect properly after profile save
+- [ ] 5. Update UserProfile.tsx to force completion and prevent navigation away

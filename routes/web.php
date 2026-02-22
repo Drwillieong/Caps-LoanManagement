@@ -3,6 +3,7 @@
 use App\Http\Controllers\HrController\CreateMemberController;
 use App\Http\Controllers\HrController\MemberProfileViewController;
 use App\Http\Controllers\Member\MemberProfileController;
+use App\Models\LoanType;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
@@ -55,7 +56,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Member
     Route::get('dashboards/Member/ApplyLoan', function () {
-        return Inertia::render('dashboards/Member/ApplyLoan');
+        $loanTypes = LoanType::select('id', 'name', 'interest_rate_per_annum', 'max_term_months', 'requires_comaker')->distinct()->get();
+        return Inertia::render('dashboards/Member/ApplyLoan', [
+            'loanTypes' => $loanTypes,
+        ]);
     })->middleware(['role:member', 'ensure.profile.completed'])->name('member.apply-loan');
 
     Route::get('dashboards/Member/UserProfile', [MemberProfileController::class, 'show'])->middleware('role:member')->name('member.user-profile');

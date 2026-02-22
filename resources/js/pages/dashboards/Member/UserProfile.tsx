@@ -55,9 +55,10 @@ interface Props {
     memberProfile?: MemberProfile | null;
     beneficiaries: Beneficiary[];
     isNewUser: boolean;
+    isAdmin?: boolean;
 }
 
-export default function UserProfile({ memberProfile, beneficiaries, isNewUser }: Props) {
+export default function UserProfile({ memberProfile, beneficiaries, isNewUser, isAdmin = false }: Props) {
     const { auth } = usePage<SharedData>().props;
     
     // Initialize form data from existing profile or defaults
@@ -114,6 +115,9 @@ export default function UserProfile({ memberProfile, beneficiaries, isNewUser }:
     ] : [];
 
     const [isEditing, setIsEditing] = useState(isNewUser);
+
+    // Determine if user can edit employment - admins can always edit, members only when isEditing
+    const canEditEmployment = isAdmin || isEditing;
 
     const formatDate = (date?: string) => {
     if (!date) return '';
@@ -403,7 +407,7 @@ export default function UserProfile({ memberProfile, beneficiaries, isNewUser }:
                                             onChange={(e) => setFormData({ ...formData, position: e.target.value })}
                                             required={isRequired('position')}
                                             placeholder="e.g., Software Engineer"
-                                            disabled={!isEditing}
+                                            disabled={!canEditEmployment}
                                         />
                                         <InputError message={errors.position} />
                                     </div>
@@ -412,7 +416,7 @@ export default function UserProfile({ memberProfile, beneficiaries, isNewUser }:
                                         <Label htmlFor="date_hired">
                                             Date Hired <span className="text-red-500">*</span>
                                         </Label>
-                                        {!isEditing ? (
+                                        {!canEditEmployment ? (
                                             <div className="rounded-md border bg-muted px-3 py-2 text-sm">
                                                 {formatDate(formData.date_hired)}
                                             </div>
@@ -424,7 +428,7 @@ export default function UserProfile({ memberProfile, beneficiaries, isNewUser }:
                                                 value={formData.date_hired}
                                                 onChange={(e) => setFormData({ ...formData, date_hired: e.target.value })}
                                                 required={isRequired('date_hired')}
-                                                disabled={!isEditing}
+                                                disabled={!canEditEmployment}
                                             />
                                         )}
                                         <InputError message={errors.date_hired} />
@@ -443,7 +447,7 @@ export default function UserProfile({ memberProfile, beneficiaries, isNewUser }:
                                             onChange={(e) => setFormData({ ...formData, basic_salary: e.target.value })}
                                             required={isRequired('basic_salary')}
                                             placeholder="e.g., 50000.00"
-                                            disabled={!isEditing}
+                                            disabled={!canEditEmployment}
                                         />
                                         <InputError message={errors.basic_salary} />
                                     </div>
@@ -458,7 +462,7 @@ export default function UserProfile({ memberProfile, beneficiaries, isNewUser }:
                                             value={formData.share_capital_balance}
                                             onChange={(e) => setFormData({ ...formData, share_capital_balance: e.target.value })}
                                             placeholder="e.g., 10000.00"
-                                            disabled={!isEditing}
+                                            disabled={!canEditEmployment}
                                         />
                                         <InputError message={errors.share_capital_balance} />
                                     </div>
@@ -471,7 +475,7 @@ export default function UserProfile({ memberProfile, beneficiaries, isNewUser }:
                                             value={formData.bank_account_number}
                                             onChange={(e) => setFormData({ ...formData, bank_account_number: e.target.value })}
                                             placeholder="e.g., 1234567890"
-                                            disabled={!isEditing}
+                                            disabled={!canEditEmployment}
                                         />
                                         <InputError message={errors.bank_account_number} />
                                     </div>

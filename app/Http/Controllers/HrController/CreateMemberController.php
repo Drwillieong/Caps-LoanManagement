@@ -84,20 +84,48 @@ class CreateMemberController extends Controller
             'email' => 'required|string|lowercase|email|max:255|unique:users',
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'role' => 'required|in:member,gm,secretary,hr,chairman',
+            
+            // Employee ID
+            'employee_id' => 'required|string|max:255|unique:member_profiles,employee_id',
+            
+            // Employment fields
+            'position' => 'required|string|max:255',
+            'date_hired' => 'required|date',
+            'basic_salary' => 'required|numeric|min:0',
+            'share_capital_balance' => 'nullable|numeric|min:0',
+            'bank_account_number' => 'nullable|string|max:50',
+            'tin_number' => 'nullable|string|max:50',
         ]);
 
-        User::create([
+        // Create the user first
+        $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'role' => $request->role,
             'password' => Hash::make($request->password),
         ]);
 
+        // Create the member profile with employment information
+        $user->memberProfile()->create([
+            'employee_id' => $request->employee_id,
+            'first_name' => explode(' ', $request->name)[0],
+            'last_name' => implode(' ', array_slice(explode(' ', $request->name), 1)),
+            'position' => $request->position,
+            'date_hired' => $request->date_hired,
+            'basic_salary' => $request->basic_salary,
+            'share_capital_balance' => $request->share_capital_balance ?? 0,
+            'bank_account_number' => $request->bank_account_number,
+            'tin_number' => $request->tin_number,
+            'mobile_number' => '',
+            'present_address' => '',
+            'civil_status' => 'single',
+            'sex' => 'male',
+            'date_of_birth' => '1990-01-01',
+        ]);
+
         // Send email with credentials
         Mail::to($request->email)->send(new SendMembersPass($request->email, $request->password));
 
         return redirect()->route('users')->with('success', 'User created successfully.');
-
-       
     }
 }

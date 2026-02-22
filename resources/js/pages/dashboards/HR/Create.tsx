@@ -186,6 +186,115 @@ export default function Create({ roles }: Props) {
                                                 />
                                                 <InputError message={errors.password_confirmation} />
                                             </div>
+
+                                            {/* Employee ID */}
+                                            <div className="space-y-2">
+                                                <Label htmlFor="employee_id">
+                                                    Employee ID <span className="text-red-500">*</span>
+                                                </Label>
+                                                <Input
+                                                    id="employee_id"
+                                                    name="employee_id"
+                                                    type="text"
+                                                    required
+                                                    placeholder="e.g., EMP-001"
+                                                />
+                                                <InputError message={errors.employee_id} />
+                                            </div>
+                                        </div>
+
+                                        {/* Employment Section */}
+                                        <div className="mt-8 border-t pt-6">
+                                            <h3 className="mb-4 text-lg font-semibold">Employment Information</h3>
+                                            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                                                {/* Position */}
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="position">
+                                                        Position <span className="text-red-500">*</span>
+                                                    </Label>
+                                                    <Input
+                                                        id="position"
+                                                        name="position"
+                                                        type="text"
+                                                        required
+                                                        placeholder="e.g., Software Engineer"
+                                                    />
+                                                    <InputError message={errors.position} />
+                                                </div>
+
+                                                {/* Date Hired */}
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="date_hired">
+                                                        Date Hired <span className="text-red-500">*</span>
+                                                    </Label>
+                                                    <Input
+                                                        id="date_hired"
+                                                        name="date_hired"
+                                                        type="date"
+                                                        required
+                                                    />
+                                                    <InputError message={errors.date_hired} />
+                                                </div>
+
+                                                {/* Basic Salary */}
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="basic_salary">
+                                                        Basic Salary <span className="text-red-500">*</span>
+                                                    </Label>
+                                                    <Input
+                                                        id="basic_salary"
+                                                        name="basic_salary"
+                                                        type="number"
+                                                        step="0.01"
+                                                        required
+                                                        placeholder="e.g., 50000.00"
+                                                    />
+                                                    <InputError message={errors.basic_salary} />
+                                                </div>
+
+                                                {/* Share Capital Balance */}
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="share_capital_balance">
+                                                        Share Capital Balance
+                                                    </Label>
+                                                    <Input
+                                                        id="share_capital_balance"
+                                                        name="share_capital_balance"
+                                                        type="number"
+                                                        step="0.01"
+                                                        placeholder="e.g., 10000.00"
+                                                    />
+                                                    <InputError message={errors.share_capital_balance} />
+                                                </div>
+
+                                                {/* Bank Account Number */}
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="bank_account_number">
+                                                        Bank Account Number (RCBC)
+                                                    </Label>
+                                                    <Input
+                                                        id="bank_account_number"
+                                                        name="bank_account_number"
+                                                        type="text"
+                                                        placeholder="e.g., 1234567890"
+                                                    />
+                                                    <InputError message={errors.bank_account_number} />
+                                                </div>
+
+                                                {/* TIN Number */}
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="tin_number">
+                                                        TIN Number
+                                                    </Label>
+                                                    <Input
+                                                        id="tin_number"
+                                                        name="tin_number"
+                                                        type="text"
+                                                        placeholder="e.g., 123-456-789"
+                                                    />
+                                                    <InputError message={errors.tin_number} />
+                                                </div>
+                                            </div>
                                         </div>
 
                                         {/* Footer */}

@@ -80,18 +80,22 @@ class LoanController extends Controller
                 'interest_rate_per_annum',
                 'max_term_months',
                 'requires_comaker'
-            )
-            ->whereNot('name', 'like', '%Tiangge%')
-            ->whereNot('name', 'like', '%Rice%')
-            ->get(),
+            )->get(),
 
             'eligibleCoMakers' => User::where('role', 'member')
                 ->where('id', '!=', $user->id)
                 ->whereDoesntHave('coMakerLoans.loan', function ($q) {
                     $q->whereIn('status', ['approved', 'released']);
                 })
-                ->select('id', 'name', 'email')
-                ->get(),
+                ->select('id', 'first_name', 'middle_name', 'last_name', 'email')
+                ->get()
+                ->map(function ($user) {
+                    return [
+                        'id' => $user->id,
+                        'name' => trim($user->first_name . ($user->middle_name ? ' ' . $user->middle_name : '') . ' ' . $user->last_name),
+                        'email' => $user->email,
+                    ];
+                }),
 
             'previousLoans' => $previousLoans,
         ]);

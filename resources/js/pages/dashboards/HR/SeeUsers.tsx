@@ -9,7 +9,9 @@ import { type BreadcrumbItem } from '@/types'
 
 interface User {
     id: number
-    name: string
+    first_name: string
+    middle_name: string | null
+    last_name: string
     email: string
     role: string
     is_active: boolean
@@ -59,6 +61,10 @@ export default function SeeUsers({ users, filters, roles }: Props) {
             month: 'short',
             day: 'numeric',
         })
+
+    const getFullName = (user: User) => {
+        return `${user.first_name}${user.middle_name ? ' ' + user.middle_name : ''} ${user.last_name}`.trim()
+    }
 
     return (
        <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
@@ -153,12 +159,12 @@ export default function SeeUsers({ users, filters, roles }: Props) {
                                     #{user.id}
                                 </td>
 
-<td className="px-6 py-4">
+                                <td className="px-6 py-4">
                                     <Link 
                                         href={`/dashboards/HR/MembersProfile/${user.id}`}
                                         className="text-primary hover:underline cursor-pointer font-medium"
                                     >
-                                        {user.name}
+                                        {getFullName(user)}
                                     </Link>
                                 </td>
 

@@ -11,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { useMemo, useState } from 'react';
 import type { ApplyLoanProps, EligibleCoMaker, PreviousLoan } from '@/types';
-import { Search, User, Calendar, DollarSign, AlertCircle, CheckCircle2, Clock } from 'lucide-react';
+import { Search, User, Calendar, DollarSign, AlertCircle, CheckCircle2, Clock,Eye, EyeOff } from 'lucide-react';
 
 export default function ApplyLoan({
     loanTypes,
@@ -59,6 +59,17 @@ export default function ApplyLoan({
         terms_months: '',
         co_maker_user_id: '',
     });
+
+    // toggle for showing applicant info (can be used for future expansion)
+     const [showApplicantInfo, setShowApplicantInfo] = useState(false);
+
+     function maskCurrency(value: number, visible: boolean) {
+    if (!visible) return '••••••';
+    return `₱${value.toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    })}`;
+}
 
     // Co-maker search state
     const [coMakerSearch, setCoMakerSearch] = useState('');
@@ -311,37 +322,50 @@ export default function ApplyLoan({
 
                 <form onSubmit={submit} className="space-y-6">
 
-                    {/* =========================================
-                        APPLICANT INFORMATION CARD
-                    ========================================= */}
-                    <Card className="shadow-sm">
-                        <CardHeader className="pb-3">
-                            <CardTitle className="text-base">Applicant Information</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                                <div className="rounded-lg bg-muted p-3">
-                                    <p className="text-xs text-gray-500">Basic Salary</p>
-                                    <p className="font-semibold text-lg">
-                                        ₱{memberProfile.basic_salary.toLocaleString()}
-                                    </p>
-                                </div>
-                                <div className="rounded-lg bg-muted p-3">
-                                    <p className="text-xs text-gray-500">Share Capital</p>
-                                    <p className="font-semibold text-lg">
-                                        ₱{memberProfile.share_capital_balance.toLocaleString()}
-                                    </p>
-                                </div>
-                                <div className="rounded-lg bg-muted p-3">
-                                    <p className="text-xs text-gray-500">Max Loan Allowed</p>
-                                    <p className="font-semibold text-lg text-blue-600">
-                                        ₱{maxLoanAllowed.toLocaleString()}
-                                    </p>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
+                   {/* =========================================
+    APPLICANT INFORMATION CARD
+========================================= */}
+<Card className="shadow-sm">
+    <CardHeader className="pb-3 flex flex-row items-center justify-between">
+        <CardTitle className="text-base">
+            Applicant Information
+        </CardTitle>
 
+        {/* Show / Hide Toggle */}
+       <button
+    type="button"
+    onClick={() => setShowApplicantInfo(!showApplicantInfo)}
+    className="text-muted-foreground hover:text-foreground"
+>
+    {showApplicantInfo ? <EyeOff size={18} /> : <Eye size={18} />}
+</button>
+    </CardHeader>
+
+    <CardContent>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="rounded-lg bg-muted p-3">
+                <p className="text-xs text-gray-500">Basic Salary</p>
+                <p className="font-semibold text-lg">
+                    {maskCurrency(memberProfile.basic_salary, showApplicantInfo)}
+                </p>
+            </div>
+
+            <div className="rounded-lg bg-muted p-3">
+                <p className="text-xs text-gray-500">Share Capital</p>
+                <p className="font-semibold text-lg">
+                    {maskCurrency(memberProfile.share_capital_balance, showApplicantInfo)}
+                </p>
+            </div>
+
+            <div className="rounded-lg bg-muted p-3">
+                <p className="text-xs text-gray-500">Max Loan Allowed</p>
+                <p className="font-semibold text-lg text-blue-600">
+                    {maskCurrency(maxLoanAllowed, showApplicantInfo)}
+                </p>
+            </div>
+        </div>
+    </CardContent>
+</Card>
                     {/* =========================================
                         LOAN DETAILS CARD
                     ========================================= */}
@@ -399,70 +423,66 @@ export default function ApplyLoan({
                         </CardContent>
                     </Card>
 
-                    {/* =========================================
-                        CO-MAKER SELECTION WITH SEARCH
-                    ========================================= */}
-                    {selectedLoanType?.requires_comaker && (
-                        <Card className="shadow-sm">
-                            <CardHeader className="pb-3">
-                                <CardTitle className="flex items-center gap-2 text-base">
-                                    <User className="h-4 w-4" />
-                                    Select Co-Maker
-                                </CardTitle>
-                                <CardDescription>
-                                    Search by name, user ID, or email address
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="space-y-4">
-                                    {/* Search input */}
-                                    <div className="relative">
-                                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                                        <Input
-                                            type="text"
-                                            placeholder="Search co-maker by name, ID, or email..."
-                                            className="pl-10"
-                                            value={coMakerSearch}
-                                            onChange={(e) => setCoMakerSearch(e.target.value)}
-                                        />
-                                    </div>
+                  {/* =========================================
+    CO-MAKER SELECTION WITH SEARCH
+========================================= */}
+<Card className="shadow-sm">
+    <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-base">
+            <User className="h-4 w-4" />
+            Select Co-Maker
+        </CardTitle>
+        <CardDescription>
+            Search by name, user ID, or email address
+        </CardDescription>
+    </CardHeader>
 
-                                    {/* Co-maker dropdown */}
-                                    <select
-                                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                                        value={data.co_maker_user_id}
-                                        onChange={(e) =>
-                                            setData('co_maker_user_id', e.target.value)
-                                        }
-                                    >
-                                        <option value="">
-                                            {filteredCoMakers.length > 0 
-                                                ? `Select co-maker (${filteredCoMakers.length} available)`
-                                                : 'No matching co-makers found'}
-                                        </option>
-                                        {filteredCoMakers.map((coMaker: EligibleCoMaker) => (
-                                            <option key={coMaker.id} value={coMaker.id}>
-                                                {coMaker.name} ({coMaker.email})
-                                            </option>
-                                        ))}
-                                    </select>
+    <CardContent>
+        <div className="space-y-4">
+            {/* Search input */}
+            <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <Input
+                    type="text"
+                    placeholder="Search co-maker by name, ID, or email..."
+                    className="pl-10"
+                    value={coMakerSearch}
+                    onChange={(e) => setCoMakerSearch(e.target.value)}
+                />
+            </div>
 
-                                    <InputError message={errors.co_maker_user_id} />
+            {/* Co-maker dropdown */}
+            <select
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={data.co_maker_user_id}
+                onChange={(e) =>
+                    setData('co_maker_user_id', e.target.value)
+                }
+            >
+                <option value="">
+                    {filteredCoMakers.length > 0
+                        ? `Select co-maker (${filteredCoMakers.length} available)`
+                        : 'No matching co-makers found'}
+                </option>
 
-                                    {/* Quick tips */}
-                                    <div className="rounded-lg bg-blue-50 p-3 text-sm text-blue-700">
-                                        <p className="font-medium">💡 Tips for selecting a co-maker:</p>
-                                        <ul className="mt-1 list-inside list-disc text-xs">
-                                            <li>Co-maker must be an active member</li>
-                                            <li>Co-maker must not have an active loan</li>
-                                            <li>Type to search by name, ID, or email</li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    )}
+                {filteredCoMakers.map((coMaker: EligibleCoMaker) => (
+                    <option key={coMaker.id} value={coMaker.id}>
+                        {coMaker.name} ({coMaker.email})
+                    </option>
+                ))}
+            </select>
 
+            <InputError message={errors.co_maker_user_id} />
+
+            {/* Optional hint */}
+            {!data.loan_type_id && (
+                <div className="rounded-lg bg-yellow-50 p-3 text-xs text-yellow-700">
+                    ⚠ Please select a loan type to confirm if a co-maker is required.
+                </div>
+            )}
+        </div>
+    </CardContent>
+</Card>
                     {/* =========================================
                         SUBMIT BUTTON
                     ========================================= */}

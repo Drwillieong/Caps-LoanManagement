@@ -25,7 +25,8 @@ class CreateMemberController extends Controller
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('id', $search)
-                  ->orWhere('name', 'like', "%{$search}%")
+                  ->orWhere('first_name', 'like', "%{$search}%")
+                  ->orWhere('last_name', 'like', "%{$search}%")
                   ->orWhere('email', 'like', "%{$search}%");
             });
         }
@@ -80,7 +81,9 @@ class CreateMemberController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'name' => 'required|string|max:255',
+            'first_name' => 'required|string|max:255',
+            'middle_name' => 'nullable|string|max:255',
+            'last_name' => 'required|string|max:255',
             'email' => 'required|string|lowercase|email|max:255|unique:users',
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'role' => 'required|in:member,gm,secretary,hr,chairman',
@@ -99,7 +102,9 @@ class CreateMemberController extends Controller
 
         // Create the user first
         $user = User::create([
-            'name' => $request->name,
+            'first_name' => $request->first_name,
+            'middle_name' => $request->middle_name,
+            'last_name' => $request->last_name,
             'email' => $request->email,
             'role' => $request->role,
             'password' => Hash::make($request->password),
@@ -108,8 +113,9 @@ class CreateMemberController extends Controller
         // Create the member profile with employment information
         $user->memberProfile()->create([
             'employee_id' => $request->employee_id,
-            'first_name' => explode(' ', $request->name)[0],
-            'last_name' => implode(' ', array_slice(explode(' ', $request->name), 1)),
+            'first_name' => $request->first_name,
+            'middle_name' => $request->middle_name,
+            'last_name' => $request->last_name,
             'position' => $request->position,
             'date_hired' => $request->date_hired,
             'basic_salary' => $request->basic_salary,

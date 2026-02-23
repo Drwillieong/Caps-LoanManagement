@@ -93,18 +93,43 @@ export default function Create({ roles }: Props) {
                                         {/* Form Grid */}
                                         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
 
-                                            {/* Name */}
+                                            {/* First Name */}
                                             <div className="space-y-2">
-                                                <Label htmlFor="name">Full Name</Label>
+                                                <Label htmlFor="first_name">First Name</Label>
                                                 <Input
-                                                    id="name"
-                                                    name="name"
+                                                    id="first_name"
+                                                    name="first_name"
                                                     type="text"
                                                     required
                                                     autoFocus
-                                                    placeholder="Kayleen Minor"
+                                                    placeholder="Kayleen"
                                                 />
-                                                <InputError message={errors.name} />
+                                                <InputError message={errors.first_name} />
+                                            </div>
+
+                                            {/* Middle Name */}
+                                            <div className="space-y-2">
+                                                <Label htmlFor="middle_name">Middle Name</Label>
+                                                <Input
+                                                    id="middle_name"
+                                                    name="middle_name"
+                                                    type="text"
+                                                    placeholder="Minor"
+                                                />
+                                                <InputError message={errors.middle_name} />
+                                            </div>
+
+                                            {/* Last Name */}
+                                            <div className="space-y-2">
+                                                <Label htmlFor="last_name">Last Name</Label>
+                                                <Input
+                                                    id="last_name"
+                                                    name="last_name"
+                                                    type="text"
+                                                    required
+                                                    placeholder="Doe"
+                                                />
+                                                <InputError message={errors.last_name} />
                                             </div>
 
                                             {/* Email */}

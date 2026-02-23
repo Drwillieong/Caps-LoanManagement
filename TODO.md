@@ -1,13 +1,18 @@
-# ApplyLoan.tsx Enhancement Tasks
+# TODO: Add Monthly Payment Eligibility Check
 
-## TODO List:
-- [x] 1. Update LoanController.php to fetch previous loans data
-- [x] 2. Update types/index.d.ts with PreviousLoan interface
-- [x] 3. Update ApplyLoanProps to include previousLoans
-- [x] 4. Redesign ApplyLoan.tsx with:
-  - [x] Enhanced Eligibility Check dashboard at top
-  - [x] Co-Maker search functionality
-  - [x] Previous Loans section
-  - [x] Improved visual design
+## Task: Add eligibility check - monthly payment must not exceed 50% of basic salary
 
-## Status: Completed ✅
+### Steps:
+- [x] 1. Analyze the codebase and understand the current implementation
+- [ ] 2. Update ApplyLoan.tsx (Frontend): Add eligibility check for monthly > 50% basic salary
+- [ ] 3. Update LoanElegibilityService.php (Backend): Add validation for monthly <= 50% basic salary
+
+### Details:
+1. Frontend (ApplyLoan.tsx):
+   - Add new eligibility check: if `computed.monthly > (basic_salary / 2)`, show error message
+   - Update UI to display this eligibility condition
+   - Disable submit button when monthly exceeds 50% of basic salary
+
+2. Backend (LoanElegibilityService.php):
+   - Add validation to ensure monthly payment <= 50% of basic salary
+   - Use LoanComputationService to calculate monthly payment

@@ -121,6 +121,20 @@ class LoanController extends Controller
             ]);
         }
 
+        // Monthly payment must not exceed 50% of basic salary
+        $loanType = LoanType::findOrFail($validated['loan_type_id']);
+        $interest = ($validated['principal_amount'] * ($loanType->interest_rate_per_annum / 100))
+            * ($validated['terms_months'] / 12);
+        $total = $validated['principal_amount'] + $interest;
+        $monthly = $total / $validated['terms_months'];
+        
+        $maxMonthlyPayment = $profile->basic_salary / 2;
+        if ($monthly > $maxMonthlyPayment) {
+            return back()->withErrors([
+                'principal_amount' => 'Monthly payment exceeds 50% of your basic salary. Please increase the loan term or reduce the amount.'
+            ]);
+        }
+
         // No active loan rule
         $hasActiveLoan = Loan::where('user_id', $user->id)
             ->whereIn('status', ['approved', 'released'])
@@ -146,18 +160,6 @@ class LoanController extends Controller
                 ]);
             }
         }
-
-        /** ===============================
-         *  COMPUTATION
-         * =============================== */
-
-        $loanType = LoanType::findOrFail($validated['loan_type_id']);
-
-        $interest = ($validated['principal_amount'] * ($loanType->interest_rate_per_annum / 100))
-            * ($validated['terms_months'] / 12);
-
-        $total = $validated['principal_amount'] + $interest;
-        $monthly = $total / $validated['terms_months'];
 
         /** ===============================
          *  CREATE LOAN

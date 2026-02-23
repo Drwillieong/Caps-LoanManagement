@@ -41,3 +41,43 @@ export interface User {
     updated_at: string;
     [key: string]: unknown; // This allows for additional properties...
 }
+
+export interface LoanType {
+    id: number;
+    name: string;
+    interest_rate_per_annum: number;
+    max_term_months: number;
+    requires_comaker: boolean;
+}
+
+export interface MemberProfile {
+    date_hired: string;
+    basic_salary: number;
+    share_capital_balance: number;
+}
+
+export interface EligibleCoMaker {
+    id: number;
+    name: string;
+    email: string;
+}
+
+export interface PreviousLoan {
+    id: number;
+    loan_type_name: string;
+    principal_amount: number;
+    total_amount_due: number;
+    balance: number;
+    next_due_date: string | null;
+    monthly_amortization: number;
+    status: string;
+    release_date: string | null;
+}
+
+export interface ApplyLoanProps {
+    loanTypes: LoanType[];
+    memberProfile: MemberProfile;
+    eligibleCoMakers: EligibleCoMaker[];
+    previousLoans: PreviousLoan[];
+    error?: string;
+}

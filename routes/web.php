@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\HrController\CreateMemberController;
 use App\Http\Controllers\HrController\MemberProfileViewController;
+use App\Http\Controllers\Member\LoanController;
 use App\Http\Controllers\Member\MemberProfileController;
 use App\Models\LoanType;
 use Illuminate\Support\Facades\Route;
@@ -54,13 +55,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     })->middleware('role:hr')->name('hr.completed-loan');
 
 
-    // Member
-    Route::get('dashboards/Member/ApplyLoan', function () {
-        $loanTypes = LoanType::select('id', 'name', 'interest_rate_per_annum', 'max_term_months', 'requires_comaker')->distinct()->get();
-        return Inertia::render('dashboards/Member/ApplyLoan', [
-            'loanTypes' => $loanTypes,
-        ]);
-    })->middleware(['role:member', 'ensure.profile.completed'])->name('member.apply-loan');
+    // Member - Loan Routes
+    Route::get('dashboards/Member/ApplyLoan', [LoanController::class, 'create'])
+        ->middleware(['role:member', 'ensure.profile.completed'])
+        ->name('member.apply-loan');
+
+    Route::post('dashboards/Member/ApplyLoan', [LoanController::class, 'store'])
+        ->middleware(['role:member', 'ensure.profile.completed'])
+        ->name('member.loan.store');
 
     Route::get('dashboards/Member/UserProfile', [MemberProfileController::class, 'show'])->middleware('role:member')->name('member.user-profile');
     Route::post('dashboards/Member/UserProfile', [MemberProfileController::class, 'store'])->middleware('role:member')->name('member.user-profile.store');

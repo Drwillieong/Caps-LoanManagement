@@ -16,7 +16,6 @@ return new class extends Migration
             // Application Details
             $table->decimal('principal_amount', 12, 2);
             $table->integer('terms_months'); // e.g., 12 months
-            $table->string('purpose')->nullable();
             
             // System Calculated Logic (Snapshots)
             $table->decimal('interest_amount', 12, 2); // Calculated at approval
@@ -30,13 +29,15 @@ return new class extends Migration
             
             // Approval Flow Status
             $table->enum('status', [
-                'pending',          // Applied, waiting for system/HR check
-                'awaiting_comaker', // If co-maker needed
-                'approved',         // Approved by Board/GM
-                'released',         // Money given (Active)
-                'rejected',         // Failed eligibility
-                'paid_off'          // Fully paid
-            ])->default('pending');
+                'draft',                  // Initial draft
+                'awaiting_comaker',       // Waiting for co-maker confirmation
+                'pending_gm_review',      // Pending GM review
+                'endorsed_by_gm',         // Endorsed by GM
+                'approved',               // Approved by Board/GM
+                'released',               // Money given (Active)
+                'rejected',               // Failed eligibility
+                'paid_off'                // Fully paid
+            ])->default('draft');
 
             $table->text('remarks')->nullable(); // For rejection reasons
             $table->timestamps();

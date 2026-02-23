@@ -21,7 +21,6 @@ class Loan extends Model
         'loan_type_id',
         'principal_amount',
         'terms_months',
-        'purpose',
         'interest_amount',
         'total_amount_due',
         'monthly_amortization',

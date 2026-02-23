@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid, Plus, UsersRound, FileCheck } from 'lucide-react';
+import { BookOpen, Folder, LayoutGrid, Plus, UsersRound, FileCheck, Archive, Clock, FileText, FilePlus } from 'lucide-react';
 
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
@@ -32,17 +32,37 @@ const hrNavItems: NavItem[] = [
         href: '/dashboards/HR/SeeUsers',
         icon: UsersRound,
     },
+    {
+        title: 'Active Loan',
+        href: '/dashboards/HR/HRActiveLoan',
+        icon: Clock,
+    },
+    {
+        title: 'Completed Loan',
+        href: '/dashboards/HR/HRCompletedLoan',
+        icon: Archive,
+    },
       
  
 ];
 
 const memberNavItems: NavItem[] = [
     {
-        title: 'Apply Loan',
+        title: 'Application Form',
         href: '/dashboards/Member/ApplyLoan',
-        icon: BookOpen,
+        icon: FileText,
     },
-      {
+    {
+        title: 'Active Loan',
+        href: '/dashboards/Member/MemberActiveLoan',
+        icon: Clock,
+    },
+    {
+        title: 'Completed Loan',
+        href: '/dashboards/Member/MemberCompletedLoan',
+        icon: Archive,
+    },
+    {
         title: 'User Profile',
         href: '/dashboards/Member/UserProfile',
         icon: UsersRound,
@@ -56,7 +76,17 @@ const gmNavItems: NavItem[] = [
         href: '/dashboards/Gm/ValidateLoan',
         icon: FileCheck,
     },
-    // Add GM specific items if any
+    {
+        title: 'Active Loan',
+        href: '/dashboards/Gm/GMActiveLoan',
+        icon: Clock,
+    },
+    {
+        title: 'Completed Loan',
+        href: '/dashboards/Gm/GMCompletedLoan',
+        icon: Archive,
+    },
+    
 ];
 
 const secretaryNavItems: NavItem[] = [
@@ -65,11 +95,11 @@ const secretaryNavItems: NavItem[] = [
         href: '/dashboards/Secretary/VerifyMemberProfile',
         icon: FileCheck,
     },
-    // Add Secretary specific items if any
+    
 ];
 
 const chairmanNavItems: NavItem[] = [
-    // Add Chairman specific items if any
+    
 ];
 
 const footerNavItems: NavItem[] = [

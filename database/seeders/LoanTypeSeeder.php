@@ -32,6 +32,13 @@ class LoanTypeSeeder extends Seeder
             'max_term_months' => 12,
             'requires_comaker' => true,
         ]);
+
+        LoanType::create([
+            'name' => 'Motor Loan',
+            'interest_rate_per_annum' => 12.00,
+            'max_term_months' => 36,
+            'requires_comaker' => true,
+        ]);
     }
 }
 

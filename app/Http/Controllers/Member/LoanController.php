@@ -190,7 +190,56 @@ class LoanController extends Controller
         }
 
         return redirect()
-            ->route('dashboard')
+            ->route('member.pending-application')
             ->with('success', 'Loan application submitted successfully.');
+    }
+
+    public function pendingApplication()
+    {
+        $user = Auth::user();
+
+        // Fetch the most recent pending loan for the user
+        $loan = Loan::where('user_id', $user->id)
+            ->whereIn('status', [
+                'awaiting_comaker',
+                'pending_gm_review',
+                'pending_secretary_review',
+                'approved',
+                'rejected'
+            ])
+            ->with(['loanType', 'coMakers.user'])
+            ->orderBy('created_at', 'desc')
+            ->first();
+
+        if (!$loan) {
+            return Inertia::render('dashboards/Member/PendingApplication', [
+                'loan' => null,
+                'hasPendingLoan' => false,
+            ]);
+        }
+
+        return Inertia::render('dashboards/Member/PendingApplication', [
+            'loan' => [
+                'id' => $loan->id,
+                'loan_type_name' => $loan->loanType->name ?? 'N/A',
+                'principal_amount' => $loan->principal_amount,
+                'terms_months' => $loan->terms_months,
+                'interest_amount' => $loan->interest_amount,
+                'total_amount_due' => $loan->total_amount_due,
+                'monthly_amortization' => $loan->monthly_amortization,
+                'status' => $loan->status,
+                'remarks' => $loan->remarks,
+                'created_at' => $loan->created_at->format('Y-m-d H:i:s'),
+                'co_makers' => $loan->coMakers->map(function ($coMaker) {
+                    return [
+                        'id' => $coMaker->user->id,
+                        'name' => trim($coMaker->user->first_name . ($coMaker->user->middle_name ? ' ' . $coMaker->user->middle_name : '') . ' ' . $coMaker->user->last_name),
+                        'email' => $coMaker->user->email,
+                        'status' => $coMaker->status,
+                    ];
+                }),
+            ],
+            'hasPendingLoan' => true,
+        ]);
     }
 }

@@ -83,3 +83,27 @@ export interface ApplyLoanProps {
     previousLoans: PreviousLoan[];
     error?: string;
 }
+
+export interface PendingApplicationLoan {
+    id: number;
+    loan_type_name: string;
+    principal_amount: number;
+    terms_months: number;
+    interest_amount: number;
+    total_amount_due: number;
+    monthly_amortization: number;
+    status: string;
+    remarks: string | null;
+    created_at: string;
+    co_makers: Array<{
+        id: number;
+        name: string;
+        email: string;
+        status: string;
+    }>;
+}
+
+export interface PendingApplicationProps {
+    loan: PendingApplicationLoan | null;
+    hasPendingLoan: boolean;
+}

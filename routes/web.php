@@ -60,6 +60,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware(['role:member', 'ensure.profile.completed'])
         ->name('member.apply-loan');
 
+    Route::get('dashboards/Member/PendingApplication', [LoanController::class, 'pendingApplication'])
+        ->middleware(['role:member', 'ensure.profile.completed'])
+        ->name('member.pending-application');
+
     Route::post('dashboards/Member/ApplyLoan', [LoanController::class, 'store'])
         ->middleware(['role:member', 'ensure.profile.completed'])
         ->name('member.loan.store');

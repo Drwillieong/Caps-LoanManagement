@@ -68,6 +68,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware(['role:member', 'ensure.profile.completed'])
         ->name('member.loan.store');
 
+    Route::put('dashboards/Member/Loan/{loan}', [LoanController::class, 'update'])
+        ->middleware(['role:member', 'ensure.profile.completed'])
+        ->name('member.loan.update');
+
+    Route::get('dashboards/Member/Loan/{loan}/edit', [LoanController::class, 'edit'])
+        ->middleware(['role:member', 'ensure.profile.completed'])
+        ->name('member.loan.edit');
+
     Route::get('dashboards/Member/UserProfile', [MemberProfileController::class, 'show'])->middleware('role:member')->name('member.user-profile');
     Route::post('dashboards/Member/UserProfile', [MemberProfileController::class, 'store'])->middleware('role:member')->name('member.user-profile.store');
 

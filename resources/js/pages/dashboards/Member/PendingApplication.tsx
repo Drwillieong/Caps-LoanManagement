@@ -17,7 +17,8 @@ import {
     DollarSign,
     Calendar,
     User,
-    ArrowRight
+    ArrowRight,
+    Edit
 } from 'lucide-react';
 import { Link } from '@inertiajs/react';
 
@@ -54,21 +55,20 @@ interface LoanData {
 interface PendingApplicationProps {
     loan: LoanData | null;
     hasPendingLoan: boolean;
+    loanHistory: LoanData[];
 }
 
-export default function PendingApplication({ loan, hasPendingLoan }: PendingApplicationProps) {
+export default function PendingApplication({ loan, hasPendingLoan, loanHistory }: PendingApplicationProps) {
     const [currentLoan, setCurrentLoan] = useState<LoanData | null>(loan);
     const [isPolling, setIsPolling] = useState(true);
     const [lastUpdated, setLastUpdated] = useState(new Date());
 
-    // Poll for status updates every 10 seconds when waiting for decision
     useEffect(() => {
         if (!hasPendingLoan || !currentLoan) {
             setIsPolling(false);
             return;
         }
 
-        // Stop polling if loan is approved or rejected
         if (['approved', 'rejected', 'released'].includes(currentLoan.status)) {
             setIsPolling(false);
             return;
@@ -76,12 +76,11 @@ export default function PendingApplication({ loan, hasPendingLoan }: PendingAppl
 
         const interval = setInterval(() => {
             window.location.reload();
-        }, 10000); // Refresh every 10 seconds
+        }, 10000);
 
         return () => clearInterval(interval);
     }, [hasPendingLoan, currentLoan?.status]);
 
-    // Update last checked time
     useEffect(() => {
         if (isPolling) {
             const interval = setInterval(() => {
@@ -91,7 +90,6 @@ export default function PendingApplication({ loan, hasPendingLoan }: PendingAppl
         }
     }, [isPolling]);
 
-    // Get status badge variant
     function getStatusBadge(status: string) {
         switch (status) {
             case 'approved':
@@ -110,62 +108,60 @@ export default function PendingApplication({ loan, hasPendingLoan }: PendingAppl
         }
     }
 
-    // Get status message
     function getStatusMessage(status: string) {
         switch (status) {
             case 'approved':
                 return {
                     icon: <CheckCircle2 className="h-12 w-12 text-green-500" />,
                     title: 'Loan Approved! 🎉',
-                    description: 'Your loan application has been approved. You can now view your active loan details.',
+                    description: 'Your loan application has been approved.',
                     color: 'bg-green-50 border-green-200'
                 };
             case 'released':
                 return {
                     icon: <CheckCircle2 className="h-12 w-12 text-green-500" />,
                     title: 'Loan Released! 🎉',
-                    description: 'Your loan has been released. Please check your active loan for payment details.',
+                    description: 'Your loan has been released.',
                     color: 'bg-green-50 border-green-200'
                 };
             case 'rejected':
                 return {
                     icon: <XCircle className="h-12 w-12 text-red-500" />,
                     title: 'Loan Rejected',
-                    description: 'Your loan application was not approved. Please contact support for more information.',
+                    description: 'Your loan application was not approved.',
                     color: 'bg-red-50 border-red-200'
                 };
             case 'awaiting_comaker':
                 return {
                     icon: <Clock className="h-12 w-12 text-yellow-500" />,
                     title: 'Awaiting Co-Maker Confirmation',
-                    description: 'Your selected co-maker needs to confirm their commitment to your loan. They will receive a notification.',
+                    description: 'Your selected co-maker needs to confirm.',
                     color: 'bg-yellow-50 border-yellow-200'
                 };
             case 'pending_gm_review':
                 return {
                     icon: <Clock className="h-12 w-12 text-blue-500" />,
                     title: 'Pending GM Review',
-                    description: 'Your loan application is under review by the General Manager. This may take a few days.',
+                    description: 'Your loan application is under review.',
                     color: 'bg-blue-50 border-blue-200'
                 };
             case 'pending_secretary_review':
                 return {
                     icon: <Clock className="h-12 w-12 text-purple-500" />,
                     title: 'Pending Secretary Review',
-                    description: 'Your loan application is under review by the Secretary.',
+                    description: 'Your loan application is under review.',
                     color: 'bg-purple-50 border-purple-200'
                 };
             default:
                 return {
                     icon: <AlertCircle className="h-12 w-12 text-gray-500" />,
                     title: 'Status Unknown',
-                    description: 'Please contact support if you have questions about your application.',
+                    description: 'Please contact support.',
                     color: 'bg-gray-50 border-gray-200'
                 };
         }
     }
 
-    // Format date
     function formatDate(dateStr: string): string {
         return new Date(dateStr).toLocaleDateString('en-PH', {
             year: 'numeric',
@@ -176,7 +172,6 @@ export default function PendingApplication({ loan, hasPendingLoan }: PendingAppl
         });
     }
 
-    // Format currency
     function formatCurrency(amount: number): string {
         return `₱${amount.toLocaleString(undefined, {
             minimumFractionDigits: 2,
@@ -184,7 +179,6 @@ export default function PendingApplication({ loan, hasPendingLoan }: PendingAppl
         })}`;
     }
 
-    // No pending loan state
     if (!hasPendingLoan || !currentLoan) {
         return (
             <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
@@ -214,6 +208,52 @@ export default function PendingApplication({ loan, hasPendingLoan }: PendingAppl
                             </Link>
                         </CardContent>
                     </Card>
+
+                    {loanHistory && loanHistory.length > 0 && (
+                        <Card>
+                            <CardHeader className="pb-3">
+                                <CardTitle className="flex items-center gap-2 text-lg">
+                                    <Clock className="h-5 w-5" />
+                                    Loan Application History
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="space-y-4">
+                                    {loanHistory.map((historyLoan) => (
+                                        <div 
+                                            key={historyLoan.id}
+                                            className="flex flex-col gap-3 rounded-lg border p-4 md:flex-row md:items-center md:justify-between"
+                                        >
+                                            <div className="space-y-1">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-semibold">
+                                                        {historyLoan.loan_type_name}
+                                                    </span>
+                                                    {getStatusBadge(historyLoan.status)}
+                                                </div>
+                                                <div className="flex flex-wrap gap-4 text-sm text-gray-600">
+                                                    <span className="flex items-center gap-1">
+                                                        <DollarSign className="h-3 w-3" />
+                                                        ₱{historyLoan.principal_amount.toLocaleString()}
+                                                    </span>
+                                                    <span className="flex items-center gap-1">
+                                                        <Calendar className="h-3 w-3" />
+                                                        {formatDate(historyLoan.created_at)}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-xs text-gray-500">Monthly</p>
+                                                <p className="font-semibold">
+                                                    ₱{historyLoan.monthly_amortization.toLocaleString()}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
                 </div>
             </AppLayout>
         );
@@ -239,7 +279,6 @@ export default function PendingApplication({ loan, hasPendingLoan }: PendingAppl
                     )}
                 </div>
 
-                {/* Status Card */}
                 <Card className={`border-l-4 ${statusInfo.color.replace('bg-', 'border-').split(' ')[0]}`}>
                     <CardHeader className="pb-3">
                         <div className="flex items-center justify-between">
@@ -255,7 +294,6 @@ export default function PendingApplication({ loan, hasPendingLoan }: PendingAppl
                     </CardHeader>
                 </Card>
 
-                {/* Loan Details */}
                 <Card>
                     <CardHeader className="pb-3">
                         <CardTitle className="flex items-center gap-2 text-lg">
@@ -305,7 +343,6 @@ export default function PendingApplication({ loan, hasPendingLoan }: PendingAppl
                     </CardContent>
                 </Card>
 
-                {/* Co-Maker Information */}
                 {currentLoan.co_makers && currentLoan.co_makers.length > 0 && (
                     <Card>
                         <CardHeader className="pb-3">
@@ -346,7 +383,6 @@ export default function PendingApplication({ loan, hasPendingLoan }: PendingAppl
                     </Card>
                 )}
 
-                {/* Action Buttons */}
                 <div className="flex gap-4">
                     {currentLoan.status === 'approved' || currentLoan.status === 'released' ? (
                         <Link
@@ -364,7 +400,15 @@ export default function PendingApplication({ loan, hasPendingLoan }: PendingAppl
                             <FileText className="h-4 w-4" />
                             Apply Again
                         </Link>
-                    ) : null}
+                    ) : (
+                        <Link
+                            href={`/dashboards/Member/Loan/${currentLoan.id}/edit`}
+                            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-white hover:opacity-90 transition"
+                        >
+                            <Edit className="h-4 w-4" />
+                            Edit Application
+                        </Link>
+                    )}
                     
                     <Link
                         href="/dashboards/Member/MemberDashboard"
@@ -374,11 +418,59 @@ export default function PendingApplication({ loan, hasPendingLoan }: PendingAppl
                     </Link>
                 </div>
 
-                {/* Last Updated */}
                 {isPolling && (
                     <p className="text-sm text-muted-foreground text-center">
                         Last checked: {lastUpdated.toLocaleTimeString()}
                     </p>
+                )}
+
+                {loanHistory && loanHistory.length > 0 && (
+                    <Card className="mt-6">
+                        <CardHeader className="pb-3">
+                            <CardTitle className="flex items-center gap-2 text-lg">
+                                <Clock className="h-5 w-5" />
+                                Loan Application History
+                            </CardTitle>
+                            <CardDescription>
+                                Your past and current loan applications
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="space-y-4">
+                                {loanHistory.map((historyLoan) => (
+                                    <div 
+                                        key={historyLoan.id}
+                                        className="flex flex-col gap-3 rounded-lg border p-4 md:flex-row md:items-center md:justify-between"
+                                    >
+                                        <div className="space-y-1">
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-semibold">
+                                                    {historyLoan.loan_type_name}
+                                                </span>
+                                                {getStatusBadge(historyLoan.status)}
+                                            </div>
+                                            <div className="flex flex-wrap gap-4 text-sm text-gray-600">
+                                                <span className="flex items-center gap-1">
+                                                    <DollarSign className="h-3 w-3" />
+                                                    ₱{historyLoan.principal_amount.toLocaleString()}
+                                                </span>
+                                                <span className="flex items-center gap-1">
+                                                    <Calendar className="h-3 w-3" />
+                                                    {formatDate(historyLoan.created_at)}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-xs text-gray-500">Monthly</p>
+                                            <p className="font-semibold">
+                                                ₱{historyLoan.monthly_amortization.toLocaleString()}
+                                            </p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </CardContent>
+                    </Card>
                 )}
             </div>
         </AppLayout>

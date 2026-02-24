@@ -82,6 +82,14 @@ export interface ApplyLoanProps {
     eligibleCoMakers: EligibleCoMaker[];
     previousLoans: PreviousLoan[];
     error?: string;
+    hasAwaitingComaker?: boolean;
+    editingLoan?: {
+        id: number;
+        loan_type_id: number;
+        principal_amount: number;
+        terms_months: number;
+        co_maker_user_id: number | '';
+    };
 }
 
 export interface PendingApplicationLoan {
@@ -106,4 +114,5 @@ export interface PendingApplicationLoan {
 export interface PendingApplicationProps {
     loan: PendingApplicationLoan | null;
     hasPendingLoan: boolean;
+    loanHistory: PendingApplicationLoan[];
 }

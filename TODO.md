@@ -1,18 +1,20 @@
-# TODO: Add Monthly Payment Eligibility Check
+# Co-Maker Issues Fix Plan
 
-## Task: Add eligibility check - monthly payment must not exceed 50% of basic salary
+## Completed:
+- [x] Fix LoanController.php - Changed comakerRequests() to use whereNull('status') instead of where('status', 'pending')
+- [x] Fix LoanController.php - Updated respondToCoMakerRequest() to use whereNull('status') for consistency
+- [x] Fix CoMaker.tsx - Moved useForm hook to top level and added toast notifications for accept/reject actions
+- [x] Added Toaster component to app-layout for toast notifications
 
-### Steps:
-- [x] 1. Analyze the codebase and understand the current implementation
-- [ ] 2. Update ApplyLoan.tsx (Frontend): Add eligibility check for monthly > 50% basic salary
-- [ ] 3. Update LoanElegibilityService.php (Backend): Add validation for monthly <= 50% basic salary
+## Summary of Changes:
+1. **Backend (LoanController.php)**:
+   - Changed `comakerRequests()` query from `where('status', 'pending')` to `whereNull('status')` to match the actual data
+   - Changed `respondToCoMakerRequest()` query from `where('status', 'pending')` to `whereNull('status')` for consistency
 
-### Details:
-1. Frontend (ApplyLoan.tsx):
-   - Add new eligibility check: if `computed.monthly > (basic_salary / 2)`, show error message
-   - Update UI to display this eligibility condition
-   - Disable submit button when monthly exceeds 50% of basic salary
+2. **Frontend (CoMaker.tsx)**:
+   - Fixed the React hook violation - moved `useForm` from inside function to top level of component
+   - Added toast notifications using react-hot-toast for success/error feedback
 
-2. Backend (LoanElegibilityService.php):
-   - Add validation to ensure monthly payment <= 50% of basic salary
-   - Use LoanComputationService to calculate monthly payment
+3. **Toast Setup**:
+   - Created toaster.tsx component
+   - Added Toaster to app-layout.tsx

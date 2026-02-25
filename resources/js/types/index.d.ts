@@ -31,7 +31,9 @@ export interface SharedData {
 
 export interface User {
     id: number;
-    name: string;
+    first_name: string;
+    middle_name: string | null;
+    last_name: string;
     email: string;
     role: string;
     avatar?: string;
@@ -80,4 +82,59 @@ export interface ApplyLoanProps {
     eligibleCoMakers: EligibleCoMaker[];
     previousLoans: PreviousLoan[];
     error?: string;
+    hasAwaitingComaker?: boolean;
+    editingLoan?: {
+        id: number;
+        loan_type_id: number;
+        principal_amount: number;
+        terms_months: number;
+        co_maker_user_id: number | '';
+    };
+}
+
+export interface PendingApplicationLoan {
+    id: number;
+    loan_type_name: string;
+    principal_amount: number;
+    terms_months: number;
+    interest_amount: number;
+    total_amount_due: number;
+    monthly_amortization: number;
+    status: string;
+    remarks: string | null;
+    created_at: string;
+    co_makers: Array<{
+        id: number;
+        name: string;
+        email: string;
+        status: string;
+    }>;
+}
+
+export interface PendingApplicationProps {
+    loan: PendingApplicationLoan | null;
+    hasPendingLoan: boolean;
+    loanHistory: PendingApplicationLoan[];
+}
+
+export interface CoMakerRequest {
+    id: number;
+    loan_id: number;
+    loan_type_name: string;
+    principal_amount: number;
+    terms_months: number;
+    interest_amount: number;
+    total_amount_due: number;
+    monthly_amortization: number;
+    status: string;
+    created_at: string;
+    requester: {
+        id: number;
+        name: string;
+        email: string;
+    };
+}
+
+export interface CoMakerProps {
+    coMakerRequests: CoMakerRequest[];
 }

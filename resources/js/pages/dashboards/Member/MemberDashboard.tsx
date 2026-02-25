@@ -1,9 +1,11 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import { LiveClock } from '@/components/live-clock';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
-import { FileText, Clock, CheckCircle, HandCoins, Wallet, Users } from 'lucide-react';
+import { FileText, Clock, CheckCircle, HandCoins, Wallet, Users, Bell } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -12,12 +14,57 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-export default function MemberDashboard() {
+interface DashboardProps {
+    comakerRequestCount?: number;
+}
+
+export default function MemberDashboard({ comakerRequestCount = 0 }: DashboardProps) {
+    const [coMakerCount, setCoMakerCount] = useState(comakerRequestCount);
+
+    // Fetch co-maker request count on mount
+    useEffect(() => {
+        fetch('/dashboards/Member/CoMaker/Count')
+            .then(res => res.json())
+            .then(data => {
+                if (data.count !== undefined) {
+                    setCoMakerCount(data.count);
+                }
+            })
+            .catch(err => console.error('Error fetching co-maker count:', err));
+    }, []);
+
     return (
         <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
             <Head title="Member Dashboard" />
 
             <div className="flex flex-col gap-6 p-6">
+
+                {/* === CO-MAKER NOTIFICATION BANNER === */}
+                {coMakerCount > 0 && (
+                    <Card className="border-l-4 border-l-orange-500 bg-orange-50">
+                        <CardContent className="flex items-center justify-between py-4">
+                            <div className="flex items-center gap-3">
+                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-100">
+                                    <Bell className="h-5 w-5 text-orange-600" />
+                                </div>
+                                <div>
+                                    <p className="font-semibold text-orange-800">
+                                        You have {coMakerCount} pending co-maker request{coMakerCount > 1 ? 's' : ''}!
+                                    </p>
+                                    <p className="text-sm text-orange-700">
+                                        A member has selected you as their co-maker. Please review and respond.
+                                    </p>
+                                </div>
+                            </div>
+                            <Link
+                                href="/dashboards/Member/CoMaker"
+                                className="inline-flex items-center gap-2 rounded-xl bg-orange-600 px-4 py-2 text-white hover:bg-orange-700 transition"
+                            >
+                                View Requests
+                            </Link>
+                        </CardContent>
+                    </Card>
+                )}
 
                 {/* === STAT CARDS === */}
                 <div className="grid gap-6 md:grid-cols-5">
@@ -55,7 +102,7 @@ export default function MemberDashboard() {
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm text-muted-foreground">Shared Capital</p>
-                                <h2 className="text-2xl font-bold">₱ 50,000</h2>
+                                <h2 className="text-2xl font-bold">₱ 50,000.00</h2>
                             </div>
                             <Wallet className="h-8 w-8 text-indigo-600" />
                         </div>
@@ -66,7 +113,7 @@ export default function MemberDashboard() {
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm text-muted-foreground">Loan Balance</p>
-                                <h2 className="text-2xl font-bold">₱ 25,000</h2>
+                                <h2 className="text-2xl font-bold">₱ 25,000.00</h2>
                             </div>
                             <HandCoins className="h-8 w-8 text-purple-600" />
                         </div>
@@ -75,15 +122,22 @@ export default function MemberDashboard() {
                     {/* Co-Maker Requests */}
                     <Link
                         href="/dashboards/Member/CoMaker"
-                        className="rounded-2xl border p-5 shadow-sm hover:shadow-md transition block"
+                        className={`rounded-2xl border p-5 shadow-sm hover:shadow-md transition block relative ${
+                            coMakerCount > 0 ? 'border-orange-300 bg-orange-50' : ''
+                        }`}
                     >
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm text-muted-foreground">Co-Maker Requests</p>
-                                <h2 className="text-2xl font-bold">1</h2>
+                                <h2 className="text-2xl font-bold">{coMakerCount}</h2>
                             </div>
-                            <Users className="h-8 w-8 text-orange-600" />
+                            <Users className={`h-8 w-8 ${coMakerCount > 0 ? 'text-orange-600' : 'text-orange-600'}`} />
                         </div>
+                        {coMakerCount > 0 && (
+                            <div className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-xs text-white">
+                                {coMakerCount}
+                            </div>
+                        )}
                     </Link>
 
                 </div>
@@ -114,10 +168,12 @@ export default function MemberDashboard() {
 
                         <Link
                             href="/dashboards/Member/CoMaker"
-                            className="inline-flex items-center gap-2 rounded-xl border px-4 py-2 hover:bg-muted transition"
+                            className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2 hover:bg-muted transition ${
+                                coMakerCount > 0 ? 'border-orange-300 bg-orange-50 text-orange-700' : ''
+                            }`}
                         >
                             <Users className="h-4 w-4" />
-                            Choose Co-Maker
+                            {coMakerCount > 0 ? `Co-Maker Requests (${coMakerCount})` : 'Choose Co-Maker'}
                         </Link>
 
                     </div>

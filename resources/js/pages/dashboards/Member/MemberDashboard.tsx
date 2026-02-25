@@ -24,7 +24,7 @@ export default function MemberDashboard() {
 
                     {/* Active Loan */}
                     <Link
-                        href="/dashboards/Member/ActiveLoan?tab=active"
+                        href="/dashboards/Member/MemberActiveLoan?tab=active"
                         className="rounded-2xl border p-5 shadow-sm hover:shadow-md transition block"
                     >
                         <div className="flex items-center justify-between">
@@ -38,7 +38,7 @@ export default function MemberDashboard() {
 
                     {/* Completed Loan */}
                     <Link
-                        href="/dashboards/Member/CompletedLoan?tab=completed"
+                        href="/dashboards/Member/MemberCompletedLoan?tab=completed"
                         className="rounded-2xl border p-5 shadow-sm hover:shadow-md transition block"
                     >
                         <div className="flex items-center justify-between">

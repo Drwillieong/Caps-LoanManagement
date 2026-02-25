@@ -71,7 +71,7 @@ export default function MemberDashboard({ comakerRequestCount = 0 }: DashboardPr
 
                     {/* Active Loan */}
                     <Link
-                        href="/dashboards/Member/ActiveLoan?tab=active"
+                        href="/dashboards/Member/MemberActiveLoan?tab=active"
                         className="rounded-2xl border p-5 shadow-sm hover:shadow-md transition block"
                     >
                         <div className="flex items-center justify-between">
@@ -85,7 +85,7 @@ export default function MemberDashboard({ comakerRequestCount = 0 }: DashboardPr
 
                     {/* Completed Loan */}
                     <Link
-                        href="/dashboards/Member/CompletedLoan?tab=completed"
+                        href="/dashboards/Member/MemberCompletedLoan?tab=completed"
                         className="rounded-2xl border p-5 shadow-sm hover:shadow-md transition block"
                     >
                         <div className="flex items-center justify-between">
@@ -102,7 +102,7 @@ export default function MemberDashboard({ comakerRequestCount = 0 }: DashboardPr
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm text-muted-foreground">Shared Capital</p>
-                                <h2 className="text-2xl font-bold">₱ 50,000</h2>
+                                <h2 className="text-2xl font-bold">₱ 50,000.00</h2>
                             </div>
                             <Wallet className="h-8 w-8 text-indigo-600" />
                         </div>
@@ -113,7 +113,7 @@ export default function MemberDashboard({ comakerRequestCount = 0 }: DashboardPr
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm text-muted-foreground">Loan Balance</p>
-                                <h2 className="text-2xl font-bold">₱ 25,000</h2>
+                                <h2 className="text-2xl font-bold">₱ 25,000.00</h2>
                             </div>
                             <HandCoins className="h-8 w-8 text-purple-600" />
                         </div>

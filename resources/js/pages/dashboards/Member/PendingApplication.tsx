@@ -14,11 +14,11 @@ import {
     AlertCircle, 
     RefreshCw, 
     FileText,
-    DollarSign,
     Calendar,
     User,
     ArrowRight,
-    Edit
+    Edit,
+    DollarSign
 } from 'lucide-react';
 import { Link } from '@inertiajs/react';
 
@@ -172,12 +172,18 @@ export default function PendingApplication({ loan, hasPendingLoan, loanHistory }
         });
     }
 
-    function formatCurrency(amount: number): string {
-        return `₱${amount.toLocaleString(undefined, {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-        })}`;
-    }
+    function formatCurrency(amount: number | string): string {
+    if (amount === null || amount === undefined || amount === '') return '₱0.00';
+
+    const number = typeof amount === 'string' ? Number(amount) : amount;
+
+    if (isNaN(number)) return '₱0.00';
+
+    return `₱${number.toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    })}`;
+}
 
     if (!hasPendingLoan || !currentLoan) {
         return (
@@ -232,9 +238,8 @@ export default function PendingApplication({ loan, hasPendingLoan, loanHistory }
                                                     {getStatusBadge(historyLoan.status)}
                                                 </div>
                                                 <div className="flex flex-wrap gap-4 text-sm text-gray-600">
-                                                    <span className="flex items-center gap-1">
-                                                        <DollarSign className="h-3 w-3" />
-                                                        ₱{historyLoan.principal_amount.toLocaleString()}
+                                                    <span>
+                                                        Principal: {formatCurrency(historyLoan.principal_amount)}
                                                     </span>
                                                     <span className="flex items-center gap-1">
                                                         <Calendar className="h-3 w-3" />
@@ -245,7 +250,7 @@ export default function PendingApplication({ loan, hasPendingLoan, loanHistory }
                                             <div className="text-right">
                                                 <p className="text-xs text-gray-500">Monthly</p>
                                                 <p className="font-semibold">
-                                                    ₱{historyLoan.monthly_amortization.toLocaleString()}
+                                                    {formatCurrency(historyLoan.monthly_amortization)}
                                                 </p>
                                             </div>
                                         </div>
@@ -450,9 +455,8 @@ export default function PendingApplication({ loan, hasPendingLoan, loanHistory }
                                                 {getStatusBadge(historyLoan.status)}
                                             </div>
                                             <div className="flex flex-wrap gap-4 text-sm text-gray-600">
-                                                <span className="flex items-center gap-1">
-                                                    <DollarSign className="h-3 w-3" />
-                                                    ₱{historyLoan.principal_amount.toLocaleString()}
+                                                <span>
+                                                    Principal: {formatCurrency(historyLoan.principal_amount)}
                                                 </span>
                                                 <span className="flex items-center gap-1">
                                                     <Calendar className="h-3 w-3" />
@@ -463,7 +467,7 @@ export default function PendingApplication({ loan, hasPendingLoan, loanHistory }
                                         <div className="text-right">
                                             <p className="text-xs text-gray-500">Monthly</p>
                                             <p className="font-semibold">
-                                                ₱{historyLoan.monthly_amortization.toLocaleString()}
+                                                {formatCurrency(historyLoan.monthly_amortization)}
                                             </p>
                                         </div>
                                     </div>

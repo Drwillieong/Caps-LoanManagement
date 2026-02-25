@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { useMemo, useState, useEffect } from 'react';
 import type { ApplyLoanProps, EligibleCoMaker, PreviousLoan } from '@/types';
-import { Search, User, Calendar, DollarSign, AlertCircle, CheckCircle2, Clock, Eye, EyeOff, ArrowRight } from 'lucide-react';
+import { Search, User, Calendar, AlertCircle, CheckCircle2, Clock, Eye, EyeOff, ArrowRight } from 'lucide-react';
 
 export default function ApplyLoan({
     loanTypes,
@@ -98,13 +98,24 @@ export default function ApplyLoan({
     // toggle for showing applicant info (can be used for future expansion)
     const [showApplicantInfo, setShowApplicantInfo] = useState(false);
 
-    function maskCurrency(value: number, visible: boolean) {
-        if (!visible) return '••••••';
-        return `₱${value.toLocaleString(undefined, {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-        })}`;
+    function maskCurrency(value: number | string, visible: boolean) {
+    if (!visible) return '₱•••••';
+
+    if (value === null || value === undefined || value === '') {
+        return '₱0.00';
     }
+
+    const number = typeof value === 'string'
+        ? Number(value.replace(/,/g, ''))
+        : value;
+
+    if (isNaN(number)) return '₱0.00';
+
+    return `₱${number.toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    })}`;
+}
 
     // Co-maker search state
     const [coMakerSearch, setCoMakerSearch] = useState('');
@@ -185,6 +196,20 @@ export default function ApplyLoan({
         });
     }
 
+    // Format currency with commas and 2 decimal places
+    function formatCurrency(amount: number | string): string {
+        if (amount === null || amount === undefined || amount === '') return '₱0.00';
+
+        const number = typeof amount === 'string' ? Number(amount) : amount;
+
+        if (isNaN(number)) return '₱0.00';
+
+        return `₱${number.toLocaleString('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        })}`;
+    }
+
     // Get status badge variant
     function getStatusBadge(status: string) {
         switch (status) {
@@ -197,6 +222,18 @@ export default function ApplyLoan({
                 return <Badge>{status}</Badge>;
         }
     }
+    // Auto-format Loan Amount input with commas and 2 decimals while typing
+    function formatNumberWithCommas(value: string | number) {
+    if (!value) return '';
+    return Number(value).toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    });
+        }
+
+        function stripCommas(value: string) {
+            return value.replace(/,/g, '');
+        }
 
     return (
         <AppLayout headerRight={<LiveClock />}>
@@ -250,8 +287,8 @@ export default function ApplyLoan({
                                             </p>
                                             <p className="text-sm text-red-600">
                                                 {exceedsShareCapital 
-                                                    ? `Maximum allowed: ₱${maxLoanAllowed.toLocaleString()}`
-                                                    : `Maximum monthly: ₱${maxMonthlyPayment.toLocaleString()} (50% of ₱${memberProfile.basic_salary.toLocaleString()})`}
+                                                    ? `Maximum allowed: ₱${formatNumberWithCommas(maxLoanAllowed)}`
+                                                    : `Maximum monthly: ₱${formatNumberWithCommas(maxMonthlyPayment)} (50% of ₱${formatNumberWithCommas(memberProfile.basic_salary)})`}
                                             </p>
                                         </div>
                                     </>
@@ -263,7 +300,7 @@ export default function ApplyLoan({
                                                 ✅ Loan amount within allowed limit
                                             </p>
                                             <p className="text-sm text-green-600">
-                                                You can apply up to ₱{maxLoanAllowed.toLocaleString()}
+                                                You can apply up to {maskCurrency(maxLoanAllowed, showApplicantInfo)}
                                             </p>
                                         </div>
                                     </>
@@ -276,7 +313,9 @@ export default function ApplyLoan({
                                     <div className="flex justify-between text-sm">
                                         <span className="text-gray-600">Loan Usage</span>
                                         <span className="font-medium">
-                                            ₱{Number(data.principal_amount).toLocaleString()} / ₱{maxLoanAllowed.toLocaleString()}
+                                            {maskCurrency(data.principal_amount, showApplicantInfo)} 
+                                            &nbsp;/&nbsp;
+                                            {maskCurrency(maxLoanAllowed, showApplicantInfo)}
                                         </span>
                                     </div>
                                     <div className="h-3 w-full overflow-hidden rounded-full bg-gray-200">
@@ -295,15 +334,21 @@ export default function ApplyLoan({
                                 <div className="grid grid-cols-3 gap-4 rounded-lg bg-muted p-4">
                                     <div className="text-center">
                                         <p className="text-xs text-gray-500">Interest</p>
-                                        <p className="font-semibold">₱{computed.interest}</p>
+                                        <p className="font-semibold">
+                                            ₱{formatNumberWithCommas(computed.interest)}
+                                        </p>
                                     </div>
                                     <div className="text-center">
                                         <p className="text-xs text-gray-500">Monthly</p>
-                                        <p className="font-semibold">₱{computed.monthly}</p>
+                                        <p className="font-semibold">
+                                            ₱{formatNumberWithCommas(computed.monthly)}
+                                        </p>
                                     </div>
                                     <div className="text-center">
                                         <p className="text-xs text-gray-500">Total Payable</p>
-                                        <p className="font-semibold">₱{computed.total}</p>
+                                        <p className="font-semibold">
+                                            ₱{formatNumberWithCommas(computed.total)}
+                                        </p>
                                     </div>
                                 </div>
                             )}
@@ -340,13 +385,11 @@ export default function ApplyLoan({
                                                 {getStatusBadge(loan.status)}
                                             </div>
                                             <div className="flex flex-wrap gap-4 text-sm text-gray-600">
-                                                <span className="flex items-center gap-1">
-                                                    <DollarSign className="h-3 w-3" />
-                                                    Principal: ₱{loan.principal_amount.toLocaleString()}
+                                                <span>
+                                                    Principal: {formatCurrency(loan.principal_amount)}
                                                 </span>
-                                                <span className="flex items-center gap-1">
-                                                    <DollarSign className="h-3 w-3" />
-                                                    Balance: ₱{loan.balance.toLocaleString()}
+                                                <span>
+                                                    Balance: {formatCurrency(loan.balance)}
                                                 </span>
                                                 {loan.next_due_date && (
                                                     <span className="flex items-center gap-1">
@@ -359,7 +402,7 @@ export default function ApplyLoan({
                                         <div className="text-right">
                                             <p className="text-xs text-gray-500">Monthly</p>
                                             <p className="font-semibold">
-                                                ₱{loan.monthly_amortization.toLocaleString()}
+                                                {formatCurrency(loan.monthly_amortization)}
                                             </p>
                                         </div>
                                     </div>
@@ -447,14 +490,19 @@ export default function ApplyLoan({
                                 <div className="space-y-2">
                                     <Label>Loan Amount (₱)</Label>
                                     <Input
-                                        type="number"
-                                        placeholder="Enter amount"
-                                        value={data.principal_amount}
-                                        onChange={(e) =>
-                                            setData('principal_amount', e.target.value)
-                                        }
-                                    />
-                                    <InputError message={errors.principal_amount} />
+                                    type="text"
+                                    inputMode="numeric"
+                                    placeholder="Enter amount"
+                                    value={formatNumberWithCommas(data.principal_amount)}
+                                    onChange={(e) => {
+                                        const rawValue = stripCommas(e.target.value);
+
+                                        // Allow only numbers
+                                        if (!/^\d*$/.test(rawValue)) return;
+
+                                        setData('principal_amount', rawValue);
+                                    }}
+                                />
                                 </div>
 
                                 <div className="space-y-2">

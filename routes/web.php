@@ -87,9 +87,17 @@ Route::get('dashboards/Member/MemberActiveLoan', function () {
         return Inertia::render('dashboards/Member/MemberCompletedLoan');
     })->middleware(['role:member', 'ensure.profile.completed'])->name('member.completed-loan');
 
-    Route::get('dashboards/Member/CoMaker', function () {
-    return Inertia::render('dashboards/Member/CoMaker');
-    })->middleware(['role:member', 'ensure.profile.completed'])->name('member.co-maker');
+    Route::get('dashboards/Member/CoMaker', [LoanController::class, 'comakerRequests'])
+        ->middleware(['role:member', 'ensure.profile.completed'])
+        ->name('member.co-maker');
+
+    Route::post('dashboards/Member/CoMaker/Respond', [LoanController::class, 'respondToCoMakerRequest'])
+        ->middleware(['role:member', 'ensure.profile.completed'])
+        ->name('member.comaker.respond');
+
+    Route::get('dashboards/Member/CoMaker/Count', [LoanController::class, 'comakerRequestCount'])
+        ->middleware(['role:member', 'ensure.profile.completed'])
+        ->name('member.comaker.count');
 
 
 

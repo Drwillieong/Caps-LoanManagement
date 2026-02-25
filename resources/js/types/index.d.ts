@@ -116,3 +116,25 @@ export interface PendingApplicationProps {
     hasPendingLoan: boolean;
     loanHistory: PendingApplicationLoan[];
 }
+
+export interface CoMakerRequest {
+    id: number;
+    loan_id: number;
+    loan_type_name: string;
+    principal_amount: number;
+    terms_months: number;
+    interest_amount: number;
+    total_amount_due: number;
+    monthly_amortization: number;
+    status: string;
+    created_at: string;
+    requester: {
+        id: number;
+        name: string;
+        email: string;
+    };
+}
+
+export interface CoMakerProps {
+    coMakerRequests: CoMakerRequest[];
+}

@@ -19,7 +19,7 @@ class LoanTypeSeeder extends Seeder
             'requires_comaker' => true,
         ]);
 
-       /* LoanType::create([
+        LoanType::create([
             'name' => 'COOP Cellphone',
             'interest_rate_per_annum' => 15.00,
             'max_term_months' => 12,
@@ -59,6 +59,6 @@ class LoanTypeSeeder extends Seeder
             'interest_rate_per_annum' => 15.00,
             'max_term_months' => 12,
             'requires_comaker' => true,
-        ]); */
+        ]); 
     }
 }

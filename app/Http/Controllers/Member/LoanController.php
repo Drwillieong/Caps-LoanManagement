@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Member;
 
 use App\Http\Controllers\Controller;
+use App\Mail\SendEmailCoMaker;
 use App\Models\Loan;
 use App\Models\LoanCoMaker;
 use App\Models\LoanType;
@@ -10,6 +11,7 @@ use App\Models\MemberProfile;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
 
 class LoanController extends Controller
@@ -204,6 +206,20 @@ class LoanController extends Controller
                 'loan_id' => $loan->id,
                 'user_id' => $validated['co_maker_user_id'],
             ]);
+
+            // Send email notification to co-maker
+            $coMaker = User::find($validated['co_maker_user_id']);
+            $borrower = $user;
+            $loanTypeName = $loanType->name;
+
+            if ($coMaker && $coMaker->email) {
+                Mail::to($coMaker->email)->send(new SendEmailCoMaker(
+                    trim($coMaker->first_name . ($coMaker->middle_name ? ' ' . $coMaker->middle_name : '') . ' ' . $coMaker->last_name),
+                    trim($borrower->first_name . ($borrower->middle_name ? ' ' . $borrower->middle_name : '') . ' ' . $borrower->last_name),
+                    $loanTypeName,
+                    $loan->principal_amount
+                ));
+            }
         }
 
         return redirect()
@@ -279,6 +295,20 @@ class LoanController extends Controller
                 'loan_id' => $loan->id,
                 'user_id' => $validated['co_maker_user_id'],
             ]);
+
+            // Send email notification to co-maker
+            $coMaker = User::find($validated['co_maker_user_id']);
+            $borrower = $user;
+            $loanTypeName = $loanType->name;
+
+            if ($coMaker && $coMaker->email) {
+                Mail::to($coMaker->email)->send(new SendEmailCoMaker(
+                    trim($coMaker->first_name . ($coMaker->middle_name ? ' ' . $coMaker->middle_name : '') . ' ' . $coMaker->last_name),
+                    trim($borrower->first_name . ($borrower->middle_name ? ' ' . $borrower->middle_name : '') . ' ' . $borrower->last_name),
+                    $loanTypeName,
+                    $loan->principal_amount
+                ));
+            }
         }
 
         return redirect()
@@ -425,5 +455,126 @@ class LoanController extends Controller
                 'co_maker_user_id' => $loan->coMakers->first()?->user_id ?? '',
             ],
         ]);
+    }
+
+    /**
+     * Get pending co-maker requests for the current user
+     */
+    public function comakerRequests()
+    {
+        $user = Auth::user();
+
+        // Get loans where current user is selected as co-maker and status is pending
+        // Also filter to only show loans that are still awaiting co-maker confirmation
+        $coMakerRequests = LoanCoMaker::where('user_id', $user->id)
+            ->where('status', 'pending')
+            ->whereHas('loan', function ($query) {
+                $query->where('status', 'awaiting_comaker');
+            })
+            ->with([
+                'loan.loanType',
+                'loan.user'
+            ])
+            ->get()
+            ->map(function ($coMaker) {
+                $loan = $coMaker->loan;
+                $loanUser = $loan->user;
+                
+                return [
+                    'id' => $coMaker->id,
+                    'loan_id' => $loan->id,
+                    'loan_type_name' => $loan->loanType->name ?? 'N/A',
+                    'principal_amount' => $loan->principal_amount,
+                    'terms_months' => $loan->terms_months,
+                    'interest_amount' => $loan->interest_amount,
+                    'total_amount_due' => $loan->total_amount_due,
+                    'monthly_amortization' => $loan->monthly_amortization,
+                    'status' => $loan->status,
+                    'created_at' => $loan->created_at->format('Y-m-d H:i:s'),
+                    'requester' => [
+                        'id' => $loanUser->id,
+                        'name' => trim($loanUser->first_name . ($loanUser->middle_name ? ' ' . $loanUser->middle_name : '') . ' ' . $loanUser->last_name),
+                        'email' => $loanUser->email,
+                    ],
+                ];
+            });
+
+        return Inertia::render('dashboards/Member/CoMaker', [
+            'coMakerRequests' => $coMakerRequests,
+        ]);
+    }
+
+    /**
+     * Respond to a co-maker request (accept or reject)
+     */
+    public function respondToCoMakerRequest(Request $request)
+    {
+        $validated = $request->validate([
+            'loan_id' => 'required|exists:loans,id',
+            'action' => 'required|in:accept,reject',
+        ]);
+
+        $user = Auth::user();
+
+        // Find the co-maker record
+        $coMaker = LoanCoMaker::where('loan_id', $validated['loan_id'])
+            ->where('user_id', $user->id)
+            ->where('status', 'pending')
+            ->first();
+
+        if (!$coMaker) {
+            return back()->with('error', 'Co-maker request not found or already responded.');
+        }
+
+        // Update the co-maker status - use 'accepted' to match the enum in migration
+        $status = $validated['action'] === 'accept' ? 'accepted' : 'rejected';
+        $coMaker->update([
+            'status' => $status,
+            'responded_at' => now(),
+        ]);
+
+        // If accepted, check if loan can proceed (if co-maker was required)
+        if ($status === 'accepted') {
+            $loan = $coMaker->loan;
+            $loanType = $loan->loanType;
+            
+            // Check if all required co-makers have accepted
+            $requiredCoMakers = $loanType->requires_comaker ? 1 : 0;
+            $acceptedCoMakers = $loan->coMakers()->where('status', 'accepted')->count();
+            
+            // If co-maker is accepted and no more co-makers needed, update loan status
+            if ($acceptedCoMakers >= $requiredCoMakers) {
+                $loan->update(['status' => 'pending_gm_review']);
+            }
+        } else {
+            // If rejected, notify the loan applicant (could add notification here)
+            $loan = $coMaker->loan;
+            $loan->update(['status' => 'rejected', 'remarks' => 'Co-maker declined the request.']);
+        }
+
+        $message = $validated['action'] === 'accept' 
+            ? 'You have accepted the co-maker request.' 
+            : 'You have declined the co-maker request.';
+
+        return redirect()
+            ->route('member.co-maker')
+            ->with('success', $message);
+    }
+
+    /**
+     * Get count of pending co-maker requests for dashboard display
+     */
+    public function comakerRequestCount()
+    {
+        $user = Auth::user();
+
+        $count = LoanCoMaker::where('user_id', $user->id)
+            ->where('status', 'pending')
+            ->whereHas('loan', function ($query) {
+                $query->where('status', 'awaiting_comaker');
+            })
+            ->count();
+
+        return response()->json(['count' => $count]);
     }
 }

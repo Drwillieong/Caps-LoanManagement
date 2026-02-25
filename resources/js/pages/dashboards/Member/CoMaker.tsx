@@ -2,6 +2,7 @@ import { Head, useForm, Link } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { LiveClock } from '@/components/live-clock';
 import { type BreadcrumbItem, type CoMakerProps } from '@/types';
+import { toast } from 'react-hot-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -60,8 +61,16 @@ export default function CoMaker({ coMakerRequests }: CoMakerProps) {
         });
         
         form.post('/dashboards/Member/CoMaker/Respond', {
+            onSuccess: () => {
+                if (action === 'accept') {
+                    toast.success('You have accepted the co-maker request!');
+                } else {
+                    toast('You have declined the co-maker request.');
+                }
+            },
             onError: (errors) => {
                 console.error('Error responding to co-maker request:', errors);
+                toast.error('Failed to respond to co-maker request. Please try again.');
             },
         });
     }

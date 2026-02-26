@@ -141,7 +141,7 @@ export default function Login({
             {/* Register link */}
             {canRegister && (
               <div className="text-center text-sm text-green-600/80">
-                Don&apos;t have an account?{' '}
+              
                 
               </div>
             )}

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Member;
 
 use App\Http\Controllers\Controller;
+use App\Mail\CoMakerDecision;
 use App\Mail\SendEmailCoMaker;
 use App\Models\Loan;
 use App\Models\LoanCoMaker;
@@ -526,6 +527,18 @@ class LoanController extends Controller
             return back()->with('error', 'Co-maker request not found or already responded.');
         }
 
+        // Get loan and borrower details before updating
+        $loan = $coMaker->loan;
+        $borrower = $loan->user;
+        $loanType = $loan->loanType;
+
+        // Co-maker name
+        $coMakerName = trim($user->first_name . ($user->middle_name ? ' ' . $user->middle_name : '') . ' ' . $user->last_name);
+        
+        // Borrower name and email
+        $borrowerName = trim($borrower->first_name . ($borrower->middle_name ? ' ' . $borrower->middle_name : '') . ' ' . $borrower->last_name);
+        $borrowerEmail = $borrower->email;
+
         // Update the co-maker status - use 'accepted' to match the enum in migration
         $status = $validated['action'] === 'accept' ? 'accepted' : 'rejected';
         $coMaker->update([
@@ -535,9 +548,6 @@ class LoanController extends Controller
 
         // If accepted, check if loan can proceed (if co-maker was required)
         if ($status === 'accepted') {
-            $loan = $coMaker->loan;
-            $loanType = $loan->loanType;
-            
             // Check if all required co-makers have accepted
             $requiredCoMakers = $loanType->requires_comaker ? 1 : 0;
             $acceptedCoMakers = $loan->coMakers()->where('status', 'accepted')->count();
@@ -547,9 +557,28 @@ class LoanController extends Controller
                 $loan->update(['status' => 'pending_gm_review']);
             }
         } else {
-            // If rejected, notify the loan applicant (could add notification here)
-            $loan = $coMaker->loan;
+            // If rejected, update loan status
             $loan->update(['status' => 'rejected', 'remarks' => 'Co-maker declined the request.']);
+        }
+
+        // Send email notification to the borrower
+        try {
+            Mail::to($borrowerEmail)->send(new CoMakerDecision(
+                $borrowerName,
+                $borrowerEmail,
+                $coMakerName,
+                $status,
+                $loanType->name ?? 'N/A',
+                $loan->principal_amount,
+                $loan->created_at->format('F d, Y'),
+                $loan->terms_months,
+                $loan->interest_amount,
+                $loan->monthly_amortization,
+                $loan->total_amount_due
+            ));
+        } catch (\Exception $e) {
+            // Log error but don't fail the request
+            \Log::error('Failed to send co-maker decision email: ' . $e->getMessage());
         }
 
         $message = $validated['action'] === 'accept' 

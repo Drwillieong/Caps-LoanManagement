@@ -31,7 +31,94 @@ Route::middleware(['auth', 'verified'])->group(function () {
             abort(403, 'Unauthorized role.');
         }
 
-        return Inertia::render($roleComponents[$role]);
+        // Get member-specific data
+        $memberData = [];
+        if ($role === 'member') {
+            $user = auth()->user();
+            $memberProfile = $user->memberProfile;
+            
+            // Get active loans (released/approved status) with amortizations
+            $activeLoans = \App\Models\Loan::where('user_id', $user->id)
+                ->whereIn('status', ['released', 'approved'])
+                ->with(['payments', 'amortizations' => function($query) {
+                    $query->orderBy('due_date', 'asc');
+                }])
+                ->get();
+            
+            // Calculate total loan balance
+            $loanBalance = $activeLoans->sum(function ($loan) {
+                $totalPaid = $loan->payments->sum('amount');
+                return $loan->total_amount_due - $totalPaid;
+            });
+
+            // Get active and completed loan counts
+            $activeLoanCount = \App\Models\Loan::where('user_id', $user->id)
+                ->whereIn('status', ['released', 'approved'])
+                ->count();
+
+            $completedLoanCount = \App\Models\Loan::where('user_id', $user->id)
+                ->where('status', 'paid_off')
+                ->count();
+
+            // Get loan progress data for the most recent active loan
+            $loanProgress = null;
+            if ($activeLoans->isNotEmpty()) {
+                $latestLoan = $activeLoans->first();
+                $totalAmortizations = $latestLoan->amortizations->count();
+                $paidAmortizations = $latestLoan->amortizations->where('status', 'paid')->count();
+                
+                // Get next due date (first unpaid amortization)
+                $nextDueAmortization = $latestLoan->amortizations
+                    ->where('status', 'unpaid')
+                    ->sortBy('due_date')
+                    ->first();
+
+                // Determine payment status
+                $paymentStatus = 'paid';
+                if ($nextDueAmortization) {
+                    $dueDate = $nextDueAmortization->due_date;
+                    $today = now()->startOfDay();
+                    $daysUntilDue = $today->diffInDays($dueDate, false);
+                    
+                    if ($daysUntilDue <= 7) {
+                        $paymentStatus = 'due_soon'; // Orange - due within 7 days
+                    } else {
+                        $paymentStatus = 'upcoming'; // Green - upcoming (more than 7 days)
+                    }
+                } else {
+                    $paymentStatus = 'paid'; // All paid
+                }
+
+                $loanProgress = [
+                    'loan_id' => $latestLoan->id,
+                    'loan_type' => $latestLoan->loanType->name ?? 'Loan',
+                    'total_amount' => $latestLoan->total_amount_due,
+                    'remaining_balance' => $loanBalance,
+                    'total_months' => $latestLoan->terms_months,
+                    'paid_months' => $paidAmortizations,
+                    'next_due_date' => $nextDueAmortization?->due_date?->format('Y-m-d'),
+                    'next_due_amount' => $nextDueAmortization?->amount_due ?? 0,
+                    'payment_status' => $paymentStatus,
+                ];
+            }
+
+            $memberData = [
+                'share_capital_balance' => $memberProfile?->share_capital_balance ?? 0,
+                'loan_balance' => $loanBalance,
+                'active_loan_count' => $activeLoanCount,
+                'completed_loan_count' => $completedLoanCount,
+                'loan_progress' => $loanProgress,
+                // Loan Eligibility Data
+                'loan_eligibility' => [
+                    'max_loan_allowed' => ($memberProfile?->share_capital_balance ?? 0) * 2,
+                    'basic_salary' => $memberProfile?->basic_salary ?? 0,
+                    'max_monthly_payment' => ($memberProfile?->basic_salary ?? 0) / 2,
+                    'has_active_loan' => $activeLoanCount > 0,
+                ],
+            ];
+        }
+
+        return Inertia::render($roleComponents[$role], $memberData);
     })->name('dashboard')->middleware('ensure.profile.completed');
 
     // HR

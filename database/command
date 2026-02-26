@@ -2,17 +2,17 @@ use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 
 User::create([
-    'first_name' => 'HrAdmin',
-    'middle_name' => '   ',
-    'last_name' => '',
-    'email' => 'hradmin@gmail.com',
+    'first_name' => 'hr',
+    'middle_name' => ' admin ',
+    'last_name' => 'minor',
+    'email' => 'kayhleenminor@gmail.com',
     'password' => Hash::make('admin123'),
     'role' => 'hr',
     'is_active' => true,
 ]);
 
 // delete user
-App\Models\User::where('email', 'kcbolado@ccc.edu.ph')->delete(); 
+App\Models\User::where('email', 'minorkayhleen@gmail.com')->delete(); 
 
 // delete all the users account except the hr
 App\Models\User::where('role', '!=', 'hr')->delete();   

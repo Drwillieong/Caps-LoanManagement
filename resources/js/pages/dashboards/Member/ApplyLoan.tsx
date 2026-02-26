@@ -224,16 +224,16 @@ export default function ApplyLoan({
     }
     // Auto-format Loan Amount input with commas and 2 decimals while typing
     function formatNumberWithCommas(value: string | number) {
-    if (!value) return '';
-    return Number(value).toLocaleString('en-US', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-    });
-        }
+        if (!value) return '';
+        return Number(value).toLocaleString('en-US', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 2,
+        });
+    }
 
-        function stripCommas(value: string) {
-            return value.replace(/,/g, '');
-        }
+    function stripCommas(value: string) {
+        return value.replace(/,/g, '');
+    }
 
     return (
         <AppLayout headerRight={<LiveClock />}>
@@ -490,19 +490,23 @@ export default function ApplyLoan({
                                 <div className="space-y-2">
                                     <Label>Loan Amount (₱)</Label>
                                     <Input
-                                    type="text"
-                                    inputMode="numeric"
-                                    placeholder="Enter amount"
-                                    value={formatNumberWithCommas(data.principal_amount)}
-                                    onChange={(e) => {
-                                        const rawValue = stripCommas(e.target.value);
+                                        type="text"
+                                        inputMode="numeric"
+                                        placeholder="Enter amount"
+                                        value={formatNumberWithCommas(data.principal_amount)}
+                                        onChange={(e) => {
+                                            // Remove commas from input value
+                                            const rawValue = e.target.value.replace(/,/g, '');
+                                            
+                                            // Allow empty, numbers with optional decimal
+                                            if (rawValue !== '' && !/^\d*\.?\d*$/.test(rawValue)) return;
+                                            
+                                            // Don't allow leading zeros like 00, 01 etc (except for decimals like 0.5)
+                                            if (/^0\d/.test(rawValue)) return;
 
-                                        // Allow only numbers
-                                        if (!/^\d*$/.test(rawValue)) return;
-
-                                        setData('principal_amount', rawValue);
-                                    }}
-                                />
+                                            setData('principal_amount', rawValue);
+                                        }}
+                                    />
                                 </div>
 
                                 <div className="space-y-2">

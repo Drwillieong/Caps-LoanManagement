@@ -138,3 +138,15 @@ export interface CoMakerRequest {
 export interface CoMakerProps {
     coMakerRequests: CoMakerRequest[];
 }
+
+export interface ChooseComakerProps {
+    members: Array<{
+        id: number;
+        name: string;
+        email: string;
+        member_id: string;
+        status: 'available' | 'unavailable';
+       
+        date_joined: string;
+    }>;
+}

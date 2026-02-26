@@ -186,6 +186,10 @@ Route::get('dashboards/Member/MemberActiveLoan', function () {
         ->middleware(['role:member', 'ensure.profile.completed'])
         ->name('member.comaker.count');
 
+    Route::get('dashboards/Member/ChooseComaker', [LoanController::class, 'chooseComaker'])
+        ->middleware(['role:member', 'ensure.profile.completed'])
+        ->name('member.choose-comaker');
+
 
 
     // Secretary

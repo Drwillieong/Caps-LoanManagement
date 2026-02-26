@@ -606,4 +606,42 @@ class LoanController extends Controller
 
         return response()->json(['count' => $count]);
     }
+
+    /**
+     * Show Choose Comaker page with eligible members
+     */
+    public function chooseComaker()
+    {
+        $user = Auth::user();
+
+        // Get all members except the current user
+        // Include their member profile for additional info
+        $members = User::where('role', 'member')
+            ->where('id', '!=', $user->id)
+            ->with('memberProfile')
+            ->select('id', 'first_name', 'middle_name', 'last_name', 'email', 'created_at')
+            ->get()
+            ->map(function ($member) {
+                // Check if member has an active loan as co-maker (they would not be eligible)
+                $hasActiveLoanAsCoMaker = Loan::whereIn('status', ['approved', 'released'])
+                    ->whereHas('coMakers', function ($q) use ($member) {
+                        $q->where('user_id', $member->id)->where('status', 'accepted');
+                    })
+                    ->exists();
+
+                return [
+                    'id' => $member->id,
+                    'name' => trim($member->first_name . ($member->middle_name ? ' ' . $member->middle_name : '') . ' ' . $member->last_name),
+                    'email' => $member->email,
+                    'member_id' => 'MEM-' . str_pad($member->id, 4, '0', STR_PAD_LEFT),
+                    'status' => $hasActiveLoanAsCoMaker ? 'unavailable' : 'available',
+                    'share_capital' => $member->memberProfile?->share_capital_balance ?? 0,
+                    'date_joined' => $member->created_at->format('Y-m-d'),
+                ];
+            });
+
+        return Inertia::render('dashboards/Member/ChooseComaker', [
+            'members' => $members,
+        ]);
+    }
 }

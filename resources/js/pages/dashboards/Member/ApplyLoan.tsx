@@ -1,4 +1,4 @@
-import { Head, useForm, Link } from '@inertiajs/react';
+import { Head, useForm, Link, usePage } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { LiveClock } from '@/components/live-clock';
 import HeadingSmall from '@/components/heading-small';
@@ -9,7 +9,7 @@ import InputError from '@/components/input-error';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useMemo, useState, useEffect } from 'react';
-import type { ApplyLoanProps, EligibleCoMaker, PreviousLoan } from '@/types';
+import type { ApplyLoanProps, EligibleCoMaker, PreviousLoan, SharedData } from '@/types';
 import { Search, User, Calendar, AlertCircle, CheckCircle2, Clock, Eye, EyeOff, ArrowRight } from 'lucide-react';
 
 export default function ApplyLoan({
@@ -94,6 +94,15 @@ export default function ApplyLoan({
         terms_months: editingLoan?.terms_months?.toString() || '',
         co_maker_user_id: editingLoan?.co_maker_user_id?.toString() || '',
     });
+
+    // Handle co_maker_id from ChooseComaker page
+    useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const coMakerId = urlParams.get('co_maker_id');
+        if (coMakerId && eligibleCoMakers.some(cm => cm.id.toString() === coMakerId)) {
+            setData('co_maker_user_id', coMakerId);
+        }
+    }, [eligibleCoMakers]);
 
     // toggle for showing applicant info (can be used for future expansion)
     const [showApplicantInfo, setShowApplicantInfo] = useState(false);

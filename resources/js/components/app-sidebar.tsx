@@ -53,6 +53,11 @@ const memberNavItems: NavItem[] = [
         icon: FileText,
     },
     {
+        title: 'Choose CoMaker',
+        href: '/dashboards/Member/ChooseComaker',
+        icon: UsersRound,
+    },
+    {
         title: 'Active Loan',
         href: '/dashboards/Member/MemberActiveLoan',
         icon: Clock,

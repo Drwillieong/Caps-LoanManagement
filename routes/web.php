@@ -197,6 +197,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboards/HR/create', [CreateMemberController::class, 'create'])->middleware('role:hr')->name('users.create');
     Route::post('dashboards/HR/SeeUsers', [CreateMemberController::class, 'store'])->middleware('role:hr')->name('users.store');
 
+
     Route::get('dashboards/HR/HRActiveLoan', function () {
         return Inertia::render('dashboards/HR/HRActiveLoan');
     })->middleware('role:hr')->name('hr.active-loan');

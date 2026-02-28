@@ -1,11 +1,13 @@
-# GM Loan Validation Feature - TODO
+# GM Loan Application Feature - Implementation Plan
 
-## Tasks
-- [ ] 1. Create GmController.php in app/Http/Controllers/GmController/
-- [ ] 2. Update routes/web.php with GM validation routes
-- [ ] 3. Update ValidateLoan.tsx with professional UI and functionality
-- [ ] 4. Add necessary types to index.d.ts for GM validation
+## TODO List:
+- [x] 1. Add a new route in GmController.php for fetching loan details by ID
+- [x] 2. Add new routes in web.php for LoanApplication page
+- [x] 3. Update TypeScript types in index.d.ts
+- [x] 4. Update LoanApplication.tsx with table showing pending_gm_review loans
+- [x] 5. ValidateLoan.tsx already handles single loan view (via viewLoan route)
+- [x] 6. Update sidebar in app-sidebar.tsx to add "Loan Application" menu item
 
-## Completed Tasks
-- [x] Analyzed existing codebase (LoanController, CoMaker, routes)
-- [x] Identified that loan status is already set to 'pending_gm_review' after co-maker approval
+## Completed:
+- [x] Plan created and confirmed by user
+- [x] All implementation tasks completed

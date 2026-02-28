@@ -77,10 +77,11 @@ const memberNavItems: NavItem[] = [
 
 const gmNavItems: NavItem[] = [
     {
-        title: 'Validate Loan Application',
-        href: '/dashboards/Gm/ValidateLoan',
-        icon: FileCheck,
+        title: 'Loan Application',
+        href: '/dashboards/Gm/LoanApplication',
+        icon: FileText,
     },
+   
     {
         title: 'Active Loan',
         href: '/dashboards/Gm/GMActiveLoan',

@@ -188,4 +188,144 @@ class GmController extends Controller
 
         return response()->json(['count' => $count]);
     }
+
+    /**
+     * Get all pending GM review loans for the loan application table
+     */
+    public function loanApplication()
+    {
+        // Get loans with status 'pending_gm_review'
+        $pendingLoans = Loan::where('status', 'pending_gm_review')
+            ->with([
+                'user.memberProfile',
+                'loanType',
+                'coMakers.user'
+            ])
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($loan) {
+                $user = $loan->user;
+                $memberProfile = $user->memberProfile;
+
+                return [
+                    'id' => $loan->id,
+                    'loan_type_name' => $loan->loanType->name ?? 'N/A',
+                    'principal_amount' => $loan->principal_amount,
+                    'terms_months' => $loan->terms_months,
+                    'interest_amount' => $loan->interest_amount,
+                    'total_amount_due' => $loan->total_amount_due,
+                    'monthly_amortization' => $loan->monthly_amortization,
+                    'status' => $loan->status,
+                    'created_at' => $loan->created_at->format('Y-m-d H:i:s'),
+                    'member' => [
+                        'id' => $user->id,
+                        'name' => trim($user->first_name . ($user->middle_name ? ' ' . $user->middle_name : '') . ' ' . $user->last_name),
+                        'email' => $user->email,
+                        'member_id' => 'MEM-' . str_pad($user->id, 4, '0', STR_PAD_LEFT),
+                        'date_hired' => $memberProfile?->date_hired?->format('Y-m-d'),
+                        'basic_salary' => $memberProfile?->basic_salary ?? 0,
+                        'share_capital_balance' => $memberProfile?->share_capital_balance ?? 0,
+                    ],
+                    'co_makers' => $loan->coMakers->map(function ($coMaker) {
+                        $coMakerUser = $coMaker->user;
+                        return [
+                            'id' => $coMakerUser->id,
+                            'name' => trim($coMakerUser->first_name . ($coMakerUser->middle_name ? ' ' . $coMakerUser->middle_name : '') . ' ' . $coMakerUser->last_name),
+                            'email' => $coMakerUser->email,
+                            'status' => $coMaker->status,
+                        ];
+                    }),
+                ];
+            });
+
+        return Inertia::render('dashboards/Gm/LoanApplication', [
+            'pendingLoans' => $pendingLoans,
+        ]);
+    }
+
+    /**
+     * Get a single loan's full details for validation
+     */
+    public function viewLoan($loanId)
+    {
+        $loan = Loan::where('id', $loanId)
+            ->where('status', 'pending_gm_review')
+            ->with([
+                'user.memberProfile',
+                'loanType',
+                'coMakers.user'
+            ])
+            ->firstOrFail();
+
+        $user = $loan->user;
+        $memberProfile = $user->memberProfile;
+
+        // Get past loans for this member (exclude rejected)
+        $pastLoans = Loan::where('user_id', $user->id)
+            ->where('id', '!=', $loan->id)
+            ->whereIn('status', ['approved', 'released', 'paid_off'])
+            ->with('loanType')
+            ->orderBy('created_at', 'desc')
+            ->limit(10)
+            ->get()
+            ->map(function ($pastLoan) {
+                // Calculate balance for past loans
+                $totalPaid = LoanPayment::where('loan_id', $pastLoan->id)
+                    ->sum('amount');
+
+                $balance = $pastLoan->total_amount_due - $totalPaid;
+
+                return [
+                    'id' => $pastLoan->id,
+                    'loan_type_name' => $pastLoan->loanType->name ?? 'N/A',
+                    'principal_amount' => $pastLoan->principal_amount,
+                    'total_amount_due' => $pastLoan->total_amount_due,
+                    'balance' => max(0, $balance),
+                    'status' => $pastLoan->status,
+                    'release_date' => $pastLoan->release_date?->format('Y-m-d'),
+                    'terms_months' => $pastLoan->terms_months,
+                ];
+            });
+
+        // Calculate active loans count
+        $activeLoansCount = Loan::where('user_id', $user->id)
+            ->whereIn('status', ['approved', 'released'])
+            ->count();
+
+        $loanDetails = [
+            'id' => $loan->id,
+            'loan_type_name' => $loan->loanType->name ?? 'N/A',
+            'principal_amount' => $loan->principal_amount,
+            'terms_months' => $loan->terms_months,
+            'interest_amount' => $loan->interest_amount,
+            'total_amount_due' => $loan->total_amount_due,
+            'monthly_amortization' => $loan->monthly_amortization,
+            'status' => $loan->status,
+            'created_at' => $loan->created_at->format('Y-m-d H:i:s'),
+            'member' => [
+                'id' => $user->id,
+                'name' => trim($user->first_name . ($user->middle_name ? ' ' . $user->middle_name : '') . ' ' . $user->last_name),
+                'email' => $user->email,
+                'member_id' => 'MEM-' . str_pad($user->id, 4, '0', STR_PAD_LEFT),
+                'date_hired' => $memberProfile?->date_hired?->format('Y-m-d'),
+                'basic_salary' => $memberProfile?->basic_salary ?? 0,
+                'share_capital_balance' => $memberProfile?->share_capital_balance ?? 0,
+            ],
+            'co_makers' => $loan->coMakers->map(function ($coMaker) {
+                $coMakerUser = $coMaker->user;
+                return [
+                    'id' => $coMakerUser->id,
+                    'name' => trim($coMakerUser->first_name . ($coMakerUser->middle_name ? ' ' . $coMakerUser->middle_name : '') . ' ' . $coMakerUser->last_name),
+                    'email' => $coMakerUser->email,
+                    'status' => $coMaker->status,
+                ];
+            }),
+            'past_loans' => $pastLoans,
+            'active_loans_count' => $activeLoansCount,
+        ];
+
+        return Inertia::render('dashboards/Gm/ValidateLoan', [
+            'pendingLoans' => [$loanDetails],
+        ]);
+    }
 }

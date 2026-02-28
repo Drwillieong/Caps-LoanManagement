@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\GmController\GmController;
 use App\Http\Controllers\HrController\CreateMemberController;
 use App\Http\Controllers\HrController\MemberProfileViewController;
 use App\Http\Controllers\Member\LoanController;
@@ -264,9 +265,21 @@ Route::get('dashboards/Member/MemberActiveLoan', function () {
 
 
     // GM
-    Route::get('dashboards/Gm/ValidateLoan', function () {
-        return Inertia::render('dashboards/Gm/ValidateLoan');
-    })->middleware('role:gm')->name('gm.validate-loan');
+    Route::get('dashboards/Gm/ValidateLoan', [GmController::class, 'index'])
+        ->middleware('role:gm')
+        ->name('gm.validate-loan');
+
+    Route::post('dashboards/Gm/Loan/{loan}/approve', [GmController::class, 'approve'])
+        ->middleware('role:gm')
+        ->name('gm.loan.approve');
+
+    Route::post('dashboards/Gm/Loan/{loan}/reject', [GmController::class, 'reject'])
+        ->middleware('role:gm')
+        ->name('gm.loan.reject');
+
+    Route::get('dashboards/Gm/Loan/PendingCount', [GmController::class, 'pendingCount'])
+        ->middleware('role:gm')
+        ->name('gm.pending-count');
 
     Route::get('dashboards/Gm/GMActiveLoan', function () {
         return Inertia::render('dashboards/Gm/GMActiveLoan');

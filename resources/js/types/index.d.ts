@@ -146,7 +146,55 @@ export interface ChooseComakerProps {
         email: string;
         member_id: string;
         status: 'available' | 'unavailable';
-       
         date_joined: string;
     }>;
+}
+
+// GM Validation Types
+export interface GmMember {
+    id: number;
+    name: string;
+    email: string;
+    member_id: string;
+    date_hired: string | null;
+    basic_salary: number;
+    share_capital_balance: number;
+}
+
+export interface GmCoMaker {
+    id: number;
+    name: string;
+    email: string;
+    status: string;
+}
+
+export interface GmPastLoan {
+    id: number;
+    loan_type_name: string;
+    principal_amount: number;
+    total_amount_due: number;
+    balance: number;
+    status: string;
+    release_date: string | null;
+    terms_months: number;
+}
+
+export interface GmPendingLoan {
+    id: number;
+    loan_type_name: string;
+    principal_amount: number;
+    terms_months: number;
+    interest_amount: number;
+    total_amount_due: number;
+    monthly_amortization: number;
+    status: string;
+    created_at: string;
+    member: GmMember;
+    co_makers: GmCoMaker[];
+    past_loans: GmPastLoan[];
+    active_loans_count: number;
+}
+
+export interface GmValidateLoanProps {
+    pendingLoans: GmPendingLoan[];
 }

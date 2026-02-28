@@ -2,12 +2,12 @@ use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 
 User::create([
-    'first_name' => 'hr',
+    'first_name' => 'gm',
     'middle_name' => ' admin ',
     'last_name' => 'minor',
-    'email' => 'kayhleenminor@gmail.com',
+    'email' => 'gmadmin@gmail.com',
     'password' => Hash::make('admin123'),
-    'role' => 'hr',
+    'role' => 'gm',
     'is_active' => true,
 ]);
 

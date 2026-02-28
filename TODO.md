@@ -1,13 +1,13 @@
-# GM Loan Application Feature - Implementation Plan
+# TODO - Number Formatting in Create.tsx
 
-## TODO List:
-- [x] 1. Add a new route in GmController.php for fetching loan details by ID
-- [x] 2. Add new routes in web.php for LoanApplication page
-- [x] 3. Update TypeScript types in index.d.ts
-- [x] 4. Update LoanApplication.tsx with table showing pending_gm_review loans
-- [x] 5. ValidateLoan.tsx already handles single loan view (via viewLoan route)
-- [x] 6. Update sidebar in app-sidebar.tsx to add "Loan Application" menu item
+## Task
+Apply format of numbers in create.tsx for basic salary and shared capital balance
 
-## Completed:
-- [x] Plan created and confirmed by user
-- [x] All implementation tasks completed
+## Steps
+- [x] 1. Analyze the file and understand the current structure
+- [x] 2. Add formatCurrency helper function
+- [x] 3. Add state variables for formatted values
+- [x] 4. Add onFocus and onBlur handlers for basic_salary
+- [x] 5. Add onFocus and onBlur handlers for share_capital_balance
+- [x] 6. Test the implementation
+

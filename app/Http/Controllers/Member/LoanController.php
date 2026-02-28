@@ -524,7 +524,7 @@ class LoanController extends Controller
             ->first();
 
         if (!$coMaker) {
-            return back()->with('error', 'Co-maker request not found or already responded.');
+            return back()->withErrors(['loan_id' => 'Co-maker request not found or already responded.']);
         }
 
         // Get loan and borrower details before updating

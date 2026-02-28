@@ -70,7 +70,12 @@ export default function CoMaker({ coMakerRequests }: CoMakerProps) {
             },
             onError: (errors) => {
                 console.error('Error responding to co-maker request:', errors);
-                toast.error('Failed to respond to co-maker request. Please try again.');
+                // Extract error message - Inertia returns errors as object { field: message }
+                const errorValues = Object.values(errors || {});
+                const errorMessage = errorValues.length > 0 
+                    ? String(errorValues[0]) 
+                    : 'Failed to respond to co-maker request. Please try again.';
+                toast.error(errorMessage);
             },
         });
     }

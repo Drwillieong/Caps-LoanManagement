@@ -38,10 +38,10 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 
 const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'GM Dashboard',
-        href: '/dashboard',
-    },
+  { title: 'Loan Applications',
+    
+    href: '/dashboards/Gm/LoanApplication'
+ },
     {
         title: 'Validate Loan Application',
         href: '/dashboards/Gm/ValidateLoan',
@@ -157,7 +157,7 @@ export default function ValidateLoan({ pendingLoans }: GmValidateLoanProps) {
                         href="/dashboard"
                         className="inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm hover:bg-muted transition"
                     >
-                        Back to Dashboard
+                        Back 
                     </Link>
                 </div>
 

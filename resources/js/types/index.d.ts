@@ -198,3 +198,22 @@ export interface GmPendingLoan {
 export interface GmValidateLoanProps {
     pendingLoans: GmPendingLoan[];
 }
+
+// GM Loan Application Table Types (simplified for table view)
+export interface GmLoanApplicationItem {
+    id: number;
+    loan_type_name: string;
+    principal_amount: number;
+    terms_months: number;
+    interest_amount: number;
+    total_amount_due: number;
+    monthly_amortization: number;
+    status: string;
+    created_at: string;
+    member: GmMember;
+    co_makers: GmCoMaker[];
+}
+
+export interface GmLoanApplicationProps {
+    pendingLoans: GmLoanApplicationItem[];
+}

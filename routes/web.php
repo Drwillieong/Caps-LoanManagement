@@ -269,6 +269,14 @@ Route::get('dashboards/Member/MemberActiveLoan', function () {
         ->middleware('role:gm')
         ->name('gm.validate-loan');
 
+    Route::get('dashboards/Gm/LoanApplication', [GmController::class, 'loanApplication'])
+        ->middleware('role:gm')
+        ->name('gm.loan-application');
+
+    Route::get('dashboards/Gm/Loan/{loan}/view', [GmController::class, 'viewLoan'])
+        ->middleware('role:gm')
+        ->name('gm.loan.view');
+
     Route::post('dashboards/Gm/Loan/{loan}/approve', [GmController::class, 'approve'])
         ->middleware('role:gm')
         ->name('gm.loan.approve');

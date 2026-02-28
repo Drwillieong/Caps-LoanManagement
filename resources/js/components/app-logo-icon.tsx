@@ -5,3 +5,4 @@ export default function AppLogoIcon(
 ) {
     return <img src="/LEIMCO.png" alt="Leimco Logo" {...props} />;
 }
+

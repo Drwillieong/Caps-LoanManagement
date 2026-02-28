@@ -34,6 +34,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Get member-specific data
         $memberData = [];
+        
         if ($role === 'member') {
             $user = auth()->user();
             $memberProfile = $user->memberProfile;
@@ -118,6 +119,73 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 ],
             ];
         }
+        
+        // Get HR-specific data
+        if ($role === 'hr') {
+            // Get member counts
+            $totalMembers = \App\Models\User::where('role', 'member')->count();
+            $activeMembers = \App\Models\User::where('role', 'member')->where('is_active', true)->count();
+            $inactiveMembers = \App\Models\User::where('role', 'member')->where('is_active', false)->count();
+            
+            // Get recent members (last 30 days)
+            $recentMembers = \App\Models\User::where('role', 'member')
+                ->where('created_at', '>=', now()->subDays(30))
+                ->with('memberProfile')
+                ->orderBy('created_at', 'desc')
+                ->limit(5)
+                ->get();
+            
+            // Get loan statistics
+            $pendingLoans = \App\Models\Loan::where('status', 'pending')->count();
+            $activeLoans = \App\Models\Loan::whereIn('status', ['released', 'approved'])->count();
+            $completedLoans = \App\Models\Loan::where('status', 'paid_off')->count();
+            
+            // Get loan status breakdown
+            $loanStatusBreakdown = [
+                'pending' => \App\Models\Loan::where('status', 'pending')->count(),
+                'approved' => \App\Models\Loan::where('status', 'approved')->count(),
+                'released' => \App\Models\Loan::where('status', 'released')->count(),
+                'paid_off' => \App\Models\Loan::where('status', 'paid_off')->count(),
+                'rejected' => \App\Models\Loan::where('status', 'rejected')->count(),
+            ];
+            
+            // Get total loan portfolio (active loans)
+            $totalLoanPortfolio = \App\Models\Loan::whereIn('status', ['released', 'approved'])
+                ->sum('total_amount_due');
+            
+            // Get total paid amount
+            $totalPaidAmount = \App\Models\LoanPayment::sum('amount');
+            
+            // Get members with loans
+            $membersWithLoans = \App\Models\Loan::whereIn('status', ['released', 'approved'])
+                ->distinct('user_id')
+                ->count('user_id');
+            
+            $memberData = [
+                'stats' => [
+                    'total_members' => $totalMembers,
+                    'active_members' => $activeMembers,
+                    'inactive_members' => $inactiveMembers,
+                    'pending_loans' => $pendingLoans,
+                    'active_loans' => $activeLoans,
+                    'completed_loans' => $completedLoans,
+                    'total_loan_portfolio' => $totalLoanPortfolio,
+                    'total_paid_amount' => $totalPaidAmount,
+                    'members_with_loans' => $membersWithLoans,
+                ],
+                'loan_status_breakdown' => $loanStatusBreakdown,
+                'recent_members' => $recentMembers->map(function ($user) {
+                    return [
+                        'id' => $user->id,
+                        'full_name' => $user->first_name . ($user->middle_name ? ' ' . $user->middle_name : '') . ' ' . $user->last_name,
+                        'email' => $user->email,
+                        'position' => $user->memberProfile?->position ?? 'N/A',
+                        'date_hired' => $user->memberProfile?->date_hired?->format('Y-m-d'),
+                        'created_at' => $user->created_at->format('Y-m-d'),
+                    ];
+                }),
+            ];
+        }
 
         return Inertia::render($roleComponents[$role], $memberData);
     })->name('dashboard')->middleware('ensure.profile.completed');
@@ -130,9 +198,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboards/HR/create', [CreateMemberController::class, 'create'])->middleware('role:hr')->name('users.create');
     Route::post('dashboards/HR/SeeUsers', [CreateMemberController::class, 'store'])->middleware('role:hr')->name('users.store');
 
-    Route::get('dashboards/HR/dashboard', function () {
-        return Inertia::render('dashboards/HR/HrDashboard');
-    })->middleware('role:hr')->name('hr.dashboard');
 
     Route::get('dashboards/HR/HRActiveLoan', function () {
         return Inertia::render('dashboards/HR/HRActiveLoan');

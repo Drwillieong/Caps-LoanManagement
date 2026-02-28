@@ -44,6 +44,7 @@ function formatNumberWithCommas(value: string | number): string {
 export default function Create({ roles }: Props) {
     const [password, setPassword] = useState('admin123')
     const [showPassword, setShowPassword] = useState(false)
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false)
     const [basicSalaryRaw, setBasicSalaryRaw] = useState('')
     const [shareCapitalRaw, setShareCapitalRaw] = useState('')
 
@@ -109,10 +110,10 @@ export default function Create({ roles }: Props) {
 
                                             <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
                                                 {[
-                                                    { id: 'first_name', label: 'First Name', required: true },
-                                                    { id: 'middle_name', label: 'Middle Name' },
-                                                    { id: 'last_name', label: 'Last Name', required: true },
-                                                    { id: 'email', label: 'Email Address', type: 'email', required: true },
+                                                    { id: 'first_name', label: 'First Name', placeholder: 'Enter first name', required: true },
+                                                    { id: 'middle_name', label: 'Middle Name', placeholder: 'Enter middle name' },
+                                                    { id: 'last_name', label: 'Last Name', placeholder: 'Enter last name', required: true },
+                                                    { id: 'email', label: 'Email Address', type: 'email', placeholder: 'Enter email address', required: true },
                                                 ].map((field) => (
                                                     <div key={field.id} className="space-y-2">
                                                         <Label htmlFor={field.id}>
@@ -126,6 +127,7 @@ export default function Create({ roles }: Props) {
                                                             name={field.id}
                                                             type={field.type ?? 'text'}
                                                             required={field.required}
+                                                            placeholder={field.placeholder}
                                                             className="h-10 rounded-lg"
                                                         />
                                                         <InputError message={(errors as any)[field.id]} />
@@ -162,6 +164,7 @@ export default function Create({ roles }: Props) {
                                                         id="employee_id"
                                                         name="employee_id"
                                                         required
+                                                        placeholder="Enter employee ID"
                                                         className="h-10 rounded-lg"
                                                     />
                                                     <InputError message={errors.employee_id} />
@@ -215,14 +218,23 @@ export default function Create({ roles }: Props) {
                                                 {/* Confirm */}
                                                 <div className="space-y-2">
                                                     <Label>Confirm Password *</Label>
-                                                    <Input
-                                                        name="password_confirmation"
-                                                        type="password"
-                                                        value={password}
-                                                        onChange={(e) => setPassword(e.target.value)}
-                                                        className="h-10"
-                                                        required
-                                                    />
+                                                    <div className="relative">
+                                                        <Input
+                                                            name="password_confirmation"
+                                                            type={showConfirmPassword ? 'text' : 'password'}
+                                                            value={password}
+                                                            onChange={(e) => setPassword(e.target.value)}
+                                                            className="pr-10 h-10"
+                                                            required
+                                                        />
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground"
+                                                        >
+                                                            {showConfirmPassword ? 'Hide' : 'Show'}
+                                                        </button>
+                                                    </div>
                                                     <InputError
                                                         message={errors.password_confirmation}
                                                     />
@@ -241,7 +253,7 @@ export default function Create({ roles }: Props) {
                                             <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
                                                 <div className="space-y-2">
                                                     <Label>Position *</Label>
-                                                    <Input name="position" required className="h-10" />
+                                                    <Input name="position" required placeholder="Enter position" className="h-10" />
                                                     <InputError message={errors.position} />
                                                 </div>
 
@@ -261,12 +273,13 @@ export default function Create({ roles }: Props) {
                                                     <Label>Basic Salary *</Label>
                                                     <div className="relative">
                                                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                                                            ₱
+                                                            ₱ 
                                                         </span>
                                                         <Input
                                                             name="basic_salary"
                                                             required
-                                                            className="pl-8 text-right font-medium tracking-wide h-10"
+                                                            className="pl-8 text-left font-medium tracking-wide h-10"
+                                                            placeholder="0.00"
                                                             value={basicSalaryRaw}
                                                             onChange={(e) => {
                                                                 const raw = e.target.value.replace(/,/g, '')
@@ -285,11 +298,12 @@ export default function Create({ roles }: Props) {
                                                     <Label>Share Capital Balance</Label>
                                                     <div className="relative">
                                                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                                                            ₱
+                                                            ₱ 
                                                         </span>
                                                         <Input
                                                             name="share_capital_balance"
-                                                            className="pl-8 text-right font-medium tracking-wide h-10"
+                                                            className="pl-8 text-left font-medium tracking-wide h-10"
+                                                            placeholder="0.00"
                                                             value={shareCapitalRaw}
                                                             onChange={(e) => {
                                                                 const raw = e.target.value.replace(/,/g, '')
@@ -307,7 +321,7 @@ export default function Create({ roles }: Props) {
 
                                                 <div className="space-y-2">
                                                     <Label>Bank Account Number</Label>
-                                                    <Input name="bank_account_number" className="h-10" />
+                                                    <Input name="bank_account_number" placeholder="Enter bank account number" className="h-10" />
                                                     <InputError
                                                         message={errors.bank_account_number}
                                                     />
@@ -315,7 +329,7 @@ export default function Create({ roles }: Props) {
 
                                                 <div className="space-y-2">
                                                     <Label>TIN Number</Label>
-                                                    <Input name="tin_number" className="h-10" />
+                                                    <Input name="tin_number" placeholder="Enter TIN number" className="h-10" />
                                                     <InputError message={errors.tin_number} />
                                                 </div>
                                             </div>

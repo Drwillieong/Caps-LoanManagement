@@ -145,18 +145,21 @@ export function AppSidebar() {
 
     return (
         <Sidebar collapsible="icon" variant="inset">
-            <SidebarHeader>
-                <SidebarMenu>
-                    <SidebarMenuItem>
-                        <SidebarMenuButton size="lg" asChild>
-                            <Link href={dashboard()} prefetch>
-                                <AppLogo/>
-                            </Link>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                </SidebarMenu>
-            </SidebarHeader>
-
+          <SidebarHeader>
+    <SidebarMenu>
+        <SidebarMenuItem className="flex justify-center">
+            <SidebarMenuButton
+                size="lg"
+                asChild
+                 className="h-15 flex items-center justify-center"
+            >
+                <Link href={dashboard()} prefetch className="flex justify-center w-full">
+                    <AppLogo />
+                </Link>
+            </SidebarMenuButton>
+        </SidebarMenuItem>
+    </SidebarMenu>
+</SidebarHeader>
             <SidebarContent>
                 <NavMain items={allNavItems} />
             </SidebarContent>

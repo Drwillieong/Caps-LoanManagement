@@ -27,35 +27,57 @@ export function UserMenuContent({ user }: UserMenuContentProps) {
 
     return (
         <>
-            <DropdownMenuLabel className="p-0 font-normal">
-                <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                    <UserInfo user={user} showEmail={true} />
-                </div>
+            {/* USER INFO */}
+            <DropdownMenuLabel className="p-2 text-sidebar-foreground/90">
+                <UserInfo user={user} showEmail />
             </DropdownMenuLabel>
-            <DropdownMenuSeparator />
+
+            <DropdownMenuSeparator className="bg-[color:var(--sidebar-divider)]" />
+
+            {/* SETTINGS */}
             <DropdownMenuGroup>
                 <DropdownMenuItem asChild>
                     <Link
-                        className="block w-full cursor-pointer"
                         href={edit()}
                         prefetch
                         onClick={cleanup}
+                        className="
+                            flex items-center
+                            w-full rounded-md
+                            px-2 py-1.5
+
+                            text-sidebar-foreground
+                            hover:bg-sidebar-accent
+                            focus:bg-sidebar-accent
+                            transition-colors
+                        "
                     >
-                        <Settings className="mr-2" />
+                        <Settings className="mr-2 h-4 w-4" />
                         Settings
                     </Link>
                 </DropdownMenuItem>
             </DropdownMenuGroup>
-            <DropdownMenuSeparator />
+
+            <DropdownMenuSeparator className="bg-[color:var(--sidebar-divider)]" />
+
+            {/* LOGOUT */}
             <DropdownMenuItem asChild>
                 <Link
-                    className="block w-full cursor-pointer"
                     href={logout()}
                     as="button"
                     onClick={handleLogout}
                     data-test="logout-button"
+                    className="
+                        flex items-center
+                        w-full rounded-md
+                        px-2 py-1.5
+
+                        text-[color:var(--sidebar-danger)]
+                        hover:bg-[color:var(--sidebar-danger-bg)]
+                        focus:bg-[color:var(--sidebar-danger-bg)]
+                    "
                 >
-                    <LogOut className="mr-2" />
+                    <LogOut className="mr-2 h-4 w-4" />
                     Log out
                 </Link>
             </DropdownMenuItem>

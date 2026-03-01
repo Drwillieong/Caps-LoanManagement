@@ -29,15 +29,32 @@ export function NavUser() {
                     <DropdownMenuTrigger asChild>
                         <SidebarMenuButton
                             size="lg"
-                            className="group text-sidebar-accent-foreground data-[state=open]:bg-sidebar-accent"
+                            className="
+                                group
+                                text-sidebar-foreground
+                                hover:bg-sidebar-accent
+                                data-[state=open]:bg-sidebar-accent
+                                transition-colors
+                            "
                             data-test="sidebar-menu-button"
                         >
                             <UserInfo user={auth.user} />
-                            <ChevronsUpDown className="ml-auto size-4" />
+                            <ChevronsUpDown className="ml-auto size-4 opacity-80" />
                         </SidebarMenuButton>
                     </DropdownMenuTrigger>
+
                     <DropdownMenuContent
-                        className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
+                        className="
+                            w-(--radix-dropdown-menu-trigger-width)
+                            min-w-56
+                            rounded-lg
+
+                            bg-[color:var(--sidebar-surface)]
+                            text-sidebar-foreground
+                            border border-[color:var(--sidebar-divider)]
+
+                            shadow-xl
+                        "
                         align="end"
                         side={
                             isMobile

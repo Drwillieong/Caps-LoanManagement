@@ -187,6 +187,75 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ];
         }
 
+        // Get GM-specific data
+        if ($role === 'gm') {
+            // Get total loan portfolio (sum of active/released loans)
+            $totalLoanPortfolio = \App\Models\Loan::whereIn('status', ['released', 'approved'])
+                ->sum('total_amount_due');
+            
+            // Get active members count
+            $activeMembers = \App\Models\User::where('role', 'member')->where('is_active', true)->count();
+            
+            // Get pending GM approvals count
+            $pendingApprovals = \App\Models\Loan::where('status', 'pending_gm_review')->count();
+            
+            // Get recent pending GM review loans (latest 5)
+            $recentPendingLoans = \App\Models\Loan::where('status', 'pending_gm_review')
+                ->with(['user', 'loanType'])
+                ->orderBy('created_at', 'desc')
+                ->limit(5)
+                ->get()
+                ->map(function ($loan) {
+                    return [
+                        'id' => $loan->id,
+                        'member_name' => $loan->user->first_name . ($loan->user->middle_name ? ' ' . $loan->user->middle_name : '') . ' ' . $loan->user->last_name,
+                        'loan_type' => $loan->loanType->name ?? 'N/A',
+                        'principal_amount' => $loan->principal_amount,
+                        'total_amount_due' => $loan->total_amount_due,
+                        'created_at' => $loan->created_at->format('Y-m-d'),
+                    ];
+                });
+            
+            // Calculate loan health metrics
+            $totalLoans = \App\Models\Loan::whereIn('status', ['released', 'approved', 'paid_off'])->count();
+            $completedLoans = \App\Models\Loan::where('status', 'paid_off')->count();
+            $collectionRate = $totalLoans > 0 ? round(($completedLoans / $totalLoans) * 100) : 0;
+            
+            // Get total paid amount
+            $totalPaidAmount = \App\Models\LoanPayment::sum('amount');
+            
+            // Get total amount due from active loans
+            $totalAmountDue = \App\Models\Loan::whereIn('status', ['released', 'approved'])->sum('total_amount_due');
+            
+            // Calculate actual collection rate based on payments
+            $actualCollectionRate = $totalAmountDue > 0 ? round(($totalPaidAmount / $totalAmountDue) * 100) : 0;
+            
+            // Get count of business loans over 100k
+            $businessLoansOver100k = \App\Models\Loan::whereIn('status', ['pending', 'pending_gm_review'])
+                ->whereHas('loanType', function ($query) {
+                    $query->where('name', 'like', '%Business%');
+                })
+                ->where('principal_amount', '>', 100000)
+                ->count();
+
+            $memberData = [
+                'stats' => [
+                    'total_loan_portfolio' => $totalLoanPortfolio,
+                    'active_members' => $activeMembers,
+                    'pending_approvals' => $pendingApprovals,
+                    'total_paid_amount' => $totalPaidAmount,
+                    'total_amount_due' => $totalAmountDue,
+                ],
+                'recent_pending_loans' => $recentPendingLoans,
+                'loan_health' => [
+                    'collection_rate' => $actualCollectionRate,
+                    'completed_loans' => $completedLoans,
+                    'active_loans' => \App\Models\Loan::whereIn('status', ['released', 'approved'])->count(),
+                ],
+                'business_loans_over_100k' => $businessLoansOver100k,
+            ];
+        }
+
         return Inertia::render($roleComponents[$role], $memberData);
     })->name('dashboard')->middleware('ensure.profile.completed');
 

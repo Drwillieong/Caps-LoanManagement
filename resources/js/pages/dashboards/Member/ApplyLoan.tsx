@@ -544,7 +544,7 @@ export default function ApplyLoan({
                                 Select Co-Maker
                             </CardTitle>
                             <CardDescription>
-                                Search by name, user ID, or email address
+                                Search by name, user ID, or email address. Members with active co-maker loans are excluded.
                             </CardDescription>
                         </CardHeader>
 

@@ -13,10 +13,7 @@ import { type BreadcrumbItem, type SharedData } from '@/types';
 import { Search, User, CheckCircle2, Users, ArrowRight, Shield, Calendar, XCircle } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'Dashboard',
-        href: dashboard().url,
-    },
+   
     {
         title: 'Choose Comaker',
         href: chooseComaker().url,

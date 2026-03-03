@@ -68,7 +68,7 @@ export default function LoanApplication({ pendingLoans }: GmLoanApplicationProps
     <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
       <Head title="Loan Applications – GM" />
 
-      <div className="space-y-6 px-4 sm:px-6 py-6 max-w-screen-2xl mx-auto">
+      <div className="space-y-6 px-6 py-6 w-full">
         {/* Header */}
         <div className="flex flex-col gap-1">
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
@@ -102,7 +102,7 @@ export default function LoanApplication({ pendingLoans }: GmLoanApplicationProps
 
             <CardContent className="p-0">
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[900px]">
+                <table className="w-full man-w-[900px]">
                   <thead className="bg-muted/60 border-b">
                     <tr>
                       <th className="w-14 px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase">
@@ -192,7 +192,7 @@ export default function LoanApplication({ pendingLoans }: GmLoanApplicationProps
           </Card>
         ) : (
           /* EMPTY STATE – WIDE CARD */
-          <Card className="border-dashed bg-muted/30 w-full max-w-7xl mx-auto">
+          <Card className="border-dashed bg-muted/30 shadow-sm border">
             <CardContent className="flex flex-col items-center justify-center py-24 text-center">
               <div className="w-full max-w-3xl flex flex-col items-center">
                 <div className="rounded-full bg-muted p-4 mb-6">

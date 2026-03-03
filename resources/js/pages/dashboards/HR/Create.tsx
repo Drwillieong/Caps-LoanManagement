@@ -70,6 +70,11 @@ export default function Create({ roles }: Props) {
                         <div className="p-8">
                             <Form
                                 {...store.form()}
+                                transform={(data) => ({
+                                    ...data,
+                                    basic_salary: data.basic_salary ? String(data.basic_salary).replace(/,/g, '') : '',
+                                    share_capital_balance: data.share_capital_balance ? String(data.share_capital_balance).replace(/,/g, '') : '',
+                                })}
                                 resetOnSuccess={['password', 'password_confirmation']}
                             >
                                 {({ processing, errors, recentlySuccessful }) => (

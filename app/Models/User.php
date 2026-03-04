@@ -66,10 +66,40 @@ class User extends Authenticatable
 
     /**
      * Check if the user has completed their profile.
+     * A profile is considered complete when all required fields are filled.
+     * Note: spouse_name and beneficiaries are optional and don't block access.
      */
     public function hasCompletedProfile(): bool
     {
-        return $this->memberProfile()->exists();
+        // Ensure memberProfile is loaded
+        $profile = $this->memberProfile;
+        
+        if (!$profile) {
+            return false;
+        }
+        
+        // Check all required fields are filled (spouse_name and beneficiaries are optional)
+        $requiredFields = [
+            'employee_id',
+            'first_name',
+            'last_name',
+            'date_of_birth',
+            'sex',
+            'civil_status',
+            'mobile_number',
+            'present_address',
+            'position',
+            'date_hired',
+            'basic_salary',
+        ];
+        
+        foreach ($requiredFields as $field) {
+            if (empty($profile->{$field})) {
+                return false;
+            }
+        }
+        
+        return true;
     }
 
     /**

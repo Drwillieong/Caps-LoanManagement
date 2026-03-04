@@ -28,6 +28,7 @@ class MemberProfileController extends Controller
             'beneficiaries' => $memberProfile?->beneficiaries ?? [],
             'isNewUser' => !$user->hasCompletedProfile(),
             'isAdmin' => $isAdmin,
+            'profileCompleted' => $user->hasCompletedProfile(),
         ]);
     }
 
@@ -62,10 +63,10 @@ class MemberProfileController extends Controller
             'bank_account_number' => 'nullable|string|max:50',
             'tin_number' => 'nullable|string|max:50',
             
-            // Beneficiaries
+            // Beneficiaries - now optional
             'beneficiaries' => 'nullable|array',
-            'beneficiaries.*.full_name' => 'required|string|max:255',
-            'beneficiaries.*.relationship' => 'required|string|max:255',
+            'beneficiaries.*.full_name' => 'nullable|string|max:255',
+            'beneficiaries.*.relationship' => 'nullable|string|max:255',
             'beneficiaries.*.date_of_birth' => 'nullable|date|before:today',
         ]);
 
@@ -77,13 +78,18 @@ class MemberProfileController extends Controller
             $validated
         );
 
-        // Handle beneficiaries
-        if (isset($validated['beneficiaries'])) {
+        // Handle beneficiaries - only save if they have at least a full_name
+        if (isset($validated['beneficiaries']) && is_array($validated['beneficiaries'])) {
             // Delete existing beneficiaries
             $memberProfile->beneficiaries()->delete();
             
-            // Create new beneficiaries
-            foreach ($validated['beneficiaries'] as $beneficiaryData) {
+            // Filter out empty beneficiaries (no full_name)
+            $validBeneficiaries = array_filter($validated['beneficiaries'], function($beneficiary) {
+                return !empty($beneficiary['full_name']);
+            });
+            
+            // Create only valid beneficiaries
+            foreach ($validBeneficiaries as $beneficiaryData) {
                 $memberProfile->beneficiaries()->create($beneficiaryData);
             }
         }

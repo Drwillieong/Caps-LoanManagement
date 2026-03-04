@@ -56,9 +56,10 @@ interface Props {
     beneficiaries: Beneficiary[];
     isNewUser: boolean;
     isAdmin?: boolean;
+    profileCompleted: boolean;
 }
 
-export default function UserProfile({ memberProfile, beneficiaries, isNewUser, isAdmin = false }: Props) {
+export default function UserProfile({ memberProfile, beneficiaries, isNewUser, isAdmin = false, profileCompleted }: Props) {
     const { auth } = usePage<SharedData>().props;
     
     // Initialize form data from existing profile or defaults
@@ -135,6 +136,25 @@ export default function UserProfile({ memberProfile, beneficiaries, isNewUser, i
     return (
     <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
         <Head title="User Profile" />
+
+        {/* Warning Banner for Incomplete Profile */}
+        {!profileCompleted && (
+            <div className="mx-6 mt-6 rounded-lg border border-amber-200 bg-amber-50 p-4">
+                <div className="flex items-start gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-100">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-amber-600" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                        </svg>
+                    </div>
+                    <div className="flex-1">
+                        <h3 className="font-semibold text-amber-800">Complete Your Profile First</h3>
+                        <p className="mt-1 text-sm text-amber-700">
+                            Please complete your profile with all required information before you can apply for a loan or access other member services.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        )}
 
         <div className="space-y-5 px-6">
             <div className="flex items-center justify-between">

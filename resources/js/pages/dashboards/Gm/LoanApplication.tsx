@@ -68,7 +68,7 @@ export default function LoanApplication({ pendingLoans }: GmLoanApplicationProps
     <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
       <Head title="Loan Applications – GM" />
 
-      <div className="space-y-6 px-4 sm:px-6 py-6 max-w-screen-2xl mx-auto">
+      <div className="flex flex-1 flex-col gap-6 p-6">
         {/* Header */}
         <div className="flex flex-col gap-1">
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
@@ -92,9 +92,9 @@ export default function LoanApplication({ pendingLoans }: GmLoanApplicationProps
 
         {/* Content */}
         {pendingLoans.length > 0 ? (
-          <Card className="shadow-sm border">
+          <Card className="border-emerald-100 shadow-sm">
             <CardHeader className="pb-4">
-              <CardTitle>Pending Applications</CardTitle>
+              <CardTitle className="text-emerald-900 dark:text-emerald-100">Pending Applications</CardTitle>
               <CardDescription>
                 Select an application to review full details and take action
               </CardDescription>
@@ -143,7 +143,7 @@ export default function LoanApplication({ pendingLoans }: GmLoanApplicationProps
                         <tr
                           key={loan.id}
                           className={cn(
-                            'group hover:bg-muted/40 transition-colors',
+                            'group hover:bg-emerald-50 transition-colors',
                             'focus-within:bg-muted/30 focus-within:ring-1 focus-within:ring-ring'
                           )}
                         >
@@ -191,15 +191,15 @@ export default function LoanApplication({ pendingLoans }: GmLoanApplicationProps
             </CardContent>
           </Card>
         ) : (
-          /* EMPTY STATE – WIDE CARD */
-          <Card className="border-dashed bg-muted/30 w-full max-w-7xl mx-auto">
+          /* EMPTY STATE */
+          <Card className="border-emerald-100 bg-white/50 dark:bg-emerald-950/10 shadow-sm">
             <CardContent className="flex flex-col items-center justify-center py-24 text-center">
               <div className="w-full max-w-3xl flex flex-col items-center">
-                <div className="rounded-full bg-muted p-4 mb-6">
-                  <CheckCircle2 className="h-10 w-10 text-muted-foreground" />
+                <div className="rounded-full bg-emerald-100 p-4 mb-6">
+                  <CheckCircle2 className="h-10 w-10 text-emerald-600" />
                 </div>
 
-                <h3 className="text-2xl font-semibold mb-3">
+                <h3 className="text-2xl font-semibold mb-3 text-emerald-900 dark:text-emerald-100">
                   No Pending Applications
                 </h3>
 
@@ -211,7 +211,7 @@ export default function LoanApplication({ pendingLoans }: GmLoanApplicationProps
                 <Button
                   asChild
                   size="lg"
-                  className="min-w-[300px] h-12 text-base font-semibold"
+                  className="min-w-[300px] h-12 text-base font-semibold bg-emerald-600 hover:bg-emerald-700"
                 >
                   <Link href="/dashboards/Gm">
                     Return to Dashboard

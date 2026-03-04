@@ -94,12 +94,6 @@ export default function GmDashboard({
             <Head title="GM Dashboard" />
             
             <div className="flex flex-1 flex-col gap-6 p-6">
-                {/* Welcome Header */}
-                <div className="flex flex-col gap-1">
-                    <h1 className="text-2xl font-bold tracking-tight text-emerald-950 dark:text-emerald-50">Management Overview</h1>
-                    <p className="text-muted-foreground text-sm">Monitor cooperative loan performance and pending approvals.</p>
-                </div>
-
                 {/* KPI Stats Grid */}
                 <div className="grid gap-4 md:grid-cols-3">
                     <Card className="border-emerald-100 bg-white/50 dark:bg-emerald-950/10 shadow-sm">

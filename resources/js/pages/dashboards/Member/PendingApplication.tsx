@@ -216,10 +216,10 @@ export default function PendingApplication({ loan, hasPendingLoan, loanHistory }
                     </Card>
 
                     {loanHistory && loanHistory.length > 0 && (
-                        <Card>
+                        <Card className="border-emerald-100 bg-white/50 dark:bg-emerald-950/10 shadow-sm">
                             <CardHeader className="pb-3">
-                                <CardTitle className="flex items-center gap-2 text-lg">
-                                    <Clock className="h-5 w-5" />
+                                <CardTitle className="flex items-center gap-2 text-lg text-emerald-900 dark:text-emerald-100">
+                                    <Clock className="h-5 w-5 text-emerald-600" />
                                     Loan Application History
                                 </CardTitle>
                             </CardHeader>
@@ -299,10 +299,10 @@ export default function PendingApplication({ loan, hasPendingLoan, loanHistory }
                     </CardHeader>
                 </Card>
 
-                <Card>
+                <Card className="border-emerald-100 bg-white/50 dark:bg-emerald-950/10 shadow-sm">
                     <CardHeader className="pb-3">
-                        <CardTitle className="flex items-center gap-2 text-lg">
-                            <FileText className="h-5 w-5" />
+                        <CardTitle className="flex items-center gap-2 text-lg text-emerald-900 dark:text-emerald-100">
+                            <FileText className="h-5 w-5 text-emerald-600" />
                             Loan Details
                         </CardTitle>
                         <CardDescription>
@@ -311,37 +311,37 @@ export default function PendingApplication({ loan, hasPendingLoan, loanHistory }
                     </CardHeader>
                     <CardContent>
                         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                            <div className="rounded-lg bg-muted p-4">
-                                <p className="text-sm text-gray-500">Loan Type</p>
-                                <p className="font-semibold text-lg">{currentLoan.loan_type_name}</p>
+                            <div className="rounded-lg bg-emerald-50 border border-emerald-100 p-4">
+                                <p className="text-sm text-emerald-600">Loan Type</p>
+                                <p className="font-semibold text-lg text-emerald-700">{currentLoan.loan_type_name}</p>
                             </div>
-                            <div className="rounded-lg bg-muted p-4">
-                                <p className="text-sm text-gray-500">Principal Amount</p>
-                                <p className="font-semibold text-lg">{formatCurrency(currentLoan.principal_amount)}</p>
+                            <div className="rounded-lg bg-emerald-50 border border-emerald-100 p-4">
+                                <p className="text-sm text-emerald-600">Principal Amount</p>
+                                <p className="font-semibold text-lg text-emerald-700">{formatCurrency(currentLoan.principal_amount)}</p>
                             </div>
-                            <div className="rounded-lg bg-muted p-4">
-                                <p className="text-sm text-gray-500">Term</p>
-                                <p className="font-semibold text-lg">{currentLoan.terms_months} Months</p>
+                            <div className="rounded-lg bg-emerald-50 border border-emerald-100 p-4">
+                                <p className="text-sm text-emerald-600">Term</p>
+                                <p className="font-semibold text-lg text-emerald-700">{currentLoan.terms_months} Months</p>
                             </div>
-                            <div className="rounded-lg bg-muted p-4">
-                                <p className="text-sm text-gray-500">Interest</p>
-                                <p className="font-semibold text-lg">{formatCurrency(currentLoan.interest_amount)}</p>
+                            <div className="rounded-lg bg-emerald-50 border border-emerald-100 p-4">
+                                <p className="text-sm text-emerald-600">Interest</p>
+                                <p className="font-semibold text-lg text-emerald-700">{formatCurrency(currentLoan.interest_amount)}</p>
                             </div>
                         </div>
 
                         <div className="mt-4 grid gap-4 md:grid-cols-3">
-                            <div className="rounded-lg bg-muted p-4">
-                                <p className="text-sm text-gray-500">Monthly Payment</p>
-                                <p className="font-semibold text-lg text-blue-600">{formatCurrency(currentLoan.monthly_amortization)}</p>
+                            <div className="rounded-lg bg-emerald-50 border border-emerald-100 p-4">
+                                <p className="text-sm text-emerald-600">Monthly Payment</p>
+                                <p className="font-semibold text-lg text-emerald-700">{formatCurrency(currentLoan.monthly_amortization)}</p>
                             </div>
-                            <div className="rounded-lg bg-muted p-4">
-                                <p className="text-sm text-gray-500">Total Payable</p>
-                                <p className="font-semibold text-lg">{formatCurrency(currentLoan.total_amount_due)}</p>
+                            <div className="rounded-lg bg-emerald-50 border border-emerald-100 p-4">
+                                <p className="text-sm text-emerald-600">Total Payable</p>
+                                <p className="font-semibold text-lg text-emerald-700">{formatCurrency(currentLoan.total_amount_due)}</p>
                             </div>
                             {currentLoan.remarks && (
-                                <div className="rounded-lg bg-muted p-4">
-                                    <p className="text-sm text-gray-500">Remarks</p>
-                                    <p className="font-semibold text-lg">{currentLoan.remarks}</p>
+                                <div className="rounded-lg bg-emerald-50 border border-emerald-100 p-4">
+                                    <p className="text-sm text-emerald-600">Remarks</p>
+                                    <p className="font-semibold text-lg text-emerald-700">{currentLoan.remarks}</p>
                                 </div>
                             )}
                         </div>
@@ -349,10 +349,10 @@ export default function PendingApplication({ loan, hasPendingLoan, loanHistory }
                 </Card>
 
                 {currentLoan.co_makers && currentLoan.co_makers.length > 0 && (
-                    <Card>
+                    <Card className="border-emerald-100 bg-white/50 dark:bg-emerald-950/10 shadow-sm">
                         <CardHeader className="pb-3">
-                            <CardTitle className="flex items-center gap-2 text-lg">
-                                <User className="h-5 w-5" />
+                            <CardTitle className="flex items-center gap-2 text-lg text-emerald-900 dark:text-emerald-100">
+                                <User className="h-5 w-5 text-emerald-600" />
                                 Co-Maker Information
                             </CardTitle>
                         </CardHeader>
@@ -430,10 +430,10 @@ export default function PendingApplication({ loan, hasPendingLoan, loanHistory }
                 )}
 
                 {loanHistory && loanHistory.length > 0 && (
-                    <Card className="mt-6">
+                    <Card className="mt-6 border-emerald-100 bg-white/50 dark:bg-emerald-950/10 shadow-sm">
                         <CardHeader className="pb-3">
-                            <CardTitle className="flex items-center gap-2 text-lg">
-                                <Clock className="h-5 w-5" />
+                            <CardTitle className="flex items-center gap-2 text-lg text-emerald-900 dark:text-emerald-100">
+                                <Clock className="h-5 w-5 text-emerald-600" />
                                 Loan Application History
                             </CardTitle>
                             <CardDescription>

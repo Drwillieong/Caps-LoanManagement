@@ -79,24 +79,17 @@ export default function ChooseComaker() {
             <Head title="Choose Comaker" />
             
             <div className="flex flex-col gap-6 p-6">
-                {/* Header Section */}
-                <div className="flex flex-col gap-2">
-                    <HeadingSmall
-                        title="Choose a Comaker"
-                        description="Select a member to be your co-maker for the loan application"
-                    />
-                </div>
 
                 {/* Info Card */}
-                <Card className="border-l-4 border-l-blue-500 bg-gradient-to-r from-blue-50 to-white shadow-sm">
+                <Card className="border-emerald-100 bg-white/50 dark:bg-emerald-950/10 shadow-sm">
                     <CardContent className="pt-6">
                         <div className="flex items-start gap-4">
-                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-100">
-                                <Shield className="h-5 w-5 text-blue-600" />
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100">
+                                <Shield className="h-5 w-5 text-emerald-600" />
                             </div>
                             <div className="space-y-1">
-                                <p className="font-medium text-blue-900">Why do I need a comaker?</p>
-                                <p className="text-sm text-blue-700">
+                                <p className="font-medium text-emerald-900">Why do I need a comaker?</p>
+                                <p className="text-sm text-emerald-700">
                                     A comaker provides additional guarantee for your loan. They must be an active member 
                                     of the cooperative with good standing. The comaker will receive a notification to confirm 
                                     their commitment to your loan application.
@@ -107,10 +100,10 @@ export default function ChooseComaker() {
                 </Card>
 
                 {/* Members Table Card */}
-                <Card className="shadow-sm">
+                <Card className="border-emerald-100 bg-white/50 dark:bg-emerald-950/10 shadow-sm">
                     <CardHeader className="pb-4">
-                        <CardTitle className="flex items-center gap-2 text-lg">
-                            <Users className="h-5 w-5" />
+                        <CardTitle className="flex items-center gap-2 text-lg text-emerald-900 dark:text-emerald-100">
+                            <Users className="h-5 w-5 text-emerald-600" />
                             Available Members
                         </CardTitle>
                         <CardDescription>
@@ -120,7 +113,7 @@ export default function ChooseComaker() {
                     <CardContent className="space-y-6">
                         {/* Search Input */}
                         <div className="relative">
-                            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-emerald-500" />
                             <Input
                                 type="text"
                                 placeholder="Search by name, email, or member ID..."
@@ -214,14 +207,14 @@ export default function ChooseComaker() {
 
                 {/* Selected Member Summary & Action */}
                 {selectedMember && (
-                    <Card className="border-l-4 border-l-green-500 bg-gradient-to-r from-green-50 to-white shadow-md">
+                    <Card className="border-emerald-100 bg-white/50 dark:bg-emerald-950/10 shadow-sm">
                         <CardContent className="flex flex-col gap-4 pt-6 md:flex-row md:items-center md:justify-between">
                             <div className="flex items-center gap-4">
-                                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-green-100 border-2 border-green-500">
-                                    <User className="h-7 w-7 text-green-700" />
+                                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 border-2 border-emerald-500">
+                                    <User className="h-7 w-7 text-emerald-700" />
                                 </div>
                                 <div>
-                                    <p className="font-semibold text-green-900">Selected Comaker</p>
+                                    <p className="font-semibold text-emerald-900">Selected Comaker</p>
                                     <p className="text-lg font-bold text-gray-900">{selectedMember.name}</p>
                                     <p className="text-sm text-gray-500">{selectedMember.email}</p>
                                 </div>
@@ -249,10 +242,10 @@ export default function ChooseComaker() {
 
                 {/* No Selection State */}
                 {!selectedMemberId && (
-                    <div className="flex items-center justify-center rounded-lg border-2 border-dashed border-gray-200 bg-gray-50 py-8">
+                    <div className="flex items-center justify-center rounded-lg border-2 border-dashed border-emerald-200 bg-emerald-50 py-8">
                         <div className="text-center">
-                            <User className="mx-auto h-8 w-8 text-gray-400" />
-                            <p className="mt-2 text-sm text-gray-500">
+                            <User className="mx-auto h-8 w-8 text-emerald-400" />
+                            <p className="mt-2 text-sm text-emerald-600">
                                 Please select a member to continue
                             </p>
                         </div>

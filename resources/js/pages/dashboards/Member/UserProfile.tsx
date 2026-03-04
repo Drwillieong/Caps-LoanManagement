@@ -1,6 +1,15 @@
 import { Transition } from '@headlessui/react';
 import { Form, Head, usePage } from '@inertiajs/react';
 import { useState } from 'react';
+import { 
+    AlertCircle, 
+    User, 
+    MapPin, 
+    Briefcase, 
+    Heart, 
+    Eye, 
+    EyeOff 
+} from 'lucide-react';
 
 import HeadingSmall from '@/components/heading-small';
 import InputError from '@/components/input-error';
@@ -8,6 +17,7 @@ import { LiveClock } from '@/components/live-clock';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import member from '@/routes/member';
@@ -139,24 +149,27 @@ export default function UserProfile({ memberProfile, beneficiaries, isNewUser, i
 
         {/* Warning Banner for Incomplete Profile */}
         {!profileCompleted && (
-            <div className="mx-6 mt-6 rounded-lg border border-amber-200 bg-amber-50 p-4">
-                <div className="flex items-start gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-100">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-amber-600" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                        </svg>
+            <Card className="border-l-4 border-l-amber-500 bg-amber-50 m-6">
+                <CardContent className="flex items-center justify-between py-4">
+                    <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100">
+                            <AlertCircle className="h-5 w-5 text-amber-600" />
+                        </div>
+                        <div>
+                            <p className="font-semibold text-amber-800">
+                                Complete Your Profile First
+                            </p>
+                            <p className="text-sm text-amber-700">
+                                Please complete your profile with all required information before you can apply for a loan or access other member services.
+                            </p>
+                        </div>
                     </div>
-                    <div className="flex-1">
-                        <h3 className="font-semibold text-amber-800">Complete Your Profile First</h3>
-                        <p className="mt-1 text-sm text-amber-700">
-                            Please complete your profile with all required information before you can apply for a loan or access other member services.
-                        </p>
-                    </div>
-                </div>
-            </div>
+                </CardContent>
+            </Card>
         )}
 
-        <div className="space-y-5 px-6">
+        <div className="flex flex-1 flex-col gap-6 p-6">
+            {/* Header Section */}
             <div className="flex items-center justify-between">
                 <HeadingSmall
                     title="Personal Information"
@@ -167,36 +180,43 @@ export default function UserProfile({ memberProfile, beneficiaries, isNewUser, i
                     }
                 />
 
-    {!isNewUser && (
-        <div className="flex gap-2">
-            {!isEditing ? (
-                <Button onClick={() => setIsEditing(true)}>
-                    Edit Profile
-                </Button>
-            ) : (
-                <Button
-                    variant="outline"
-                    onClick={() => setIsEditing(false)}
-                >
-                    Cancel
-                </Button>
-            )}
-        </div>
-    )}
-</div>
+                {!isNewUser && (
+                    <div className="flex gap-2">
+                        {!isEditing ? (
+                            <Button onClick={() => setIsEditing(true)}>
+                                Edit Profile
+                            </Button>
+                        ) : (
+                            <Button
+                                variant="outline"
+                                onClick={() => setIsEditing(false)}
+                            >
+                                Cancel
+                            </Button>
+                        )}
+                    </div>
+                )}
+            </div>
 
-
-                <Form
-                    method="post"
-                    action={member.userProfile.store.url()}
-                    transform={() => formData as any}
-                    className="space-y-8"
-                >
-                    {({ processing, recentlySuccessful, errors }) => (
-                        <>
-                            {/* Identity Section */}
-                            <div className="rounded-lg border bg-card p-6 shadow-sm">
-                                <h3 className="mb-4 text-lg font-semibold">Identity</h3>
+            <Form
+                method="post"
+                action={member.userProfile.store.url()}
+                transform={() => formData as any}
+                className="space-y-6"
+            >
+                {({ processing, recentlySuccessful, errors }) => (
+                    <>
+                        {/* Identity Section */}
+                        <Card className="border-emerald-100">
+                            <CardHeader className="flex flex-row items-center justify-between pb-3">
+                                <div className="flex items-center gap-2">
+                                    <User className="h-5 w-5 text-emerald-600" />
+                                    <CardTitle className="text-emerald-900 dark:text-emerald-100 text-lg">
+                                        Identity
+                                    </CardTitle>
+                                </div>
+                            </CardHeader>
+                            <CardContent>
                                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                                     <div className="grid gap-2">
                                         <Label htmlFor="employee_id">
@@ -210,7 +230,6 @@ export default function UserProfile({ memberProfile, beneficiaries, isNewUser, i
                                             required={isRequired('employee_id')}
                                             placeholder="e.g., EMP-001"
                                             disabled={!isEditing}
-
                                         />
                                         <InputError message={errors.employee_id} />
                                     </div>
@@ -227,7 +246,6 @@ export default function UserProfile({ memberProfile, beneficiaries, isNewUser, i
                                             required={isRequired('first_name')}
                                             placeholder="First name"
                                             disabled={!isEditing}
-
                                         />
                                         <InputError message={errors.first_name} />
                                     </div>
@@ -262,26 +280,23 @@ export default function UserProfile({ memberProfile, beneficiaries, isNewUser, i
                                     </div>
 
                                     <div className="grid gap-2">
-    <Label>Date of Birth</Label>
-
-    {!isEditing ? (
-        <div className="rounded-md border bg-muted px-3 py-2 text-sm">
-            {formatDate(formData.date_of_birth)}
-        </div>
-    ) : (
-        <Input
-            type="date"
-            name="date_of_birth"
-            value={formData.date_of_birth}
-            onChange={(e) =>
-                setFormData({ ...formData, date_of_birth: e.target.value })
-            }
-        />
-    )}
-
-    <InputError message={errors.date_of_birth} />
-</div>
-
+                                        <Label>Date of Birth</Label>
+                                        {!isEditing ? (
+                                            <div className="rounded-md border bg-muted px-3 py-2 text-sm">
+                                                {formatDate(formData.date_of_birth)}
+                                            </div>
+                                        ) : (
+                                            <Input
+                                                type="date"
+                                                name="date_of_birth"
+                                                value={formData.date_of_birth}
+                                                onChange={(e) =>
+                                                    setFormData({ ...formData, date_of_birth: e.target.value })
+                                                }
+                                            />
+                                        )}
+                                        <InputError message={errors.date_of_birth} />
+                                    </div>
 
                                     <div className="grid gap-2">
                                         <Label htmlFor="sex">
@@ -293,8 +308,7 @@ export default function UserProfile({ memberProfile, beneficiaries, isNewUser, i
                                             value={formData.sex}
                                             onChange={(e) => setFormData({ ...formData, sex: e.target.value })}
                                             required={isRequired('sex')}
-                                           disabled={!isEditing}
-
+                                            disabled={!isEditing}
                                             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                                         >
                                             <option value="">Select sex</option>
@@ -315,7 +329,6 @@ export default function UserProfile({ memberProfile, beneficiaries, isNewUser, i
                                             onChange={(e) => setFormData({ ...formData, civil_status: e.target.value })}
                                             required={isRequired('civil_status')}
                                             disabled={!isEditing}
-
                                             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                                         >
                                             <option value="">Select civil status</option>
@@ -336,16 +349,24 @@ export default function UserProfile({ memberProfile, beneficiaries, isNewUser, i
                                             onChange={(e) => setFormData({ ...formData, spouse_name: e.target.value })}
                                             placeholder="Spouse name (if married)"
                                             disabled={!isEditing}
-
                                         />
                                         <InputError message={errors.spouse_name} />
                                     </div>
                                 </div>
-                            </div>
+                            </CardContent>
+                        </Card>
 
-                            {/* Contact & Address Section */}
-                            <div className="rounded-lg border bg-card p-6 shadow-sm">
-                                <h3 className="mb-4 text-lg font-semibold">Contact & Address</h3>
+                        {/* Contact & Address Section */}
+                        <Card className="border-emerald-100">
+                            <CardHeader className="flex flex-row items-center justify-between pb-3">
+                                <div className="flex items-center gap-2">
+                                    <MapPin className="h-5 w-5 text-emerald-600" />
+                                    <CardTitle className="text-emerald-900 dark:text-emerald-100 text-lg">
+                                        Contact & Address
+                                    </CardTitle>
+                                </div>
+                            </CardHeader>
+                            <CardContent>
                                 <div className="grid gap-4 md:grid-cols-2">
                                     <div className="grid gap-2">
                                         <Label htmlFor="mobile_number">
@@ -410,11 +431,20 @@ export default function UserProfile({ memberProfile, beneficiaries, isNewUser, i
                                         <InputError message={errors.permanent_address} />
                                     </div>
                                 </div>
-                            </div>
+                            </CardContent>
+                        </Card>
 
-                            {/* Employment Section */}
-                            <div className="rounded-lg border bg-card p-6 shadow-sm">
-                                <h3 className="mb-4 text-lg font-semibold">Employment Information</h3>
+                        {/* Employment Section */}
+                        <Card className="border-emerald-100">
+                            <CardHeader className="flex flex-row items-center justify-between pb-3">
+                                <div className="flex items-center gap-2">
+                                    <Briefcase className="h-5 w-5 text-emerald-600" />
+                                    <CardTitle className="text-emerald-900 dark:text-emerald-100 text-lg">
+                                        Employment Information
+                                    </CardTitle>
+                                </div>
+                            </CardHeader>
+                            <CardContent>
                                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                                     <div className="grid gap-2">
                                         <Label htmlFor="position">
@@ -500,27 +530,35 @@ export default function UserProfile({ memberProfile, beneficiaries, isNewUser, i
                                         <InputError message={errors.bank_account_number} />
                                     </div>
                                 </div>
-                            </div>
+                            </CardContent>
+                        </Card>
 
-                            {/* Beneficiaries Section */}
-                            <div className="rounded-lg border bg-card p-6 shadow-sm">
-                                <div className="mb-4 flex items-center justify-between">
-                                    <h3 className="text-lg font-semibold">Beneficiaries</h3>
-                                   {isEditing && ( <Button
+                        {/* Beneficiaries Section */}
+                        <Card className="border-emerald-100">
+                            <CardHeader className="flex flex-row items-center justify-between pb-3">
+                                <div className="flex items-center gap-2">
+                                    <Heart className="h-5 w-5 text-emerald-600" />
+                                    <CardTitle className="text-emerald-900 dark:text-emerald-100 text-lg">
+                                        Beneficiaries
+                                    </CardTitle>
+                                </div>
+                                {isEditing && (
+                                    <Button
                                         type="button"
                                         variant="outline"
                                         size="sm"
                                         onClick={addBeneficiary}
                                     >
                                         Add Beneficiary
-                                    </Button> )}
-                                </div>
-                                
+                                    </Button>
+                                )}
+                            </CardHeader>
+                            <CardContent>
                                 <div className="space-y-4">
                                     {formData.beneficiaries.map((beneficiary, index) => (
-                                        <div key={index} className="rounded-md border p-4">
+                                        <div key={index} className="rounded-lg border border-emerald-100 p-4 bg-emerald-50/50">
                                             <div className="mb-2 flex items-center justify-between">
-                                                <span className="text-sm font-medium">Beneficiary {index + 1}</span>
+                                                <span className="text-sm font-medium text-emerald-800">Beneficiary {index + 1}</span>
                                                 {formData.beneficiaries.length > 1 && (
                                                     <Button
                                                         type="button"
@@ -583,40 +621,29 @@ export default function UserProfile({ memberProfile, beneficiaries, isNewUser, i
                                         </div>
                                     ))}
                                 </div>
-                            </div>
+                            </CardContent>
+                        </Card>
 
-                            {/* Submit Button */}
-                            <div className="flex items-center gap-4 pb-8">
-                              {isEditing && (
-    <div className="flex items-center gap-4">
-        <Button disabled={processing} type="submit">
-            Save Changes
-        </Button>
+                        {/* Submit Button */}
+                        <div className="flex items-center gap-4 pb-8">
+                            {isEditing && (
+                                <div className="flex items-center gap-4">
+                                    <Button disabled={processing} type="submit">
+                                        Save Changes
+                                    </Button>
 
-        <Transition show={recentlySuccessful}>
-            <p className="text-sm text-green-600">
-                Saved successfully!
-            </p>
-        </Transition>
-    </div>
-)}
-
-                                <Transition
-                                    show={recentlySuccessful}
-                                    enter="transition ease-in-out"
-                                    enterFrom="opacity-0"
-                                    leave="transition ease-in-out"
-                                    leaveTo="opacity-0"
-                                >
-                                    <p className="text-sm text-green-600">
-                                        Saved successfully!
-                                    </p>
-                                </Transition>
-                            </div>
-                        </>
-                    )}
-                </Form>
-            </div>
-        </AppLayout>
+                                    <Transition show={recentlySuccessful}>
+                                        <p className="text-sm text-green-600">
+                                            Saved successfully!
+                                        </p>
+                                    </Transition>
+                                </div>
+                            )}
+                        </div>
+                    </>
+                )}
+            </Form>
+        </div>
+    </AppLayout>
     );
 }

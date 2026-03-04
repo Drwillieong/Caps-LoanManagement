@@ -18,6 +18,9 @@ class EnsureProfileCompleted
 
         // Only apply to authenticated users with member role
         if ($user && $user->role === 'member') {
+            // Load the memberProfile relationship to ensure it's available
+            $user->load('memberProfile');
+            
             // Check if profile is not completed
             if (!$user->hasCompletedProfile()) {
                 // Allow access only to profile page and profile store

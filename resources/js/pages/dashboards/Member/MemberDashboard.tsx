@@ -57,6 +57,7 @@ interface DashboardProps {
     completed_loan_count?: number;
     loan_progress?: LoanProgress | null;
     loan_eligibility?: LoanEligibility | null;
+    profileCompleted?: boolean;
 }
 
 export default function MemberDashboard({ 
@@ -67,6 +68,7 @@ export default function MemberDashboard({
     completed_loan_count = 0,
     loan_progress = null,
     loan_eligibility = null,
+    profileCompleted = true,
 }: DashboardProps) {
     const [coMakerCount, setCoMakerCount] = useState(comakerRequestCount);
     const [showValues, setShowValues] = useState(true);
@@ -161,6 +163,33 @@ export default function MemberDashboard({
                     </Card>
                 )}
 
+                {/* === PROFILE INCOMPLETE WARNING BANNER === */}
+                {!profileCompleted && (
+                    <Card className="border-l-4 border-l-amber-500 bg-amber-50">
+                        <CardContent className="flex items-center justify-between py-4">
+                            <div className="flex items-center gap-3">
+                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100">
+                                    <AlertCircle className="h-5 w-5 text-amber-600" />
+                                </div>
+                                <div>
+                                    <p className="font-semibold text-amber-800">
+                                        Complete Your Profile First!
+                                    </p>
+                                    <p className="text-sm text-amber-700">
+                                        You need to complete your profile with all required information before you can apply for a loan.
+                                    </p>
+                                </div>
+                            </div>
+                            <Link
+                                href="/dashboards/Member/UserProfile"
+                                className="inline-flex items-center gap-2 rounded-xl bg-amber-600 px-4 py-2 text-white hover:bg-amber-700 transition"
+                            >
+                                Complete Profile
+                            </Link>
+                        </CardContent>
+                    </Card>
+                )}
+
                 {/* === LOAN ELIGIBILITY SECTION - KPI Stats Grid Style === */}
                 {loan_eligibility && (
                     <Card className="border-emerald-100">
@@ -236,7 +265,12 @@ export default function MemberDashboard({
                                     <div className="flex items-center gap-2">
                                         <span className="text-sm font-bold text-emerald-900 dark:text-emerald-100">Current Eligibility Status</span>
                                     </div>
-                                    {loan_eligibility.has_active_loan ? (
+                                    {!profileCompleted ? (
+                                        <span className="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium bg-amber-100 text-amber-700">
+                                            <AlertCircle className="size-3 mr-1" />
+                                            Profile Incomplete
+                                        </span>
+                                    ) : loan_eligibility.has_active_loan ? (
                                         <span className="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium bg-amber-100 text-amber-700">
                                             <AlertCircle className="size-3 mr-1" />
                                             Has Active Loan
@@ -249,8 +283,8 @@ export default function MemberDashboard({
                                     )}
                                 </div>
 
-                                {/* Quick Action Link - Only show if eligible */}
-                                {!loan_eligibility.has_active_loan && loan_eligibility.max_loan_allowed > 0 && (
+                                {/* Quick Action Link - Only show if eligible and profile is complete */}
+                                {profileCompleted && !loan_eligibility.has_active_loan && loan_eligibility.max_loan_allowed > 0 && (
                                     <Link
                                         href="/dashboards/Member/ApplyLoan"
                                         className="mt-4 inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-white hover:bg-emerald-700 transition"
@@ -259,6 +293,13 @@ export default function MemberDashboard({
                                         Apply for Loan
                                         <ArrowRight className="h-4 w-4" />
                                     </Link>
+                                )}
+
+                                {/* Show message when profile is incomplete */}
+                                {!profileCompleted && (
+                                    <div className="mt-4 text-sm text-amber-700">
+                                        Please complete your profile to unlock loan application.
+                                    </div>
                                 )}
                             </div>
                         </CardContent>

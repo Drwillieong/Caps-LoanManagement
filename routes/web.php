@@ -117,6 +117,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     'max_monthly_payment' => ($memberProfile?->basic_salary ?? 0) / 2,
                     'has_active_loan' => $activeLoanCount > 0,
                 ],
+                // Profile completion status
+                'profileCompleted' => $user->hasCompletedProfile(),
             ];
         }
         

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\GmController\GmController;
+use App\Http\Controllers\CreditComController\CreditComController;
 use App\Http\Controllers\HrController\CreateMemberController;
 use App\Http\Controllers\HrController\MemberProfileViewController;
 use App\Http\Controllers\Member\LoanController;
@@ -21,9 +22,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         $roleComponents = [
             'member' => 'dashboards/Member/MemberDashboard',
             'gm' => 'dashboards/Gm/GmDashboard',
-            'secretary' => 'dashboards/Secretary/SecretaryDashboard',
             'hr' => 'dashboards/HR/HrDashboard',
-            'chairman' => 'dashboards/ChairMan/ChairManDashboard',
+            'creditcom' => 'dashboards/CreditCom/CreditComDashboard',
         ];
 
         $role = auth()->user()->role;
@@ -258,6 +258,65 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ];
         }
 
+        // Get Credit Coordinator-specific data
+        if ($role === 'creditcom') {
+            // Get total loan portfolio (sum of active/released loans)
+            $totalLoanPortfolio = \App\Models\Loan::whereIn('status', ['released', 'approved'])
+                ->sum('total_amount_due');
+            
+            // Get active members count
+            $activeMembers = \App\Models\User::where('role', 'member')->where('is_active', true)->count();
+            
+            // Get pending CC validations count (loans approved by GM awaiting CC review)
+            $pendingValidations = \App\Models\Loan::where('status', 'pending_cc_review')->count();
+            
+            // Get recent pending CC review loans (latest 5)
+            $recentPendingLoans = \App\Models\Loan::where('status', 'pending_cc_review')
+                ->with(['user', 'loanType'])
+                ->orderBy('created_at', 'desc')
+                ->limit(5)
+                ->get()
+                ->map(function ($loan) {
+                    return [
+                        'id' => $loan->id,
+                        'member_name' => $loan->user->first_name . ($loan->user->middle_name ? ' ' . $loan->user->middle_name : '') . ' ' . $loan->user->last_name,
+                        'loan_type' => $loan->loanType->name ?? 'N/A',
+                        'principal_amount' => $loan->principal_amount,
+                        'total_amount_due' => $loan->total_amount_due,
+                        'created_at' => $loan->created_at->format('Y-m-d'),
+                    ];
+                });
+            
+            // Calculate loan health metrics
+            $totalLoans = \App\Models\Loan::whereIn('status', ['released', 'approved', 'paid_off'])->count();
+            $completedLoans = \App\Models\Loan::where('status', 'paid_off')->count();
+            
+            // Get total paid amount
+            $totalPaidAmount = \App\Models\LoanPayment::sum('amount');
+            
+            // Get total amount due from active loans
+            $totalAmountDue = \App\Models\Loan::whereIn('status', ['released', 'approved'])->sum('total_amount_due');
+            
+            // Calculate actual collection rate based on payments
+            $actualCollectionRate = $totalAmountDue > 0 ? round(($totalPaidAmount / $totalAmountDue) * 100) : 0;
+
+            $memberData = [
+                'stats' => [
+                    'total_loan_portfolio' => $totalLoanPortfolio,
+                    'active_members' => $activeMembers,
+                    'pending_approvals' => $pendingValidations,
+                    'total_paid_amount' => $totalPaidAmount,
+                    'total_amount_due' => $totalAmountDue,
+                ],
+                'recent_pending_loans' => $recentPendingLoans,
+                'loan_health' => [
+                    'collection_rate' => $actualCollectionRate,
+                    'completed_loans' => $completedLoans,
+                    'active_loans' => \App\Models\Loan::whereIn('status', ['released', 'approved'])->count(),
+                ],
+            ];
+        }
+
         return Inertia::render($roleComponents[$role], $memberData);
     })->name('dashboard')->middleware('ensure.profile.completed');
 
@@ -329,12 +388,6 @@ Route::get('dashboards/Member/MemberActiveLoan', function () {
 
 
 
-    // Secretary
-    Route::get('dashboards/Secretary/VerifyMemberProfile', function () {
-        return Inertia::render('dashboards/Secretary/VerifyMemberProfile');
-    })->middleware('role:secretary')->name('secretary.verify-member-profile');
-
-
     // GM
     Route::get('dashboards/Gm/ValidateLoan', [GmController::class, 'index'])
         ->middleware('role:gm')
@@ -367,6 +420,31 @@ Route::get('dashboards/Member/MemberActiveLoan', function () {
     Route::get('dashboards/Gm/GMCompletedLoan', function () {
         return Inertia::render('dashboards/Gm/GMCompletedLoan');
     })->middleware('role:gm')->name('gm.completed-loan');
+
+    // Credit Coordinator
+    Route::get('dashboards/CreditCom/ValidateLoan', [CreditComController::class, 'index'])
+        ->middleware('role:creditcom')
+        ->name('creditcom.validate-loan');
+
+    Route::get('dashboards/CreditCom/LoanApplication', [CreditComController::class, 'loanApplication'])
+        ->middleware('role:creditcom')
+        ->name('creditcom.loan-application');
+
+    Route::get('dashboards/CreditCom/Loan/{loan}/view', [CreditComController::class, 'viewLoan'])
+        ->middleware('role:creditcom')
+        ->name('creditcom.loan.view');
+
+    Route::post('dashboards/CreditCom/Loan/{loan}/approve', [CreditComController::class, 'approve'])
+        ->middleware('role:creditcom')
+        ->name('creditcom.loan.approve');
+
+    Route::post('dashboards/CreditCom/Loan/{loan}/reject', [CreditComController::class, 'reject'])
+        ->middleware('role:creditcom')
+        ->name('creditcom.loan.reject');
+
+    Route::get('dashboards/CreditCom/Loan/PendingCount', [CreditComController::class, 'pendingCount'])
+        ->middleware('role:creditcom')
+        ->name('creditcom.pending-count');
 
     // Chairman
 

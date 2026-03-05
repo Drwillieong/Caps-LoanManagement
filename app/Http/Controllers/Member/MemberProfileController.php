@@ -19,8 +19,8 @@ class MemberProfileController extends Controller
         $user = $request->user();
         $memberProfile = $user->memberProfile;
         
-        // Check if user is an admin (hr, gm, chairman, secretary roles)
-        $adminRoles = ['hr', 'gm', 'chairman', 'secretary'];
+        // Check if user is an admin (hr, gm, creditcom roles)
+        $adminRoles = ['hr', 'gm', 'creditcom'];
         $isAdmin = in_array($user->role, $adminRoles);
         
         return Inertia::render('dashboards/Member/UserProfile', [

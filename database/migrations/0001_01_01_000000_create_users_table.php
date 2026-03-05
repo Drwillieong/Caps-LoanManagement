@@ -21,9 +21,8 @@ return new class extends Migration
     $table->enum('role', [
         'member',
         'gm',
-        'secretary',
+        'creditcom',
         'hr',
-        'chairman',
     ])->default('member');
 
     $table->boolean('is_active')->default(true);

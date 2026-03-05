@@ -7,6 +7,13 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import InputError from '@/components/input-error';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from '@/components/ui/badge';
 import { useMemo, useState, useEffect } from 'react';
 import type { ApplyLoanProps, EligibleCoMaker, PreviousLoan, SharedData } from '@/types';
@@ -518,18 +525,28 @@ export default function ApplyLoan({
                                     />
                                 </div>
 
-                                <div className="space-y-2">
-                                    <Label>Term (Months)</Label>
-                                    <Input
-                                        type="number"
-                                        placeholder="Enter term"
-                                        value={data.terms_months}
-                                        onChange={(e) =>
-                                            setData('terms_months', e.target.value)
-                                        }
-                                    />
-                                    <InputError message={errors.terms_months} />
-                                </div>
+                              <div className="space-y-2">
+  <Label>Term (Months)</Label>
+
+  <Select
+    value={data.terms_months}
+    onValueChange={(value) => setData("terms_months", value)}
+  >
+    <SelectTrigger className="w-full">
+      <SelectValue placeholder="Select term" />
+    </SelectTrigger>
+
+    <SelectContent className="max-h-48 overflow-y-auto">
+      {[...Array(24)].map((_, i) => (
+        <SelectItem key={i + 1} value={(i + 1).toString()}>
+          {i + 1} {i + 1 === 1 ? "Month" : "Months"}
+        </SelectItem>
+      ))}
+    </SelectContent>
+  </Select>
+
+  <InputError message={errors.terms_months} />
+</div>
                             </div>
                         </CardContent>
                     </Card>

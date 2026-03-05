@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\GmController;
+namespace App\Http\Controllers\CreditComController;
 
 use App\Http\Controllers\Controller;
 use App\Models\Loan;
@@ -12,15 +12,15 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
-class GmController extends Controller
+class CreditComController extends Controller
 {
     /**
-     * Display list of loans pending GM validation
+     * Display list of loans pending Credit Coordinator validation
      */
     public function index()
     {
-        // Get loans with status 'pending_gm_review'
-        $pendingLoans = Loan::where('status', 'pending_gm_review')
+        // Get loans with status 'pending_cc_review'
+        $pendingLoans = Loan::where('status', 'pending_cc_review')
             ->with([
                 'user.memberProfile',
                 'loanType',
@@ -97,13 +97,13 @@ class GmController extends Controller
                 ];
             });
 
-        return Inertia::render('dashboards/Gm/ValidateLoan', [
+        return Inertia::render('dashboards/CreditCom/CrCoorValidateLoan', [
             'pendingLoans' => $pendingLoans,
         ]);
     }
 
     /**
-     * Approve a loan application
+     * Approve a loan application (Credit Coordinator final approval)
      */
     public function approve(Request $request, $loanId)
     {
@@ -113,24 +113,23 @@ class GmController extends Controller
 
         $loan = Loan::findOrFail($loanId);
 
-        // Verify the loan is in pending_gm_review status
-        if ($loan->status !== 'pending_gm_review') {
-            return back()->with('error', 'This loan is not pending GM review.');
+        // Verify the loan is in pending_cc_review status
+        if ($loan->status !== 'pending_cc_review') {
+            return back()->with('error', 'This loan is not pending Credit Coordinator review.');
         }
 
-        // Update loan status to pending_cc_review (Credit Coordinator Review)
-        // Credit Coordinator will then approve to generate amortization schedule
+        // Update loan status to approved
         $loan->update([
-            'status' => 'pending_cc_review',
-            'remarks' => $validated['remarks'] ?? 'Approved by GM, pending CC review',
+            'status' => 'approved',
+            'remarks' => $validated['remarks'] ?? 'Approved by Credit Coordinator',
         ]);
 
-        // Do NOT generate amortization schedule yet - Credit Coordinator will do that
-        // after final approval
+        // Generate amortization schedule now that CC has approved
+        $this->generateAmortizationSchedule($loan);
 
         return redirect()
-            ->route('gm.validate-loan')
-            ->with('success', 'Loan application approved and forwarded to Credit Coordinator.');
+            ->route('creditcom.validate-loan')
+            ->with('success', 'Loan application approved successfully!');
     }
 
     /**
@@ -144,9 +143,9 @@ class GmController extends Controller
 
         $loan = Loan::findOrFail($loanId);
 
-        // Verify the loan is in pending_gm_review status
-        if ($loan->status !== 'pending_gm_review') {
-            return back()->with('error', 'This loan is not pending GM review.');
+        // Verify the loan is in pending_cc_review status
+        if ($loan->status !== 'pending_cc_review') {
+            return back()->with('error', 'This loan is not pending Credit Coordinator review.');
         }
 
         // Update loan status to rejected
@@ -156,7 +155,7 @@ class GmController extends Controller
         ]);
 
         return redirect()
-            ->route('gm.validate-loan')
+            ->route('creditcom.validate-loan')
             ->with('success', 'Loan application rejected.');
     }
 
@@ -181,22 +180,22 @@ class GmController extends Controller
     }
 
     /**
-     * Get count of pending GM validations for dashboard
+     * Get count of pending Credit Coordinator validations for dashboard
      */
     public function pendingCount()
     {
-        $count = Loan::where('status', 'pending_gm_review')->count();
+        $count = Loan::where('status', 'pending_cc_review')->count();
 
         return response()->json(['count' => $count]);
     }
 
     /**
-     * Get all pending GM review loans for the loan application table
+     * Get all pending CC review loans for the loan application table
      */
     public function loanApplication()
     {
-        // Get loans with status 'pending_gm_review'
-        $pendingLoans = Loan::where('status', 'pending_gm_review')
+        // Get loans with status 'pending_cc_review'
+        $pendingLoans = Loan::where('status', 'pending_cc_review')
             ->with([
                 'user.memberProfile',
                 'loanType',
@@ -239,7 +238,7 @@ class GmController extends Controller
                 ];
             });
 
-        return Inertia::render('dashboards/Gm/LoanApplication', [
+        return Inertia::render('dashboards/CreditCom/CrCoorLoanApplication', [
             'pendingLoans' => $pendingLoans,
         ]);
     }
@@ -250,7 +249,7 @@ class GmController extends Controller
     public function viewLoan($loanId)
     {
         $loan = Loan::where('id', $loanId)
-            ->where('status', 'pending_gm_review')
+            ->where('status', 'pending_cc_review')
             ->with([
                 'user.memberProfile',
                 'loanType',
@@ -325,8 +324,9 @@ class GmController extends Controller
             'active_loans_count' => $activeLoansCount,
         ];
 
-        return Inertia::render('dashboards/Gm/ValidateLoan', [
+        return Inertia::render('dashboards/CreditCom/CrCoorValidateLoan', [
             'pendingLoans' => [$loanDetails],
         ]);
     }
 }
+

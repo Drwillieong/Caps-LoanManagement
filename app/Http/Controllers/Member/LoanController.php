@@ -326,7 +326,6 @@ class LoanController extends Controller
             ->whereIn('status', [
                 'awaiting_comaker',
                 'pending_gm_review',
-                'pending_secretary_review',
                 'approved',
                 'rejected'
             ])

@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid, Plus, UsersRound, FileCheck, Archive, Clock, FileText, FilePlus } from 'lucide-react';
+import { BookOpen, Folder, LayoutGrid, Plus, UsersRound, Archive, Clock, FileText, FilePlus } from 'lucide-react';
 
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
@@ -95,16 +95,12 @@ const gmNavItems: NavItem[] = [
     
 ];
 
-const secretaryNavItems: NavItem[] = [
+const creditcomNavItems: NavItem[] = [
     {
-        title: 'Verify Member Profile',
-        href: '/dashboards/Secretary/VerifyMemberProfile',
-        icon: FileCheck,
+        title: 'Loan Application',
+        href: '/dashboards/CreditCom/LoanApplication',
+        icon: FileText,
     },
-    
-];
-
-const chairmanNavItems: NavItem[] = [
     
 ];
 
@@ -128,11 +124,8 @@ export function AppSidebar() {
         case 'gm':
             roleNavItems = gmNavItems;
             break;
-        case 'secretary':
-            roleNavItems = secretaryNavItems;
-            break;
-        case 'chairman':
-            roleNavItems = chairmanNavItems;
+        case 'creditcom':
+            roleNavItems = creditcomNavItems;
             break;
         default:
             roleNavItems = [];

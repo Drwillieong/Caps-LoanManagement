@@ -101,8 +101,6 @@ export default function PendingApplication({ loan, hasPendingLoan, loanHistory }
                 return <Badge className="bg-yellow-500">Awaiting Co-Maker</Badge>;
             case 'pending_gm_review':
                 return <Badge className="bg-blue-500">Pending GM Review</Badge>;
-            case 'pending_secretary_review':
-                return <Badge className="bg-purple-500">Pending Secretary Review</Badge>;
             default:
                 return <Badge>{status}</Badge>;
         }
@@ -144,13 +142,6 @@ export default function PendingApplication({ loan, hasPendingLoan, loanHistory }
                     title: 'Pending GM Review',
                     description: 'Your loan application is under review.',
                     color: 'bg-blue-50 border-blue-200'
-                };
-            case 'pending_secretary_review':
-                return {
-                    icon: <Clock className="h-12 w-12 text-purple-500" />,
-                    title: 'Pending Secretary Review',
-                    description: 'Your loan application is under review.',
-                    color: 'bg-purple-50 border-purple-200'
                 };
             default:
                 return {

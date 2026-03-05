@@ -58,9 +58,8 @@ class CreateMemberController extends Controller
             'roles' => [
                 'member',
                 'gm',
-                'secretary',
+                'creditcom',
                 'hr',
-                'chairman',
             ],
         ]);
     }
@@ -71,9 +70,8 @@ class CreateMemberController extends Controller
             'roles' => [
                 'member',
                 'gm',
-                'secretary',
+                'creditcom',
                 'hr',
-                'chairman',
             ],
         ]);
     }
@@ -86,7 +84,7 @@ class CreateMemberController extends Controller
             'last_name' => 'required|string|max:255',
             'email' => 'required|string|lowercase|email|max:255|unique:users',
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
-            'role' => 'required|in:member,gm,secretary,hr,chairman',
+            'role' => 'required|in:member,gm,creditcom,hr',
             
             // Employee ID
             'employee_id' => 'required|string|max:255|unique:member_profiles,employee_id',

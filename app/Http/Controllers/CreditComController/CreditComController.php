@@ -19,8 +19,8 @@ class CreditComController extends Controller
      */
     public function index()
     {
-        // Get loans with status 'pending_cc_review'
-        $pendingLoans = Loan::where('status', 'pending_cc_review')
+        // Get loans with status 'pending_cc_review' or 'endorsed_by_gm' (legacy status)
+        $pendingLoans = Loan::whereIn('status', ['pending_cc_review', 'endorsed_by_gm'])
             ->with([
                 'user.memberProfile',
                 'loanType',
@@ -113,8 +113,8 @@ class CreditComController extends Controller
 
         $loan = Loan::findOrFail($loanId);
 
-        // Verify the loan is in pending_cc_review status
-        if ($loan->status !== 'pending_cc_review') {
+        // Verify the loan is in pending_cc_review or endorsed_by_gm status
+        if (!in_array($loan->status, ['pending_cc_review', 'endorsed_by_gm'])) {
             return back()->with('error', 'This loan is not pending Credit Coordinator review.');
         }
 
@@ -143,8 +143,8 @@ class CreditComController extends Controller
 
         $loan = Loan::findOrFail($loanId);
 
-        // Verify the loan is in pending_cc_review status
-        if ($loan->status !== 'pending_cc_review') {
+        // Verify the loan is in pending_cc_review or endorsed_by_gm status
+        if (!in_array($loan->status, ['pending_cc_review', 'endorsed_by_gm'])) {
             return back()->with('error', 'This loan is not pending Credit Coordinator review.');
         }
 
@@ -184,7 +184,7 @@ class CreditComController extends Controller
      */
     public function pendingCount()
     {
-        $count = Loan::where('status', 'pending_cc_review')->count();
+        $count = Loan::whereIn('status', ['pending_cc_review', 'endorsed_by_gm'])->count();
 
         return response()->json(['count' => $count]);
     }
@@ -194,8 +194,8 @@ class CreditComController extends Controller
      */
     public function loanApplication()
     {
-        // Get loans with status 'pending_cc_review'
-        $pendingLoans = Loan::where('status', 'pending_cc_review')
+        // Get loans with status 'pending_cc_review' or 'endorsed_by_gm' (legacy status)
+        $pendingLoans = Loan::whereIn('status', ['pending_cc_review', 'endorsed_by_gm'])
             ->with([
                 'user.memberProfile',
                 'loanType',
@@ -249,7 +249,7 @@ class CreditComController extends Controller
     public function viewLoan($loanId)
     {
         $loan = Loan::where('id', $loanId)
-            ->where('status', 'pending_cc_review')
+            ->whereIn('status', ['pending_cc_review', 'endorsed_by_gm'])
             ->with([
                 'user.memberProfile',
                 'loanType',

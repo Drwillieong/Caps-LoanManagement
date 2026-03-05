@@ -50,6 +50,7 @@ export default function CrCoorLoanApplication({ pendingLoans }: GmLoanApplicatio
       { variant: 'default' | 'secondary' | 'destructive' | 'outline'; label: string }
     > = {
       pending_cc_review: { variant: 'secondary', label: 'Pending CC Review' },
+      endorsed_by_gm: { variant: 'secondary', label: 'Endorsed by GM' },
       pending_gm_review: { variant: 'secondary', label: 'Pending Review' },
       approved: { variant: 'default', label: 'Approved' },
       rejected: { variant: 'destructive', label: 'Rejected' },

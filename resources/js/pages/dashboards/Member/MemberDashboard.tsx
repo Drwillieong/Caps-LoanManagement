@@ -131,10 +131,6 @@ export default function MemberDashboard({
             
             <div className="flex flex-1 flex-col gap-6 p-6">
                 {/* Welcome Header */}
-                <div className="flex flex-col gap-1">
-                    <h1 className="text-2xl font-bold tracking-tight text-emerald-950 dark:text-emerald-50">Member Dashboard</h1>
-                    <p className="text-muted-foreground text-sm">View your loan eligibility, track payments, and manage applications.</p>
-                </div>
 
                 {/* === CO-MAKER NOTIFICATION BANNER === */}
                 {coMakerCount > 0 && (

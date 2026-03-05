@@ -22,7 +22,7 @@ class DatabaseSeeder extends Seeder
             'is_active' => true,
         ]);
 
-         // Gm Admin
+        // GM Admin
         User::create([
             'first_name' => 'Admin',
             'middle_name' => '',
@@ -33,7 +33,8 @@ class DatabaseSeeder extends Seeder
             'is_active' => true,
         ]);
 
-         User::create([
+        // Credit Committee Admin
+        User::create([
             'first_name' => 'Admin',
             'middle_name' => '',
             'last_name' => '',
@@ -43,45 +44,91 @@ class DatabaseSeeder extends Seeder
             'is_active' => true,
         ]);
 
-        // Test Member
-       $user = User::create([
-    'first_name' => 'Jairus',
-    'middle_name' => 'Sotto',
-    'last_name' => 'Pecho',
-    'email' => 'jairuspecho19@gmail.com',
-    'password' => Hash::make('admin123'),
-    'role' => 'member',
-    'is_active' => true,
-]);
+        // -----------------------------
+        // Test Member 1
+        // -----------------------------
+        $user = User::create([
+            'first_name' => 'Jairus',
+            'middle_name' => 'Sotto',
+            'last_name' => 'Pecho',
+            'email' => 'jairuspecho19@gmail.com',
+            'password' => Hash::make('admin123'),
+            'role' => 'member',
+            'is_active' => true,
+        ]);
 
-MemberProfile::create([
-    'user_id' => $user->id,
+        MemberProfile::create([
+            'user_id' => $user->id,
 
-    'employee_id' => 'EMP-001',
-    'first_name' => 'Jairus',
-    'middle_name' => 'Sotto',
-    'last_name' => 'Pecho',
+            'employee_id' => 'EMP-001',
+            'first_name' => 'Jairus',
+            'middle_name' => 'Sotto',
+            'last_name' => 'Pecho',
 
-    'date_of_birth' => '2002-05-19',
-    'sex' => 'male',
-    'civil_status' => 'single',
-    'spouse_name' => null,
+            'date_of_birth' => '2002-05-19',
+            'sex' => 'male',
+            'civil_status' => 'single',
+            'spouse_name' => null,
 
-    // Contact
-    'mobile_number' => '09123456789',
-    'present_address' => 'Majayjay, Laguna',
-    'permanent_address' => 'Majayjay, Laguna',
+            // Contact
+            'mobile_number' => '09123456789',
+            'present_address' => 'Majayjay, Laguna',
+            'permanent_address' => 'Majayjay, Laguna',
 
-    // Employment
-    'position' => 'IT Staff',
-    'date_hired' => '2024-01-15',
-    'basic_salary' => 25000.00,
+            // Employment
+            'position' => 'IT Staff',
+            'date_hired' => '2024-01-15',
+            'basic_salary' => 25000.00,
 
-    // Financial
-    'share_capital_balance' => 0,
-    'bank_account_number' => '1234567890',
-    'tin_number' => '123-456-789',
-]);
+            // Financial
+            'share_capital_balance' => 20000.00,
+            'bank_account_number' => '1234567890',
+            'tin_number' => '123-456-789',
+        ]);
+
+        // -----------------------------
+        // Test Member 2
+        // -----------------------------
+        $user = User::create([
+            'first_name' => 'Kevin',
+            'middle_name' => 'Corpuz',
+            'last_name' => 'Bolado',
+            'email' => 'kevincorpuz321@gmail.com',
+            'password' => Hash::make('admin123'),
+            'role' => 'member',
+            'is_active' => true,
+        ]);
+
+        MemberProfile::create([
+            'user_id' => $user->id,
+
+            'employee_id' => 'EMP-002', // fixed duplicate
+            'first_name' => 'Kevin',
+            'middle_name' => 'Corpuz',
+            'last_name' => 'Bolado',
+
+            'date_of_birth' => '2002-12-01',
+            'sex' => 'male',
+            'civil_status' => 'single',
+            'spouse_name' => null,
+
+            // Contact
+            'mobile_number' => '09123456789',
+            'present_address' => 'Majayjay, Laguna',
+            'permanent_address' => 'Majayjay, Laguna',
+
+            // Employment
+            'position' => 'IT Staff',
+            'date_hired' => '2024-01-15',
+            'basic_salary' => 20000.00,
+
+            // Financial
+            'share_capital_balance' => 15000.00,
+            'bank_account_number' => '1234567890',
+            'tin_number' => '123-456-789',
+        ]);
+
+        // Call other seeders
         $this->call(LoanTypeSeeder::class);
     }
 }

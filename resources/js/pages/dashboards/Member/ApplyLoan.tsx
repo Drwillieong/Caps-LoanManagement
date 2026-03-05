@@ -16,8 +16,15 @@ import {
 } from "@/components/ui/select";
 import { Badge } from '@/components/ui/badge';
 import { useMemo, useState, useEffect } from 'react';
-import type { ApplyLoanProps, EligibleCoMaker, PreviousLoan, SharedData } from '@/types';
+import type { ApplyLoanProps, EligibleCoMaker, PreviousLoan, SharedData, BreadcrumbItem } from '@/types';
 import { Search, User, Calendar, AlertCircle, CheckCircle2, Clock, Eye, EyeOff, ArrowRight } from 'lucide-react';
+
+const breadcrumbs: BreadcrumbItem[] = [
+    {
+        title: 'Apply for a Loan',
+        href: '/dashboards/Member/ApplyLoan',
+    },
+];
 
 export default function ApplyLoan({
     loanTypes,
@@ -34,7 +41,7 @@ export default function ApplyLoan({
     // Show error message if profile is not verified
     if (error) {
         return (
-            <AppLayout headerRight={<LiveClock />}>
+            <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
                 <Head title={isEditing ? "Edit Loan" : "Apply Loan"} />
                 <div className="space-y-6 px-6">
                     <HeadingSmall
@@ -55,7 +62,7 @@ export default function ApplyLoan({
     // Show message if user has a pending application awaiting co-maker confirmation (only when not editing)
     if (hasAwaitingComaker && !isEditing) {
         return (
-            <AppLayout headerRight={<LiveClock />}>
+            <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
                 <Head title="Apply Loan" />
                 <div className="space-y-6 px-6">
                     <HeadingSmall
@@ -86,7 +93,7 @@ export default function ApplyLoan({
     // Don't render if memberProfile is not available yet
     if (!memberProfile) {
         return (
-            <AppLayout headerRight={<LiveClock />}>
+            <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
                 <Head title={isEditing ? "Edit Loan" : "Apply Loan"} />
                 <div className="flex items-center justify-center p-6">
                     <p className="text-gray-500">Loading...</p>
@@ -252,15 +259,11 @@ export default function ApplyLoan({
     }
 
     return (
-        <AppLayout headerRight={<LiveClock />}>
+        <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
             <Head title={isEditing ? "Edit Loan Application" : "Apply Loan"} />
 
             <div className="space-y-6 px-6 py-6">
                 <div className="flex items-center justify-between">
-                    <HeadingSmall
-                        title={isEditing ? "Edit Loan Application" : "Apply for a Loan"}
-                        description={isEditing ? "Update your loan details" : "Fill in the loan details. Eligibility is checked automatically."}
-                    />
                     {isEditing && (
                         <Link
                             href="/dashboards/Member/PendingApplication"
@@ -274,10 +277,10 @@ export default function ApplyLoan({
                 {/* =========================================
                     TOP SECTION: ENHANCED ELIGIBILITY CHECK
                 ========================================= */}
-                <Card className="border-l-4 border-l-blue-500 shadow-md">
+                <Card className="border-emerald-100 bg-white/50 dark:bg-emerald-950/10 shadow-sm">
                     <CardHeader className="pb-3">
-                        <CardTitle className="flex items-center gap-2 text-lg">
-                            <CheckCircle2 className="h-5 w-5 text-blue-500" />
+                        <CardTitle className="flex items-center gap-2 text-lg text-emerald-900 dark:text-emerald-100">
+                            <CheckCircle2 className="h-5 w-5 text-emerald-600" />
                             Eligibility Check
                         </CardTitle>
                         <CardDescription>
@@ -290,7 +293,7 @@ export default function ApplyLoan({
                             <div className={`flex items-center gap-3 rounded-lg p-4 ${
                                 exceedsShareCapital || exceedsMonthlyLimit
                                     ? 'bg-red-50 border border-red-200' 
-                                    : 'bg-green-50 border border-green-200'
+                                    : 'bg-emerald-50 border border-emerald-200'
                             }`}>
                                 {exceedsShareCapital || exceedsMonthlyLimit ? (
                                     <>
@@ -310,12 +313,12 @@ export default function ApplyLoan({
                                     </>
                                 ) : (
                                     <>
-                                        <CheckCircle2 className="h-6 w-6 text-green-500" />
+                                        <CheckCircle2 className="h-6 w-6 text-emerald-500" />
                                         <div>
-                                            <p className="font-semibold text-green-700">
+                                            <p className="font-semibold text-emerald-700">
                                                 ✅ Loan amount within allowed limit
                                             </p>
-                                            <p className="text-sm text-green-600">
+                                            <p className="text-sm text-emerald-600">
                                                 You can apply up to {maskCurrency(maxLoanAllowed, showApplicantInfo)}
                                             </p>
                                         </div>
@@ -327,17 +330,17 @@ export default function ApplyLoan({
                             {data.principal_amount && Number(data.principal_amount) > 0 && (
                                 <div className="space-y-2">
                                     <div className="flex justify-between text-sm">
-                                        <span className="text-gray-600">Loan Usage</span>
+                                        <span className="text-emerald-600">Loan Usage</span>
                                         <span className="font-medium">
                                             {maskCurrency(data.principal_amount, showApplicantInfo)} 
                                             &nbsp;/&nbsp;
                                             {maskCurrency(maxLoanAllowed, showApplicantInfo)}
                                         </span>
                                     </div>
-                                    <div className="h-3 w-full overflow-hidden rounded-full bg-gray-200">
+                                    <div className="h-3 w-full overflow-hidden rounded-full bg-emerald-100">
                                         <div 
                                             className={`h-full transition-all duration-300 ${
-                                                exceedsShareCapital ? 'bg-red-500' : 'bg-green-500'
+                                                exceedsShareCapital ? 'bg-red-500' : 'bg-emerald-600'
                                             }`}
                                             style={{ width: `${loanUsagePercentage}%` }}
                                         />
@@ -347,22 +350,22 @@ export default function ApplyLoan({
 
                             {/* Computation summary */}
                             {computed && (
-                                <div className="grid grid-cols-3 gap-4 rounded-lg bg-muted p-4">
+                                <div className="grid grid-cols-3 gap-4 rounded-lg bg-emerald-50 border border-emerald-100 p-4">
                                     <div className="text-center">
-                                        <p className="text-xs text-gray-500">Interest</p>
-                                        <p className="font-semibold">
+                                        <p className="text-xs text-emerald-600">Interest</p>
+                                        <p className="font-semibold text-emerald-700">
                                             ₱{formatNumberWithCommas(computed.interest)}
                                         </p>
                                     </div>
                                     <div className="text-center">
-                                        <p className="text-xs text-gray-500">Monthly</p>
-                                        <p className="font-semibold">
+                                        <p className="text-xs text-emerald-600">Monthly</p>
+                                        <p className="font-semibold text-emerald-700">
                                             ₱{formatNumberWithCommas(computed.monthly)}
                                         </p>
                                     </div>
                                     <div className="text-center">
-                                        <p className="text-xs text-gray-500">Total Payable</p>
-                                        <p className="font-semibold">
+                                        <p className="text-xs text-emerald-600">Total Payable</p>
+                                        <p className="font-semibold text-emerald-700">
                                             ₱{formatNumberWithCommas(computed.total)}
                                         </p>
                                     </div>
@@ -376,10 +379,10 @@ export default function ApplyLoan({
                     PREVIOUS LOANS SECTION (only show when not editing)
                 ========================================= */}
                 {!isEditing && previousLoans && previousLoans.length > 0 && (
-                    <Card className="border-l-4 border-l-amber-500 shadow-md">
+                    <Card className="border-emerald-100 bg-white/50 dark:bg-emerald-950/10 shadow-sm">
                         <CardHeader className="pb-3">
-                            <CardTitle className="flex items-center gap-2 text-lg">
-                                <Clock className="h-5 w-5 text-amber-500" />
+                            <CardTitle className="flex items-center gap-2 text-lg text-emerald-900 dark:text-emerald-100">
+                                <Clock className="h-5 w-5 text-emerald-600" />
                                 Previous Loan: Balance as of Today
                             </CardTitle>
                             <CardDescription>
@@ -433,9 +436,9 @@ export default function ApplyLoan({
                    {/* =========================================
                     APPLICANT INFORMATION CARD
                     ========================================= */}
-                    <Card className="shadow-sm">
+                    <Card className="border-emerald-100 bg-white/50 dark:bg-emerald-950/10 shadow-sm">
                         <CardHeader className="pb-3 flex flex-row items-center justify-between">
-                            <CardTitle className="text-base">
+                            <CardTitle className="text-base text-emerald-900 dark:text-emerald-100">
                                 Applicant Information
                             </CardTitle>
 
@@ -451,23 +454,23 @@ export default function ApplyLoan({
 
                         <CardContent>
                             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                                <div className="rounded-lg bg-muted p-3">
-                                    <p className="text-xs text-gray-500">Basic Salary</p>
-                                    <p className="font-semibold text-lg">
+                                <div className="rounded-lg bg-emerald-50 border border-emerald-100 p-3">
+                                    <p className="text-xs text-emerald-600">Basic Salary</p>
+                                    <p className="font-semibold text-lg text-emerald-700">
                                         {maskCurrency(memberProfile.basic_salary, showApplicantInfo)}
                                     </p>
                                 </div>
 
-                                <div className="rounded-lg bg-muted p-3">
-                                    <p className="text-xs text-gray-500">Share Capital</p>
-                                    <p className="font-semibold text-lg">
+                                <div className="rounded-lg bg-emerald-50 border border-emerald-100 p-3">
+                                    <p className="text-xs text-emerald-600">Share Capital</p>
+                                    <p className="font-semibold text-lg text-emerald-700">
                                         {maskCurrency(memberProfile.share_capital_balance, showApplicantInfo)}
                                     </p>
                                 </div>
 
-                                <div className="rounded-lg bg-muted p-3">
-                                    <p className="text-xs text-gray-500">Max Loan Allowed</p>
-                                    <p className="font-semibold text-lg text-blue-600">
+                                <div className="rounded-lg bg-emerald-50 border border-emerald-100 p-3">
+                                    <p className="text-xs text-emerald-600">Max Loan Allowed</p>
+                                    <p className="font-semibold text-lg text-emerald-700">
                                         {maskCurrency(maxLoanAllowed, showApplicantInfo)}
                                     </p>
                                 </div>
@@ -478,9 +481,9 @@ export default function ApplyLoan({
                     {/* =========================================
                         LOAN DETAILS CARD
                     ========================================= */}
-                    <Card className="shadow-sm">
+                    <Card className="border-emerald-100 bg-white/50 dark:bg-emerald-950/10 shadow-sm">
                         <CardHeader className="pb-3">
-                            <CardTitle className="text-base">Loan Details</CardTitle>
+                            <CardTitle className="text-base text-emerald-900 dark:text-emerald-100">Loan Details</CardTitle>
                         </CardHeader>
                         <CardContent>
                             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -554,10 +557,10 @@ export default function ApplyLoan({
                   {/* =========================================
                     CO-MAKER SELECTION WITH SEARCH
                     ========================================= */}
-                    <Card className="shadow-sm">
+                    <Card className="border-emerald-100 bg-white/50 dark:bg-emerald-950/10 shadow-sm">
                         <CardHeader className="pb-3">
-                            <CardTitle className="flex items-center gap-2 text-base">
-                                <User className="h-4 w-4" />
+                            <CardTitle className="flex items-center gap-2 text-base text-emerald-900 dark:text-emerald-100">
+                                <User className="h-4 w-4 text-emerald-600" />
                                 Select Co-Maker
                             </CardTitle>
                             <CardDescription>
@@ -569,7 +572,7 @@ export default function ApplyLoan({
                             <div className="space-y-4">
                                 {/* Search input */}
                                 <div className="relative">
-                                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-emerald-500" />
                                     <Input
                                         type="text"
                                         placeholder="Search co-maker by name, ID, or email..."
@@ -604,7 +607,7 @@ export default function ApplyLoan({
 
                                 {/* Optional hint */}
                                 {!data.loan_type_id && (
-                                    <div className="rounded-lg bg-yellow-50 p-3 text-xs text-yellow-700">
+                                    <div className="rounded-lg bg-emerald-50 p-3 text-xs text-emerald-700">
                                         ⚠ Please select a loan type to confirm if a co-maker is required.
                                     </div>
                                 )}

@@ -46,8 +46,14 @@ export default function CoMaker({ coMakerRequests }: CoMakerProps) {
         });
     }
 
-    function formatCurrency(amount: number): string {
-        return `₱${amount.toLocaleString(undefined, {
+    function formatCurrency(amount: number | string): string {
+        if (amount === null || amount === undefined || amount === '') return '₱0.00';
+
+        const number = typeof amount === 'string' ? Number(amount) : amount;
+
+        if (isNaN(number)) return '₱0.00';
+
+        return `₱${number.toLocaleString('en-US', {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
         })}`;
@@ -111,15 +117,15 @@ export default function CoMaker({ coMakerRequests }: CoMakerProps) {
                         </div>
 
                         {coMakerRequests.map((request) => (
-                            <Card key={request.id} className="border-l-4 border-l-yellow-500 shadow-md">
+                            <Card key={request.id} className="border-emerald-100 bg-white/50 dark:bg-emerald-950/10 shadow-sm">
                                 <CardHeader className="pb-3">
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-3">
-                                            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-yellow-100">
-                                                <Users className="h-6 w-6 text-yellow-600" />
+                                            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100">
+                                                <Users className="h-6 w-6 text-emerald-600" />
                                             </div>
                                             <div>
-                                                <CardTitle className="text-lg">
+                                                <CardTitle className="text-lg text-emerald-900 dark:text-emerald-100">
                                                     Loan Application from {request.requester.name}
                                                 </CardTitle>
                                                 <CardDescription className="flex items-center gap-2">
@@ -134,9 +140,9 @@ export default function CoMaker({ coMakerRequests }: CoMakerProps) {
                                 <CardContent>
                                     <div className="space-y-4">
                                         {/* Requester Info */}
-                                        <div className="rounded-lg bg-muted p-4">
-                                            <h4 className="font-semibold mb-2 flex items-center gap-2">
-                                                <UserCheck className="h-4 w-4" />
+                                        <div className="rounded-lg bg-emerald-50 border border-emerald-100 p-4">
+                                            <h4 className="font-semibold mb-2 flex items-center gap-2 text-emerald-900">
+                                                <UserCheck className="h-4 w-4 text-emerald-600" />
                                                 Applicant Information
                                             </h4>
                                             <div className="grid grid-cols-2 gap-2 text-sm">
@@ -152,9 +158,9 @@ export default function CoMaker({ coMakerRequests }: CoMakerProps) {
                                         </div>
 
                                         {/* Loan Details */}
-                                        <div className="rounded-lg bg-muted p-4">
-                                            <h4 className="font-semibold mb-2 flex items-center gap-2">
-                                                <FileText className="h-4 w-4" />
+                                        <div className="rounded-lg bg-emerald-50 border border-emerald-100 p-4">
+                                            <h4 className="font-semibold mb-2 flex items-center gap-2 text-emerald-900">
+                                                <FileText className="h-4 w-4 text-emerald-600" />
                                                 Loan Details
                                             </h4>
                                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -236,13 +242,13 @@ export default function CoMaker({ coMakerRequests }: CoMakerProps) {
                 )}
 
                 {/* Info Card */}
-                <Card className="bg-blue-50 border-blue-200">
+                <Card className="border-emerald-100 bg-emerald-50">
                     <CardContent className="pt-6">
                         <div className="flex gap-3">
-                            <AlertCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                            <AlertCircle className="h-5 w-5 text-emerald-600 flex-shrink-0 mt-0.5" />
                             <div>
-                                <h4 className="font-semibold text-blue-800">What is a Co-Maker?</h4>
-                                <p className="text-sm text-blue-700 mt-1">
+                                <h4 className="font-semibold text-emerald-800">What is a Co-Maker?</h4>
+                                <p className="text-sm text-emerald-700 mt-1">
                                     A co-maker is a person who agrees to be equally responsible for repaying the loan if the primary borrower defaults. 
                                     By accepting a co-maker request, you acknowledge this responsibility.
                                 </p>

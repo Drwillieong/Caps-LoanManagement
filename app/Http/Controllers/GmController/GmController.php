@@ -118,10 +118,10 @@ class GmController extends Controller
             return back()->with('error', 'This loan is not pending GM review.');
         }
 
-        // Update loan status to pending_cc_review (Credit Coordinator Review)
+        // Update loan status to endorsed_by_gm (Credit Coordinator Review)
         // Credit Coordinator will then approve to generate amortization schedule
         $loan->update([
-            'status' => 'pending_cc_review',
+            'status' => 'endorsed_by_gm',
             'remarks' => $validated['remarks'] ?? 'Approved by GM, pending CC review',
         ]);
 

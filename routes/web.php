@@ -63,6 +63,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 ->where('status', 'paid_off')
                 ->count();
 
+            // Check if user has a pending loan application
+            $hasPendingLoan = \App\Models\Loan::where('user_id', $user->id)
+                ->whereIn('status', ['pending', 'pending_gm_review', 'pending_cc_review', 'awaiting_comaker'])
+                ->exists();
+
             // Get loan progress data for the most recent active loan
             $loanProgress = null;
             if ($activeLoans->isNotEmpty()) {
@@ -110,6 +115,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 'loan_balance' => $loanBalance,
                 'active_loan_count' => $activeLoanCount,
                 'completed_loan_count' => $completedLoanCount,
+                'has_pending_loan' => $hasPendingLoan,
                 'loan_progress' => $loanProgress,
                 // Loan Eligibility Data
                 'loan_eligibility' => [

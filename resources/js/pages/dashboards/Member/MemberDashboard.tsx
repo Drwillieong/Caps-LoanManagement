@@ -55,6 +55,7 @@ interface DashboardProps {
     loan_balance?: number;
     active_loan_count?: number;
     completed_loan_count?: number;
+    has_pending_loan?: boolean;
     loan_progress?: LoanProgress | null;
     loan_eligibility?: LoanEligibility | null;
     profileCompleted?: boolean;
@@ -66,6 +67,7 @@ export default function MemberDashboard({
     loan_balance = 0,
     active_loan_count = 0,
     completed_loan_count = 0,
+    has_pending_loan = false,
     loan_progress = null,
     loan_eligibility = null,
     profileCompleted = true,
@@ -154,6 +156,34 @@ export default function MemberDashboard({
                                 className="inline-flex items-center gap-2 rounded-xl bg-orange-600 px-4 py-2 text-white hover:bg-orange-700 transition"
                             >
                                 View Requests
+                            </Link>
+                        </CardContent>
+                    </Card>
+                )}
+
+                {/* === PENDING APPLICATION BANNER - PROMINENTLY DISPLAYED === */}
+                {has_pending_loan && (
+                    <Card className="border-l-4 border-l-yellow-500 bg-yellow-50">
+                        <CardContent className="flex items-center justify-between py-4">
+                            <div className="flex items-center gap-3">
+                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-yellow-100">
+                                    <Clock className="h-5 w-5 text-yellow-600" />
+                                </div>
+                                <div>
+                                    <p className="font-semibold text-yellow-800">
+                                        You have a pending loan application!
+                                    </p>
+                                    <p className="text-sm text-yellow-700">
+                                        Your loan application is under review. Click to view status.
+                                    </p>
+                                </div>
+                            </div>
+                            <Link
+                                href="/dashboards/Member/PendingApplication"
+                                className="inline-flex items-center gap-2 rounded-xl bg-yellow-600 px-4 py-2 text-white hover:bg-yellow-700 transition"
+                            >
+                                View Application
+                                <ArrowRight className="h-4 w-4" />
                             </Link>
                         </CardContent>
                     </Card>
@@ -412,15 +442,30 @@ export default function MemberDashboard({
                             {/* Quick Actions */}
                             <div className="mt-4 space-y-2">
                                 <p className="text-sm font-bold text-emerald-900 dark:text-emerald-100 mb-3">Quick Actions</p>
+                                
+                                {/* View Pending Application - with status icon */}
                                 <Link
                                     href="/dashboards/Member/PendingApplication"
-                                    className="flex items-center justify-between p-3 rounded-lg hover:bg-emerald-50 transition-colors border border-transparent hover:border-emerald-100"
+                                    className={`flex items-center justify-between p-3 rounded-lg transition-colors border ${
+                                        has_pending_loan 
+                                            ? 'bg-yellow-50 border-yellow-200 hover:bg-yellow-100' 
+                                            : 'hover:bg-emerald-50 border-transparent hover:border-emerald-100'
+                                    }`}
                                 >
                                     <div className="flex items-center gap-3">
-                                        <Clock className="h-4 w-4 text-emerald-600" />
-                                        <span className="text-sm font-medium">View Pending Application</span>
+                                        {has_pending_loan ? (
+                                            <Clock className="h-4 w-4 text-yellow-600" />
+                                        ) : (
+                                            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                                        )}
+                                        <div className="flex flex-col">
+                                            <span className="text-sm font-medium">View Pending Application</span>
+                                            {has_pending_loan && (
+                                                <span className="text-xs text-yellow-700">Under Review</span>
+                                            )}
+                                        </div>
                                     </div>
-                                    <ArrowRight className="h-4 w-4 text-emerald-400" />
+                                    <ArrowRight className={`h-4 w-4 ${has_pending_loan ? 'text-yellow-400' : 'text-emerald-400'}`} />
                                 </Link>
                                 
                                 {loan_progress && loan_progress.payment_status !== 'paid' && (

@@ -217,3 +217,52 @@ export interface GmLoanApplicationItem {
 export interface GmLoanApplicationProps {
     pendingLoans: GmLoanApplicationItem[];
 }
+
+// Member Active Loan Types
+export interface MemberActiveLoanAmortization {
+    id: number;
+    installment_number: number;
+    due_date: string | null;
+    amount_due: number;
+    amount_paid: number;
+    status: string;
+}
+
+export interface MemberActiveLoanPayment {
+    id: number;
+    amount: number;
+    payment_date: string | null;
+    reference_number: string | null;
+    paid_by: string;
+}
+
+export interface MemberActiveLoan {
+    id: number;
+    loan_type_name: string;
+    principal_amount: number;
+    terms_months: number;
+    interest_amount: number;
+    total_amount_due: number;
+    monthly_amortization: number;
+    voucher_number: string | null;
+    check_number: string | null;
+    release_date: string | null;
+    status: string;
+    total_paid: number;
+    remaining_balance: number;
+    progress_percentage: number;
+    paid_amortizations: number;
+    total_amortizations: number;
+    next_due_date: string | null;
+    next_due_amount: number;
+    payment_status: string;
+    amortizations: MemberActiveLoanAmortization[];
+    payments: MemberActiveLoanPayment[];
+}
+
+export interface MemberActiveLoanProps {
+    activeLoans: MemberActiveLoan[];
+    hasActiveLoan: boolean;
+    totalLoanBalance: number;
+    totalAmountPaid: number;
+}

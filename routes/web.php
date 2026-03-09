@@ -369,6 +369,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboards/Member/UserProfile', [MemberProfileController::class, 'show'])->middleware('role:member')->name('member.user-profile');
     Route::post('dashboards/Member/UserProfile', [MemberProfileController::class, 'store'])->middleware('role:member')->name('member.user-profile.store');
 
+    // HR - Edit Member Profile
+    Route::get('dashboards/HR/EditMember/{userId}', [MemberProfileController::class, 'editMember'])
+        ->middleware('role:hr,gm,creditcom')
+        ->name('hr.edit-member');
+    
+    Route::put('dashboards/HR/EditMember/{userId}', [MemberProfileController::class, 'updateMember'])
+        ->middleware('role:hr,gm,creditcom')
+        ->name('hr.update-member');
+
     Route::get('dashboards/Member/MemberActiveLoan', function () {
         $user = auth()->user();
         

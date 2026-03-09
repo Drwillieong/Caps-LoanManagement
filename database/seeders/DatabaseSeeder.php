@@ -171,6 +171,8 @@ class DatabaseSeeder extends Seeder
             'tin_number' => '143-456-789',
         ]);
 
+
+
         // Call other seeders
         $this->call(LoanTypeSeeder::class);
     }

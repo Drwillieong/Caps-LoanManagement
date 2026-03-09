@@ -8,7 +8,7 @@ import { type BreadcrumbItem } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'Active Loan',
+        title: 'Approved History',
         href: dashboard().url,
     },
 ];

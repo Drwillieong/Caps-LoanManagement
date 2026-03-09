@@ -81,7 +81,11 @@ const gmNavItems: NavItem[] = [
         href: '/dashboards/Gm/LoanApplication',
         icon: FileText,
     },
-   
+    {
+        title: 'Approved Loan',
+        href: '/dashboards/Gm/ApprovedLoan',
+        icon: BookOpen,
+    },
     {
         title: 'Active Loan',
         href: '/dashboards/Gm/GMActiveLoan',
@@ -100,6 +104,11 @@ const creditcomNavItems: NavItem[] = [
         title: 'Loan Application',
         href: '/dashboards/CreditCom/LoanApplication',
         icon: FileText,
+    },
+    {
+        title: 'Approved History',
+        href: '/dashboards/CreditCom/ApprovedHistory',
+        icon: BookOpen,
     },
     
 ];

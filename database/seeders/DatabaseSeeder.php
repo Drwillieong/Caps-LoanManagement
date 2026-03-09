@@ -128,6 +128,49 @@ class DatabaseSeeder extends Seeder
             'tin_number' => '123-456-789',
         ]);
 
+         // -----------------------------
+        // Test Member 3
+        // -----------------------------
+
+         $user = User::create([
+            'first_name' => 'Kayhleen',
+            'middle_name' => 'Dela ',
+            'last_name' => 'Minoe',
+            'email' => 'kdminor@ccc.edu.ph',
+            'password' => Hash::make('admin123'),
+            'role' => 'member',
+            'is_active' => true,
+        ]);
+
+        MemberProfile::create([
+            'user_id' => $user->id,
+
+            'employee_id' => 'EMP-003', // fixed duplicate
+            'first_name' => 'Kayhleen',
+            'middle_name' => 'Dela ',
+            'last_name' => 'Minoe',
+
+            'date_of_birth' => '2004-12-01',
+            'sex' => 'male',
+            'civil_status' => 'single',
+            'spouse_name' => null,
+
+            // Contact
+            'mobile_number' => '09123456789',
+            'present_address' => 'Calamba, Laguna',
+            'permanent_address' => 'Calamba, Laguna',
+
+            // Employment
+            'position' => 'IT Staff',
+            'date_hired' => '2024-01-15',
+            'basic_salary' => 15000.00,
+
+            // Financial
+            'share_capital_balance' => 10000.00,
+            'bank_account_number' => '12345670',
+            'tin_number' => '143-456-789',
+        ]);
+
         // Call other seeders
         $this->call(LoanTypeSeeder::class);
     }

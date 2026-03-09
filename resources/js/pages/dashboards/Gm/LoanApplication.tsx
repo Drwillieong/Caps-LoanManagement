@@ -37,8 +37,21 @@ export default function LoanApplication({ pendingLoans }: GmLoanApplicationProps
     });
   }
 
-  function formatCurrency(amount: number): string {
-    return `₱${amount.toLocaleString('en-PH', {
+  function formatCurrency(amount: number | string): string {
+    // Handle null, undefined, or empty values
+    if (amount === null || amount === undefined || amount === '') {
+      return '₱0.00';
+    }
+    
+    // Convert string to number if needed
+    const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+    
+    // Check if valid number
+    if (isNaN(num)) {
+      return '₱0.00';
+    }
+    
+    return `₱${num.toLocaleString('en-PH', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     })}`;

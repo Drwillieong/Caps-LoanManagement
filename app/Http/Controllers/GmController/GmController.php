@@ -119,10 +119,10 @@ class GmController extends Controller
         }
 
         // Update loan status to pending_cc_review (Credit Coordinator Review)
-        // Credit Coordinator will then approve to generate amortization schedule
+        // Credit Coordinator will validate and then approve to generate amortization schedule
         $loan->update([
             'status' => 'pending_cc_review',
-            'remarks' => $validated['remarks'] ?? 'Approved by GM, pending CC review',
+            'remarks' => $validated['remarks'] ?? 'Approved by GM, pending Credit Coordinator validation',
         ]);
 
         // Do NOT generate amortization schedule yet - Credit Coordinator will do that

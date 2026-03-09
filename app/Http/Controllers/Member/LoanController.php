@@ -92,8 +92,11 @@ class LoanController extends Controller
 
             'eligibleCoMakers' => User::where('role', 'member')
                 ->where('id', '!=', $user->id)
-                ->whereDoesntHave('coMakerLoans.loan', function ($q) {
-                    $q->whereIn('status', ['approved', 'released']);
+                ->whereDoesntHave('coMakerLoans', function ($q) {
+                    $q->where('status', 'accepted')
+                      ->whereHas('loan', function ($q2) {
+                          $q2->whereNotIn('status', ['rejected', 'paid_off']);
+                      });
                 })
                 ->select('id', 'first_name', 'middle_name', 'last_name', 'email')
                 ->get()
@@ -170,17 +173,18 @@ class LoanController extends Controller
             ]);
         }
 
-        // Co-maker restriction rule
+        // Co-maker restriction rule - check if co-maker is bound to any non-final loan
         if (!empty($validated['co_maker_user_id'])) {
-            $coMakerHasActiveLoan = Loan::whereIn('status', ['approved', 'released'])
-                ->whereHas('coMakers', function ($q) use ($validated) {
-                    $q->where('user_id', $validated['co_maker_user_id']);
-                })
-                ->exists();
+            $coMakerHasBoundLoan = Loan::whereHas('coMakers', function ($q) use ($validated) {
+                $q->where('user_id', $validated['co_maker_user_id'])
+                  ->where('status', 'accepted');
+            })
+            ->whereNotIn('status', ['rejected', 'paid_off'])
+            ->exists();
 
-            if ($coMakerHasActiveLoan) {
+            if ($coMakerHasBoundLoan) {
                 return back()->withErrors([
-                    'co_maker_user_id' => 'Selected co-maker is already assigned to another active loan.'
+                    'co_maker_user_id' => 'Selected co-maker is already bound to another loan. Please wait until their loan is rejected or paid off.'
                 ]);
             }
         }
@@ -423,8 +427,11 @@ class LoanController extends Controller
 
         $eligibleCoMakers = User::where('role', 'member')
             ->where('id', '!=', $user->id)
-            ->whereDoesntHave('coMakerLoans.loan', function ($q) {
-                $q->whereIn('status', ['approved', 'released']);
+            ->whereDoesntHave('coMakerLoans', function ($q) {
+                $q->where('status', 'accepted')
+                  ->whereHas('loan', function ($q2) {
+                      $q2->whereNotIn('status', ['rejected', 'paid_off']);
+                  });
             })
             ->select('id', 'first_name', 'middle_name', 'last_name', 'email')
             ->get()
@@ -608,6 +615,9 @@ class LoanController extends Controller
 
     /**
      * Show Choose Comaker page with eligible members
+     * A member is available as co-maker only if they are NOT bound to any loan
+     * (i.e., no loan with status: awaiting_comaker, pending_gm_review, pending_cc_review, approved, released)
+     * Once loan is rejected or paid_off, they become available again
      */
     public function chooseComaker()
     {
@@ -621,19 +631,26 @@ class LoanController extends Controller
             ->select('id', 'first_name', 'middle_name', 'last_name', 'email', 'created_at')
             ->get()
             ->map(function ($member) {
-                // Check if member has an active loan as co-maker (they would not be eligible)
-                $hasActiveLoanAsCoMaker = Loan::whereIn('status', ['approved', 'released'])
-                    ->whereHas('coMakers', function ($q) use ($member) {
-                        $q->where('user_id', $member->id)->where('status', 'accepted');
-                    })
-                    ->exists();
+                // Check if member is bound to any loan that is NOT rejected and NOT paid_off
+                // These are the statuses where a member is considered "bound" as co-maker:
+                // - awaiting_comaker: loan is pending co-maker confirmation
+                // - pending_gm_review: loan is pending GM approval
+                // - pending_cc_review: loan is pending Credit Coordinator approval
+                // - approved: loan is approved but not yet released
+                // - released: loan is active and being paid
+                $isBoundToLoan = Loan::whereHas('coMakers', function ($q) use ($member) {
+                    $q->where('user_id', $member->id)
+                      ->where('status', 'accepted');
+                })
+                ->whereNotIn('status', ['rejected', 'paid_off'])
+                ->exists();
 
                 return [
                     'id' => $member->id,
                     'name' => trim($member->first_name . ($member->middle_name ? ' ' . $member->middle_name : '') . ' ' . $member->last_name),
                     'email' => $member->email,
                     'member_id' => 'MEM-' . str_pad($member->id, 4, '0', STR_PAD_LEFT),
-                    'status' => $hasActiveLoanAsCoMaker ? 'unavailable' : 'available',
+                    'status' => $isBoundToLoan ? 'unavailable' : 'available',
                     'share_capital' => $member->memberProfile?->share_capital_balance ?? 0,
                     'date_joined' => $member->created_at->format('Y-m-d'),
                 ];

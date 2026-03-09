@@ -1,4 +1,4 @@
-import { Head, useForm, Link } from '@inertiajs/react';
+import { Head, useForm, Link, router } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { LiveClock } from '@/components/live-clock';
 import { type BreadcrumbItem, type CoMakerProps } from '@/types';
@@ -61,12 +61,10 @@ export default function CoMaker({ coMakerRequests }: CoMakerProps) {
 
     // Handle accept/reject actions
     function handleResponse(loanId: number, action: 'accept' | 'reject') {
-        form.setData({
+        router.post('/dashboards/Member/CoMaker/Respond', {
             loan_id: loanId,
             action: action,
-        });
-        
-        form.post('/dashboards/Member/CoMaker/Respond', {
+        }, {
             onSuccess: () => {
                 if (action === 'accept') {
                     toast.success('You have accepted the co-maker request!');
@@ -74,12 +72,19 @@ export default function CoMaker({ coMakerRequests }: CoMakerProps) {
                     toast('You have declined the co-maker request.');
                 }
             },
-            onError: (errors) => {
+            onError: (errors: Record<string, string>) => {
                 console.error('Error responding to co-maker request:', errors);
+                
+                // Check if errors is empty or undefined
+                if (!errors || Object.keys(errors).length === 0) {
+                    toast.error('An unexpected error occurred. Please try again.');
+                    return;
+                }
+                
                 // Extract error message - Inertia returns errors as object { field: message }
-                const errorValues = Object.values(errors || {});
-                const errorMessage = errorValues.length > 0 
-                    ? String(errorValues[0]) 
+                const errorMessages = Object.values(errors);
+                const errorMessage = errorMessages.length > 0 
+                    ? String(errorMessages[0]) 
                     : 'Failed to respond to co-maker request. Please try again.';
                 toast.error(errorMessage);
             },
@@ -98,12 +103,7 @@ export default function CoMaker({ coMakerRequests }: CoMakerProps) {
                             Review and respond to loan applications where you've been selected as co-maker
                         </p>
                     </div>
-                    <Link
-                        href="/dashboards/Member/MemberDashboard"
-                        className="inline-flex items-center gap-2 rounded-xl border px-4 py-2 hover:bg-muted transition"
-                    >
-                        Back to Dashboard
-                    </Link>
+                  
                 </div>
 
                 {/* Pending Co-Maker Requests */}

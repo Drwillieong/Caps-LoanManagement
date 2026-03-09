@@ -6,6 +6,7 @@ use App\Http\Controllers\HrController\CreateMemberController;
 use App\Http\Controllers\HrController\MemberProfileViewController;
 use App\Http\Controllers\Member\LoanController;
 use App\Http\Controllers\Member\MemberProfileController;
+use App\Models\Loan;
 use App\Models\LoanType;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -62,6 +63,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 ->where('status', 'paid_off')
                 ->count();
 
+            // Check if user has a pending loan application
+            $hasPendingLoan = \App\Models\Loan::where('user_id', $user->id)
+                ->whereIn('status', ['pending', 'pending_gm_review', 'pending_cc_review', 'awaiting_comaker'])
+                ->exists();
+
             // Get loan progress data for the most recent active loan
             $loanProgress = null;
             if ($activeLoans->isNotEmpty()) {
@@ -109,6 +115,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 'loan_balance' => $loanBalance,
                 'active_loan_count' => $activeLoanCount,
                 'completed_loan_count' => $completedLoanCount,
+                'has_pending_loan' => $hasPendingLoan,
                 'loan_progress' => $loanProgress,
                 // Loan Eligibility Data
                 'loan_eligibility' => [
@@ -362,8 +369,106 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboards/Member/UserProfile', [MemberProfileController::class, 'show'])->middleware('role:member')->name('member.user-profile');
     Route::post('dashboards/Member/UserProfile', [MemberProfileController::class, 'store'])->middleware('role:member')->name('member.user-profile.store');
 
-Route::get('dashboards/Member/MemberActiveLoan', function () {
-        return Inertia::render('dashboards/Member/MemberActiveLoan');
+    Route::get('dashboards/Member/MemberActiveLoan', function () {
+        $user = auth()->user();
+        
+        // Get active loans (released or approved status)
+        $activeLoans = Loan::where('user_id', $user->id)
+            ->whereIn('status', ['released', 'approved'])
+            ->with(['loanType', 'amortizations', 'payments'])
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($loan) {
+                // Calculate total paid from payments
+                $totalPaid = $loan->payments->sum('amount');
+                
+                // Calculate remaining balance
+                $remainingBalance = max(0, $loan->total_amount_due - $totalPaid);
+                
+                // Calculate progress percentage
+                $progressPercentage = $loan->total_amount_due > 0 
+                    ? round(($totalPaid / $loan->total_amount_due) * 100, 1)
+                    : 0;
+                
+                // Get paid amortizations count
+                $paidAmortizations = $loan->amortizations->where('status', 'paid')->count();
+                $totalAmortizations = $loan->amortizations->count();
+                
+                // Get next due amortization (first unpaid)
+                $nextDueAmortization = $loan->amortizations
+                    ->whereIn('status', ['pending', 'partial', 'overdue'])
+                    ->sortBy('due_date')
+                    ->first();
+                
+                // Determine payment status
+                $paymentStatus = 'current';
+                if ($nextDueAmortization) {
+                    $dueDate = $nextDueAmortization->due_date;
+                    $today = now()->startOfDay();
+                    $daysUntilDue = $today->diffInDays($dueDate, false);
+                    
+                    if ($daysUntilDue < 0) {
+                        $paymentStatus = 'overdue';
+                    } elseif ($daysUntilDue <= 7) {
+                        $paymentStatus = 'due_soon';
+                    }
+                } else {
+                    $paymentStatus = 'paid_off';
+                }
+                
+                return [
+                    'id' => $loan->id,
+                    'loan_type_name' => $loan->loanType->name ?? 'N/A',
+                    'principal_amount' => $loan->principal_amount,
+                    'terms_months' => $loan->terms_months,
+                    'interest_amount' => $loan->interest_amount,
+                    'total_amount_due' => $loan->total_amount_due,
+                    'monthly_amortization' => $loan->monthly_amortization,
+                    'voucher_number' => $loan->voucher_number,
+                    'check_number' => $loan->check_number,
+                    'release_date' => $loan->release_date?->format('Y-m-d'),
+                    'status' => $loan->status,
+                    'total_paid' => $totalPaid,
+                    'remaining_balance' => $remainingBalance,
+                    'progress_percentage' => $progressPercentage,
+                    'paid_amortizations' => $paidAmortizations,
+                    'total_amortizations' => $totalAmortizations,
+                    'next_due_date' => $nextDueAmortization?->due_date?->format('Y-m-d'),
+                    'next_due_amount' => $nextDueAmortization?->amount_due ?? 0,
+                    'payment_status' => $paymentStatus,
+                    'amortizations' => $loan->amortizations->map(function ($amortization) {
+                        return [
+                            'id' => $amortization->id,
+                            'installment_number' => $amortization->installment_number,
+                            'due_date' => $amortization->due_date?->format('Y-m-d'),
+                            'amount_due' => $amortization->amount_due,
+                            'amount_paid' => $amortization->amount_paid,
+                            'status' => $amortization->status,
+                        ];
+                    })->sortBy('installment_number')->values(),
+                    'payments' => $loan->payments->map(function ($payment) {
+                        return [
+                            'id' => $payment->id,
+                            'amount' => $payment->amount,
+                            'payment_date' => $payment->payment_date?->format('Y-m-d'),
+                            'reference_number' => $payment->reference_number,
+                            'paid_by' => $payment->paid_by,
+                        ];
+                    })->sortByDesc('payment_date')->values(),
+                ];
+            });
+        
+        // Calculate overall stats
+        $totalLoanBalance = $activeLoans->sum('remaining_balance');
+        $totalAmountPaid = $activeLoans->sum('total_paid');
+        $hasActiveLoan = $activeLoans->isNotEmpty();
+        
+        return Inertia::render('dashboards/Member/MemberActiveLoan', [
+            'activeLoans' => $activeLoans,
+            'hasActiveLoan' => $hasActiveLoan,
+            'totalLoanBalance' => $totalLoanBalance,
+            'totalAmountPaid' => $totalAmountPaid,
+        ]);
     })->middleware(['role:member', 'ensure.profile.completed'])->name('member.active-loan');
 
     Route::get('dashboards/Member/MemberCompletedLoan', function () {

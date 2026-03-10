@@ -148,9 +148,9 @@ class CreditComController extends Controller
             return back()->with('error', 'This loan is not pending Credit Coordinator review.');
         }
 
-        // Update loan status to rejected
+        // Update loan status to rejected_by_credit_com
         $loan->update([
-            'status' => 'rejected',
+            'status' => 'rejected_by_credit_com',
             'remarks' => $validated['remarks'],
         ]);
 

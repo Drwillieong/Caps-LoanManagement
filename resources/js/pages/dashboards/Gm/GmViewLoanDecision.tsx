@@ -106,6 +106,8 @@ export default function GmViewLoanDecision() {
             'pending_cc_review': { variant: 'secondary', label: 'Pending CC Review' },
             'approved': { variant: 'default', label: 'Approved' },
             'rejected': { variant: 'destructive', label: 'Rejected' },
+            'rejected_by_gm': { variant: 'destructive', label: 'Rejected by GM' },
+            'rejected_by_credit_com': { variant: 'destructive', label: 'Rejected by Credit Com' },
             'released': { variant: 'default', label: 'Released' },
             'paid_off': { variant: 'outline', label: 'Paid Off' },
         };

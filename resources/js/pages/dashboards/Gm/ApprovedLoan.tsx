@@ -19,7 +19,7 @@ import {
 const breadcrumbs: BreadcrumbItem[] = [
 
     {
-        title: 'Approved & Disapproved History',
+        title: 'GM Loan Decision History',
         href: '/dashboards/Gm/ApprovedLoan',
     },
 ];
@@ -85,17 +85,19 @@ export default function ApprovedLoan() {
     }
 
     function getStatusBadge(status: string) {
-        const approvedStatusMap: Record<string, { variant: 'default' | 'secondary' | 'outline'; label: string }> = {
+        const pendingCCReviewStatusMap: Record<string, { variant: 'default' | 'secondary' | 'outline'; label: string }> = {
+            'pending_cc_review': { variant: 'secondary', label: 'Pending CC Review' },
             'approved': { variant: 'default', label: 'Approved' },
             'released': { variant: 'default', label: 'Released' },
             'paid_off': { variant: 'outline', label: 'Paid Off' },
         };
         
-        const disapprovedStatusMap: Record<string, { variant: 'destructive' | 'secondary'; label: string }> = {
+        const rejectedByGMStatusMap: Record<string, { variant: 'destructive' | 'secondary'; label: string }> = {
+            'rejected_by_gm': { variant: 'destructive', label: 'Rejected by GM' },
             'rejected': { variant: 'destructive', label: 'Rejected' },
         };
         
-        const map = activeTab === 'approved' ? approvedStatusMap : disapprovedStatusMap;
+        const map = activeTab === 'approved' ? pendingCCReviewStatusMap : rejectedByGMStatusMap;
         const config = map[status] || { variant: 'secondary' as const, label: status };
         
         return (
@@ -134,11 +136,11 @@ export default function ApprovedLoan() {
 
                 {/* Stats Summary */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <Card className={activeTab === 'approved' ? 'border-green-500 border-2' : ''}>
+                    <Card className={activeTab === 'approved' ? 'border-blue-500 border-2' : ''}>
                         <CardHeader className="pb-2">
                             <CardDescription className="flex items-center gap-2">
-                                <CheckCircle2 className="h-4 w-4 text-green-600" />
-                                Approved
+                                <CheckCircle2 className="h-4 w-4 text-blue-600" />
+                                Pending CC Review
                             </CardDescription>
                             <CardTitle className="text-2xl">{totalApproved}</CardTitle>
                         </CardHeader>
@@ -150,7 +152,7 @@ export default function ApprovedLoan() {
                         <CardHeader className="pb-2">
                             <CardDescription className="flex items-center gap-2">
                                 <XCircle className="h-4 w-4 text-red-600" />
-                                Disapproved
+                                Rejected by GM
                             </CardDescription>
                             <CardTitle className="text-2xl">{totalDisapproved}</CardTitle>
                         </CardHeader>
@@ -166,12 +168,12 @@ export default function ApprovedLoan() {
                         onClick={() => setActiveTab('approved')}
                         className={`flex items-center gap-2 px-4 py-2 border-b-2 transition-colors ${
                             activeTab === 'approved' 
-                            ? 'border-green-600 text-green-600' 
+                            ? 'border-blue-600 text-blue-600' 
                             : 'border-transparent text-muted-foreground hover:text-foreground'
                         }`}
                     >
                         <CheckCircle2 className="h-4 w-4" />
-                        Approved History ({totalApproved})
+                        Pending CC Review ({totalApproved})
                     </button>
                     <button
                         onClick={() => setActiveTab('disapproved')}
@@ -182,7 +184,7 @@ export default function ApprovedLoan() {
                         }`}
                     >
                         <Ban className="h-4 w-4" />
-                        Disapproved History ({totalDisapproved})
+                        Rejected by GM ({totalDisapproved})
                     </button>
                 </div>
 
@@ -250,12 +252,12 @@ export default function ApprovedLoan() {
                                 <Ban className="h-12 w-12 text-muted-foreground mb-4" />
                             )}
                             <h3 className="text-lg font-medium text-foreground mb-2">
-                                No {activeTab === 'approved' ? 'Approved' : 'Disapproved'} Loans
+                                No {activeTab === 'approved' ? 'Pending CC Review' : 'Rejected by GM'} Loans
                             </h3>
                             <p className="text-sm text-muted-foreground text-center">
                                 {searchTerm 
                                     ? 'No loans match your search criteria.' 
-                                    : `There are no ${activeTab === 'approved' ? 'approved' : 'disapproved'} loans in the history yet.`
+                                    : `There are no ${activeTab === 'approved' ? 'pending CC review' : 'rejected by GM'} loans in the history yet.`
                                 }
                             </p>
                         </CardContent>

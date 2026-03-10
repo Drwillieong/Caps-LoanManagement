@@ -69,7 +69,7 @@ export default function PendingApplication({ loan, hasPendingLoan, loanHistory }
             return;
         }
 
-        if (['approved', 'rejected', 'released'].includes(currentLoan.status)) {
+        if (['approved', 'rejected', 'rejected_by_co_maker', 'rejected_by_gm', 'rejected_by_credit_com', 'released'].includes(currentLoan.status)) {
             setIsPolling(false);
             return;
         }
@@ -96,11 +96,16 @@ export default function PendingApplication({ loan, hasPendingLoan, loanHistory }
             case 'released':
                 return <Badge className="bg-green-500">Approved</Badge>;
             case 'rejected':
+            case 'rejected_by_co_maker':
+            case 'rejected_by_gm':
+            case 'rejected_by_credit_com':
                 return <Badge className="bg-red-500">Rejected</Badge>;
             case 'awaiting_comaker':
                 return <Badge className="bg-yellow-500">Awaiting Co-Maker</Badge>;
             case 'pending_gm_review':
                 return <Badge className="bg-blue-500">Pending GM Review</Badge>;
+            case 'pending_cc_review':
+                return <Badge className="bg-purple-500">Pending CC Review</Badge>;
             default:
                 return <Badge>{status}</Badge>;
         }
@@ -123,6 +128,9 @@ export default function PendingApplication({ loan, hasPendingLoan, loanHistory }
                     color: 'bg-green-50 border-green-200'
                 };
             case 'rejected':
+            case 'rejected_by_co_maker':
+            case 'rejected_by_gm':
+            case 'rejected_by_credit_com':
                 return {
                     icon: <XCircle className="h-12 w-12 text-red-500" />,
                     title: 'Loan Rejected',
@@ -142,6 +150,13 @@ export default function PendingApplication({ loan, hasPendingLoan, loanHistory }
                     title: 'Pending GM Review',
                     description: 'Your loan application is under review.',
                     color: 'bg-blue-50 border-blue-200'
+                };
+            case 'pending_cc_review':
+                return {
+                    icon: <Clock className="h-12 w-12 text-purple-500" />,
+                    title: 'Pending Credit Coordinator Review',
+                    description: 'Your loan application is under final review.',
+                    color: 'bg-purple-50 border-purple-200'
                 };
             default:
                 return {
@@ -388,7 +403,7 @@ export default function PendingApplication({ loan, hasPendingLoan, loanHistory }
                             <DollarSign className="h-4 w-4" />
                             View Active Loan
                         </Link>
-                    ) : currentLoan.status === 'rejected' ? (
+                    ) : currentLoan.status === 'rejected' || currentLoan.status === 'rejected_by_co_maker' || currentLoan.status === 'rejected_by_gm' || currentLoan.status === 'rejected_by_credit_com' ? (
                         <Link
                             href="/dashboards/Member/ApplyLoan"
                             className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-white hover:opacity-90 transition"

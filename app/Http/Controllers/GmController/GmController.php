@@ -149,9 +149,9 @@ class GmController extends Controller
             return back()->with('error', 'This loan is not pending GM review.');
         }
 
-        // Update loan status to rejected
+        // Update loan status to rejected_by_gm
         $loan->update([
-            'status' => 'rejected',
+            'status' => 'rejected_by_gm',
             'remarks' => $validated['remarks'],
         ]);
 

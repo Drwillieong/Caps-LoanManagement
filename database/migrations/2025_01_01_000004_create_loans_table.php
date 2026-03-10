@@ -36,7 +36,9 @@ return new class extends Migration
                 'pending_cc_review',      // Pending Credit Coordinator review
                 'approved',               // Approved by Board/GM
                 'released',               // Money given (Active)
-                'rejected',               // Failed eligibility
+                'rejected_by_co_maker',
+                'rejected_by_gm',
+                'rejected_by_credit_com',        // Failed eligibility
                 'paid_off'                // Fully paid
             ])->default('draft');
 

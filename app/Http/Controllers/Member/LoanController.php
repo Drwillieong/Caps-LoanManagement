@@ -564,7 +564,7 @@ class LoanController extends Controller
             }
         } else {
             // If rejected, update loan status
-            $loan->update(['status' => 'rejected', 'remarks' => 'Co-maker declined the request.']);
+            $loan->update(['status' => 'rejected_by_co_maker', 'remarks' => 'Co-maker declined the request.']);
         }
 
         // Send email notification to the borrower

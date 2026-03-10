@@ -536,8 +536,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     })->middleware('role:gm')->name('gm.completed-loan');
 
     Route::get('dashboards/Gm/ApprovedLoan', function () {
-        // Get loans approved by GM (approved, released, paid_off)
-        $approvedLoans = Loan::whereIn('status', ['approved', 'released', 'paid_off'])
+        // Get loans pending CC review (after GM approval)
+        $pendingCCReviewLoans = Loan::where('status', 'pending_cc_review')
             ->with(['user.memberProfile', 'loanType'])
             ->orderBy('created_at', 'desc')
             ->get()
@@ -565,13 +565,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 ];
             });
         
-        // Get loans rejected by GM (rejected with gm rejection)
-        $disapprovedLoans = Loan::where('status', 'rejected')
-            ->where('remarks', 'like', '%GM%')
-            ->orWhere(function($query) {
-                $query->where('status', 'rejected')
-                      ->where('remarks', 'not like', '%Credit Coordinator%');
-            })
+        // Get loans rejected by GM
+        $rejectedByGMLoans = Loan::where('status', 'rejected_by_gm')
             ->with(['user.memberProfile', 'loanType'])
             ->orderBy('created_at', 'desc')
             ->get()
@@ -600,8 +595,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
             });
         
         return Inertia::render('dashboards/Gm/ApprovedLoan', [
-            'approvedLoans' => $approvedLoans,
-            'disapprovedLoans' => $disapprovedLoans,
+            'approvedLoans' => $pendingCCReviewLoans,
+            'disapprovedLoans' => $rejectedByGMLoans,
         ]);
     })->middleware('role:gm')->name('gm.approved-loan');
 
@@ -631,8 +626,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('creditcom.pending-count');
 
     Route::get('dashboards/CreditCom/ApprovedHistory', function () {
-        // Get loans that have been approved by Credit Coordinator (approved, released, paid_off)
-        $approvedLoans = Loan::whereIn('status', ['approved', 'released', 'paid_off'])
+        // Get loans approved by Credit Coordinator
+        $approvedLoans = Loan::where('status', 'approved')
             ->with(['user.memberProfile', 'loanType'])
             ->orderBy('created_at', 'desc')
             ->get()
@@ -661,12 +656,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             });
         
         // Get loans rejected by Credit Coordinator
-        $disapprovedLoans = Loan::where('status', 'rejected')
-            ->where('remarks', 'like', '%Credit Coordinator%')
-            ->orWhere(function($query) {
-                $query->where('status', 'rejected')
-                      ->where('remarks', 'like', '%CC%');
-            })
+        $disapprovedLoans = Loan::where('status', 'rejected_by_credit_com')
             ->with(['user.memberProfile', 'loanType'])
             ->orderBy('created_at', 'desc')
             ->get()

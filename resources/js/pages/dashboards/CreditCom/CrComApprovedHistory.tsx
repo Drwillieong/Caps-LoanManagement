@@ -91,11 +91,12 @@ export default function CrComApprovedHistory() {
             'paid_off': { variant: 'outline', label: 'Paid Off' },
         };
         
-        const disapprovedStatusMap: Record<string, { variant: 'destructive' | 'secondary'; label: string }> = {
+        const rejectedByCCStatusMap: Record<string, { variant: 'destructive' | 'secondary'; label: string }> = {
+            'rejected_by_credit_com': { variant: 'destructive', label: 'Rejected by Credit Com' },
             'rejected': { variant: 'destructive', label: 'Rejected' },
         };
         
-        const map = activeTab === 'approved' ? approvedStatusMap : disapprovedStatusMap;
+        const map = activeTab === 'approved' ? approvedStatusMap : rejectedByCCStatusMap;
         const config = map[status] || { variant: 'secondary' as const, label: status };
         
         return (

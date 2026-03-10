@@ -17,10 +17,10 @@ import {
 } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
-
+  
     {
         title: 'Approved & Disapproved History',
-        href: '/dashboards/Gm/ApprovedLoan',
+        href: '/dashboards/CreditCom/ApprovedHistory',
     },
 ];
 
@@ -46,13 +46,13 @@ interface Loan {
     member: LoanMember;
 }
 
-interface GmApprovedLoanProps {
+interface CrComApprovedHistoryProps {
     approvedLoans: Loan[];
     disapprovedLoans: Loan[];
 }
 
-export default function ApprovedLoan() {
-    const props = usePage().props as unknown as GmApprovedLoanProps;
+export default function CrComApprovedHistory() {
+    const props = usePage().props as unknown as CrComApprovedHistoryProps;
     const approvedLoans = props.approvedLoans || [];
     const disapprovedLoans = props.disapprovedLoans || [];
     
@@ -113,7 +113,7 @@ export default function ApprovedLoan() {
 
     return (
         <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
-            <Head title="Approved & Disapproved History - GM" />
+            <Head title="Approved & Disapproved History - Credit Coordinator" />
 
             <div className="space-y-6 px-6 py-6">
                 {/* Header */}
@@ -125,7 +125,7 @@ export default function ApprovedLoan() {
                         </p>
                     </div>
                     <Link
-                        href="/dashboard"
+                        href="/dashboards/CreditCom/CreditComDashboard"
                         className="inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm hover:bg-muted transition"
                     >
                         Back to Dashboard
@@ -230,7 +230,7 @@ export default function ApprovedLoan() {
                                         <td className="px-4 py-3">{formatDate(loanItem.created_at)}</td>
                                         <td className="px-4 py-3">{getStatusBadge(loanItem.status)}</td>
                                         <td className="px-4 py-3 text-right">
-                                            <Link href={`/dashboards/Gm/Loan/${loanItem.id}/viewDecision`}>
+                                            <Link href={`/dashboards/CreditCom/Loan/${loanItem.id}/viewDecision`}>
                                                 <Button variant="outline" size="sm">
                                                     View
                                                 </Button>

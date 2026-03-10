@@ -536,7 +536,73 @@ Route::middleware(['auth', 'verified'])->group(function () {
     })->middleware('role:gm')->name('gm.completed-loan');
 
     Route::get('dashboards/Gm/ApprovedLoan', function () {
-        return Inertia::render('dashboards/Gm/ApprovedLoan');
+        // Get loans approved by GM (approved, released, paid_off)
+        $approvedLoans = Loan::whereIn('status', ['approved', 'released', 'paid_off'])
+            ->with(['user.memberProfile', 'loanType'])
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($loan) {
+                $user = $loan->user;
+                
+                return [
+                    'id' => $loan->id,
+                    'loan_type_name' => $loan->loanType->name ?? 'N/A',
+                    'principal_amount' => $loan->principal_amount,
+                    'terms_months' => $loan->terms_months,
+                    'interest_amount' => $loan->interest_amount,
+                    'total_amount_due' => $loan->total_amount_due,
+                    'monthly_amortization' => $loan->monthly_amortization,
+                    'status' => $loan->status,
+                    'created_at' => $loan->created_at->format('Y-m-d H:i:s'),
+                    'release_date' => $loan->release_date?->format('Y-m-d'),
+                    'remarks' => $loan->remarks,
+                    'member' => [
+                        'id' => $user->id,
+                        'name' => trim($user->first_name . ($user->middle_name ? ' ' . $user->middle_name : '') . ' ' . $user->last_name),
+                        'email' => $user->email,
+                        'member_id' => 'MEM-' . str_pad($user->id, 4, '0', STR_PAD_LEFT),
+                    ],
+                ];
+            });
+        
+        // Get loans rejected by GM (rejected with gm rejection)
+        $disapprovedLoans = Loan::where('status', 'rejected')
+            ->where('remarks', 'like', '%GM%')
+            ->orWhere(function($query) {
+                $query->where('status', 'rejected')
+                      ->where('remarks', 'not like', '%Credit Coordinator%');
+            })
+            ->with(['user.memberProfile', 'loanType'])
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($loan) {
+                $user = $loan->user;
+                
+                return [
+                    'id' => $loan->id,
+                    'loan_type_name' => $loan->loanType->name ?? 'N/A',
+                    'principal_amount' => $loan->principal_amount,
+                    'terms_months' => $loan->terms_months,
+                    'interest_amount' => $loan->interest_amount,
+                    'total_amount_due' => $loan->total_amount_due,
+                    'monthly_amortization' => $loan->monthly_amortization,
+                    'status' => $loan->status,
+                    'created_at' => $loan->created_at->format('Y-m-d H:i:s'),
+                    'release_date' => $loan->release_date?->format('Y-m-d'),
+                    'remarks' => $loan->remarks,
+                    'member' => [
+                        'id' => $user->id,
+                        'name' => trim($user->first_name . ($user->middle_name ? ' ' . $user->middle_name : '') . ' ' . $user->last_name),
+                        'email' => $user->email,
+                        'member_id' => 'MEM-' . str_pad($user->id, 4, '0', STR_PAD_LEFT),
+                    ],
+                ];
+            });
+        
+        return Inertia::render('dashboards/Gm/ApprovedLoan', [
+            'approvedLoans' => $approvedLoans,
+            'disapprovedLoans' => $disapprovedLoans,
+        ]);
     })->middleware('role:gm')->name('gm.approved-loan');
 
     // Credit Coordinator
@@ -565,8 +631,216 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('creditcom.pending-count');
 
     Route::get('dashboards/CreditCom/ApprovedHistory', function () {
-        return Inertia::render('dashboards/CreditCom/CrComApprovedHistory');
+        // Get loans that have been approved by Credit Coordinator (approved, released, paid_off)
+        $approvedLoans = Loan::whereIn('status', ['approved', 'released', 'paid_off'])
+            ->with(['user.memberProfile', 'loanType'])
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($loan) {
+                $user = $loan->user;
+                
+                return [
+                    'id' => $loan->id,
+                    'loan_type_name' => $loan->loanType->name ?? 'N/A',
+                    'principal_amount' => $loan->principal_amount,
+                    'terms_months' => $loan->terms_months,
+                    'interest_amount' => $loan->interest_amount,
+                    'total_amount_due' => $loan->total_amount_due,
+                    'monthly_amortization' => $loan->monthly_amortization,
+                    'status' => $loan->status,
+                    'created_at' => $loan->created_at->format('Y-m-d H:i:s'),
+                    'release_date' => $loan->release_date?->format('Y-m-d'),
+                    'remarks' => $loan->remarks,
+                    'member' => [
+                        'id' => $user->id,
+                        'name' => trim($user->first_name . ($user->middle_name ? ' ' . $user->middle_name : '') . ' ' . $user->last_name),
+                        'email' => $user->email,
+                        'member_id' => 'MEM-' . str_pad($user->id, 4, '0', STR_PAD_LEFT),
+                    ],
+                ];
+            });
+        
+        // Get loans rejected by Credit Coordinator
+        $disapprovedLoans = Loan::where('status', 'rejected')
+            ->where('remarks', 'like', '%Credit Coordinator%')
+            ->orWhere(function($query) {
+                $query->where('status', 'rejected')
+                      ->where('remarks', 'like', '%CC%');
+            })
+            ->with(['user.memberProfile', 'loanType'])
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($loan) {
+                $user = $loan->user;
+                
+                return [
+                    'id' => $loan->id,
+                    'loan_type_name' => $loan->loanType->name ?? 'N/A',
+                    'principal_amount' => $loan->principal_amount,
+                    'terms_months' => $loan->terms_months,
+                    'interest_amount' => $loan->interest_amount,
+                    'total_amount_due' => $loan->total_amount_due,
+                    'monthly_amortization' => $loan->monthly_amortization,
+                    'status' => $loan->status,
+                    'created_at' => $loan->created_at->format('Y-m-d H:i:s'),
+                    'release_date' => $loan->release_date?->format('Y-m-d'),
+                    'remarks' => $loan->remarks,
+                    'member' => [
+                        'id' => $user->id,
+                        'name' => trim($user->first_name . ($user->middle_name ? ' ' . $user->middle_name : '') . ' ' . $user->last_name),
+                        'email' => $user->email,
+                        'member_id' => 'MEM-' . str_pad($user->id, 4, '0', STR_PAD_LEFT),
+                    ],
+                ];
+            });
+        
+        return Inertia::render('dashboards/CreditCom/CrComApprovedHistory', [
+            'approvedLoans' => $approvedLoans,
+            'disapprovedLoans' => $disapprovedLoans,
+        ]);
     })->middleware('role:creditcom')->name('creditcom.approved-history');
+
+    // GM - View Loan Decision History
+    Route::get('dashboards/Gm/Loan/{loan}/viewDecision', function ($loanId) {
+        $loan = Loan::where('id', $loanId)
+            ->with(['user.memberProfile', 'loanType', 'coMakers.user', 'amortizations', 'payments'])
+            ->firstOrFail();
+        
+        $user = $loan->user;
+        $memberProfile = $user->memberProfile;
+        
+        $pastLoans = Loan::where('user_id', $user->id)
+            ->where('id', '!=', $loan->id)
+            ->whereIn('status', ['approved', 'released', 'paid_off'])
+            ->with('loanType')
+            ->orderBy('created_at', 'desc')
+            ->limit(10)
+            ->get()
+            ->map(function ($pastLoan) {
+                $totalPaid = \App\Models\LoanPayment::where('loan_id', $pastLoan->id)->sum('amount');
+                $balance = $pastLoan->total_amount_due - $totalPaid;
+                
+                return [
+                    'id' => $pastLoan->id,
+                    'loan_type_name' => $pastLoan->loanType->name ?? 'N/A',
+                    'principal_amount' => $pastLoan->principal_amount,
+                    'total_amount_due' => $pastLoan->total_amount_due,
+                    'balance' => max(0, $balance),
+                    'status' => $pastLoan->status,
+                    'release_date' => $pastLoan->release_date?->format('Y-m-d'),
+                    'terms_months' => $pastLoan->terms_months,
+                ];
+            });
+        
+        $loanDetails = [
+            'id' => $loan->id,
+            'loan_type_name' => $loan->loanType->name ?? 'N/A',
+            'principal_amount' => $loan->principal_amount,
+            'terms_months' => $loan->terms_months,
+            'interest_amount' => $loan->interest_amount,
+            'total_amount_due' => $loan->total_amount_due,
+            'monthly_amortization' => $loan->monthly_amortization,
+            'status' => $loan->status,
+            'created_at' => $loan->created_at->format('Y-m-d H:i:s'),
+            'release_date' => $loan->release_date?->format('Y-m-d'),
+            'remarks' => $loan->remarks,
+            'member' => [
+                'id' => $user->id,
+                'name' => trim($user->first_name . ($user->middle_name ? ' ' . $user->middle_name : '') . ' ' . $user->last_name),
+                'email' => $user->email,
+                'member_id' => 'MEM-' . str_pad($user->id, 4, '0', STR_PAD_LEFT),
+                'date_hired' => $memberProfile?->date_hired?->format('Y-m-d'),
+                'basic_salary' => $memberProfile?->basic_salary ?? 0,
+                'share_capital_balance' => $memberProfile?->share_capital_balance ?? 0,
+            ],
+            'co_makers' => $loan->coMakers->map(function ($coMaker) {
+                $coMakerUser = $coMaker->user;
+                return [
+                    'id' => $coMakerUser->id,
+                    'name' => trim($coMakerUser->first_name . ($coMakerUser->middle_name ? ' ' . $coMakerUser->middle_name : '') . ' ' . $coMakerUser->last_name),
+                    'email' => $coMakerUser->email,
+                    'status' => $coMaker->status,
+                ];
+            }),
+            'past_loans' => $pastLoans,
+            'active_loans_count' => Loan::where('user_id', $user->id)->whereIn('status', ['approved', 'released'])->count(),
+        ];
+        
+        return Inertia::render('dashboards/Gm/GmViewLoanDecision', [
+            'loan' => $loanDetails,
+        ]);
+    })->middleware('role:gm')->name('gm.loan.viewDecision');
+
+    // CreditCom - View Loan Decision History
+    Route::get('dashboards/CreditCom/Loan/{loan}/viewDecision', function ($loanId) {
+        $loan = Loan::where('id', $loanId)
+            ->with(['user.memberProfile', 'loanType', 'coMakers.user', 'amortizations', 'payments'])
+            ->firstOrFail();
+        
+        $user = $loan->user;
+        $memberProfile = $user->memberProfile;
+        
+        $pastLoans = Loan::where('user_id', $user->id)
+            ->where('id', '!=', $loan->id)
+            ->whereIn('status', ['approved', 'released', 'paid_off'])
+            ->with('loanType')
+            ->orderBy('created_at', 'desc')
+            ->limit(10)
+            ->get()
+            ->map(function ($pastLoan) {
+                $totalPaid = \App\Models\LoanPayment::where('loan_id', $pastLoan->id)->sum('amount');
+                $balance = $pastLoan->total_amount_due - $totalPaid;
+                
+                return [
+                    'id' => $pastLoan->id,
+                    'loan_type_name' => $pastLoan->loanType->name ?? 'N/A',
+                    'principal_amount' => $pastLoan->principal_amount,
+                    'total_amount_due' => $pastLoan->total_amount_due,
+                    'balance' => max(0, $balance),
+                    'status' => $pastLoan->status,
+                    'release_date' => $pastLoan->release_date?->format('Y-m-d'),
+                    'terms_months' => $pastLoan->terms_months,
+                ];
+            });
+        
+        $loanDetails = [
+            'id' => $loan->id,
+            'loan_type_name' => $loan->loanType->name ?? 'N/A',
+            'principal_amount' => $loan->principal_amount,
+            'terms_months' => $loan->terms_months,
+            'interest_amount' => $loan->interest_amount,
+            'total_amount_due' => $loan->total_amount_due,
+            'monthly_amortization' => $loan->monthly_amortization,
+            'status' => $loan->status,
+            'created_at' => $loan->created_at->format('Y-m-d H:i:s'),
+            'release_date' => $loan->release_date?->format('Y-m-d'),
+            'remarks' => $loan->remarks,
+            'member' => [
+                'id' => $user->id,
+                'name' => trim($user->first_name . ($user->middle_name ? ' ' . $user->middle_name : '') . ' ' . $user->last_name),
+                'email' => $user->email,
+                'member_id' => 'MEM-' . str_pad($user->id, 4, '0', STR_PAD_LEFT),
+                'date_hired' => $memberProfile?->date_hired?->format('Y-m-d'),
+                'basic_salary' => $memberProfile?->basic_salary ?? 0,
+                'share_capital_balance' => $memberProfile?->share_capital_balance ?? 0,
+            ],
+            'co_makers' => $loan->coMakers->map(function ($coMaker) {
+                $coMakerUser = $coMaker->user;
+                return [
+                    'id' => $coMakerUser->id,
+                    'name' => trim($coMakerUser->first_name . ($coMakerUser->middle_name ? ' ' . $coMakerUser->middle_name : '') . ' ' . $coMakerUser->last_name),
+                    'email' => $coMakerUser->email,
+                    'status' => $coMaker->status,
+                ];
+            }),
+            'past_loans' => $pastLoans,
+            'active_loans_count' => Loan::where('user_id', $user->id)->whereIn('status', ['approved', 'released'])->count(),
+        ];
+        
+        return Inertia::render('dashboards/CreditCom/ViewLoanDecision', [
+            'loan' => $loanDetails,
+        ]);
+    })->middleware('role:creditcom')->name('creditcom.loan.viewDecision');
 
     // Chairman
 

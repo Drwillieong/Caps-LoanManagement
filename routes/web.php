@@ -369,6 +369,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboards/Member/UserProfile', [MemberProfileController::class, 'show'])->middleware('role:member')->name('member.user-profile');
     Route::post('dashboards/Member/UserProfile', [MemberProfileController::class, 'store'])->middleware('role:member')->name('member.user-profile.store');
 
+    // HR - Edit Member Profile
+    Route::get('dashboards/HR/EditMember/{userId}', [MemberProfileController::class, 'editMember'])
+        ->middleware('role:hr,gm,creditcom')
+        ->name('hr.edit-member');
+    
+    Route::put('dashboards/HR/EditMember/{userId}', [MemberProfileController::class, 'updateMember'])
+        ->middleware('role:hr,gm,creditcom')
+        ->name('hr.update-member');
+
     Route::get('dashboards/Member/MemberActiveLoan', function () {
         $user = auth()->user();
         
@@ -526,6 +535,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render('dashboards/Gm/GMCompletedLoan');
     })->middleware('role:gm')->name('gm.completed-loan');
 
+    Route::get('dashboards/Gm/ApprovedLoan', function () {
+        return Inertia::render('dashboards/Gm/ApprovedLoan');
+    })->middleware('role:gm')->name('gm.approved-loan');
+
     // Credit Coordinator
     Route::get('dashboards/CreditCom/ValidateLoan', [CreditComController::class, 'index'])
         ->middleware('role:creditcom')
@@ -550,6 +563,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboards/CreditCom/Loan/PendingCount', [CreditComController::class, 'pendingCount'])
         ->middleware('role:creditcom')
         ->name('creditcom.pending-count');
+
+    Route::get('dashboards/CreditCom/ApprovedHistory', function () {
+        return Inertia::render('dashboards/CreditCom/CrComApprovedHistory');
+    })->middleware('role:creditcom')->name('creditcom.approved-history');
 
     // Chairman
 

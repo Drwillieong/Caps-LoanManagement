@@ -71,7 +71,8 @@ export default function ValidateLoan({ pendingLoans }: GmValidateLoanProps) {
     }
 
     function formatCurrency(amount: number): string {
-        return `₱${amount.toLocaleString(undefined, {
+        const num = typeof amount === 'number' ? amount : parseFloat(amount) || 0;
+        return `₱${num.toLocaleString('en-US', {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
         })}`;
@@ -144,30 +145,17 @@ export default function ValidateLoan({ pendingLoans }: GmValidateLoanProps) {
         <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
             <Head title="Validate Loan Application" />
 
-            <div className="space-y-6 px-6 py-6">
+            <div className="flex flex-1 flex-col gap-6 p-6">
                 {/* Header */}
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-2xl font-semibold">Loan Application Review</h1>
-                        <p className="text-muted-foreground text-sm">
-                            Review and validate loan applications from members
-                        </p>
-                    </div>
-                    <Link
-                        href="/dashboard"
-                        className="inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm hover:bg-muted transition"
-                    >
-                        Back 
-                    </Link>
+                <div className="flex flex-col gap-1">
+                    <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-emerald-900 dark:text-emerald-100">
+                        Loan Application Review
+                    </h1>
+                    <p className="text-muted-foreground">
+                        Review and validate loan applications from members
+                    </p>
                 </div>
 
-                {/* Pending Loans Count */}
-                <div className="flex items-center gap-2 text-sm">
-                    <Clock className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">
-                        {pendingLoans.length} Pending Application{pendingLoans.length !== 1 ? 's' : ''}
-                    </span>
-                </div>
 
                 <Separator />
 
@@ -418,11 +406,15 @@ export default function ValidateLoan({ pendingLoans }: GmValidateLoanProps) {
                         ))}
                     </div>
                 ) : (
-                    <Card className="border-dashed">
-                        <CardContent className="flex flex-col items-center justify-center py-12">
-                            <CheckCircle2 className="h-12 w-12 text-muted-foreground mb-4" />
-                            <h3 className="text-lg font-medium text-foreground mb-2">All Caught Up</h3>
-                            <p className="text-sm text-muted-foreground text-center mb-6">
+                    <Card className="border-emerald-100 bg-white/50 dark:bg-emerald-950/10 shadow-sm">
+                        <CardContent className="flex flex-col items-center justify-center py-24 text-center">
+                            <div className="rounded-full bg-emerald-100 p-4 mb-6">
+                                <CheckCircle2 className="h-10 w-10 text-emerald-600" />
+                            </div>
+                            <h3 className="text-2xl font-semibold mb-3 text-emerald-900 dark:text-emerald-100">
+                                All Caught Up
+                            </h3>
+                            <p className="text-muted-foreground max-w-xl mb-10">
                                 There are no pending loan applications to review at this time.
                             </p>
                             <Link
@@ -437,12 +429,12 @@ export default function ValidateLoan({ pendingLoans }: GmValidateLoanProps) {
                 )}
 
                 {/* Info Card */}
-                <Card className="bg-muted/50">
+                <Card className="border-emerald-100 bg-emerald-50 dark:bg-emerald-950/20">
                     <CardContent className="pt-6">
                         <div className="flex gap-3">
-                            <AlertCircle className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
+                            <AlertCircle className="h-5 w-5 text-emerald-600 flex-shrink-0 mt-0.5" />
                             <div>
-                                <h4 className="font-medium text-sm">Review Guidelines</h4>
+                                <h4 className="font-medium text-sm text-emerald-900 dark:text-emerald-100">Review Guidelines</h4>
                                 <p className="text-sm text-muted-foreground mt-1">
                                     Please review all member details, loan terms, co-maker information, and past loan history before making a decision. Ensure all requirements are met before approval.
                                 </p>

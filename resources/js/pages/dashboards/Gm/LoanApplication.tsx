@@ -38,11 +38,12 @@ export default function LoanApplication({ pendingLoans }: GmLoanApplicationProps
   }
 
   function formatCurrency(amount: number): string {
-    return `₱${amount.toLocaleString('en-PH', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`;
-  }
+        const num = typeof amount === 'number' ? amount : parseFloat(amount) || 0;
+        return `₱${num.toLocaleString('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        })}`;
+    }
 
   function getStatusConfig(status: string) {
     const map: Record<

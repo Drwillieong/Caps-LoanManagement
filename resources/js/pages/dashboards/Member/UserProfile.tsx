@@ -67,10 +67,18 @@ interface Props {
     isNewUser: boolean;
     isAdmin?: boolean;
     profileCompleted: boolean;
+    targetUserId?: number;
+    targetUserName?: string;
 }
 
-export default function UserProfile({ memberProfile, beneficiaries, isNewUser, isAdmin = false, profileCompleted }: Props) {
+export default function UserProfile({ memberProfile, beneficiaries, isNewUser, isAdmin = false, profileCompleted, targetUserId, targetUserName }: Props) {
     const { auth } = usePage<SharedData>().props;
+    
+    // Determine if this is HR editing another member
+    const isHREditingMember = isAdmin && targetUserId;
+    
+    // For HR editing, always enable editing
+    const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
     
     // Initialize form data from existing profile or defaults
     const [formData, setFormData] = useState({
@@ -125,10 +133,15 @@ export default function UserProfile({ memberProfile, beneficiaries, isNewUser, i
         'date_hired', 'basic_salary'
     ] : [];
 
-    const [isEditing, setIsEditing] = useState(isNewUser);
-
     // Determine if user can edit employment - admins can always edit, members only when isEditing
-  const canEditEmployment = isAdmin;
+    const canEditEmployment = isAdmin;
+
+    // Get the appropriate URL for form action
+    const formActionUrl = isHREditingMember 
+        ? `/dashboards/HR/EditMember/${targetUserId}` 
+        : member.userProfile.store.url();
+
+    const formMethod = isHREditingMember ? 'put' : 'post';
 
     const formatDate = (date?: string) => {
     if (!date) return '';
@@ -199,8 +212,8 @@ export default function UserProfile({ memberProfile, beneficiaries, isNewUser, i
             </div>
 
             <Form
-                method="post"
-                action={member.userProfile.store.url()}
+                method={formMethod}
+                action={formActionUrl}
                 transform={() => formData as any}
                 className="space-y-6"
             >
@@ -376,8 +389,16 @@ export default function UserProfile({ memberProfile, beneficiaries, isNewUser, i
                                             id="mobile_number"
                                             name="mobile_number"
                                             type="tel"
+                                            inputMode="numeric"
+                                            pattern="[0-9]{11}"
+                                            maxLength={11}
+                                            minLength={11}
                                             value={formData.mobile_number}
-                                            onChange={(e) => setFormData({ ...formData, mobile_number: e.target.value })}
+                                            onChange={(e) => {
+                                                // Only allow numeric input and limit to 11 characters
+                                                const value = e.target.value.replace(/[^0-9]/g, '').slice(0, 11);
+                                                setFormData({ ...formData, mobile_number: value });
+                                            }}
                                             required={isRequired('mobile_number')}
                                             placeholder="e.g., 09123456789"
                                             disabled={!isEditing}

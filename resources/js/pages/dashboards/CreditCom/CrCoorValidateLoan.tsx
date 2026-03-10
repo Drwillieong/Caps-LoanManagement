@@ -68,7 +68,8 @@ export default function CrCoorValidateLoan({ pendingLoans }: GmValidateLoanProps
     }
 
     function formatCurrency(amount: number): string {
-        return `₱${amount.toLocaleString(undefined, {
+        const num = typeof amount === 'number' ? amount : parseFloat(amount) || 0;
+        return `₱${num.toLocaleString('en-US', {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
         })}`;
@@ -453,4 +454,3 @@ export default function CrCoorValidateLoan({ pendingLoans }: GmValidateLoanProps
         </AppLayout>
     );
 }
-

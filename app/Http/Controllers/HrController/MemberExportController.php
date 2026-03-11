@@ -11,7 +11,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\SendMembersPass;
 
-class CreateMemberController extends Controller
+class MemberExportController extends Controller
 {
     public function index(Request $request)
     {
@@ -22,7 +22,7 @@ class CreateMemberController extends Controller
 
         $query = User::query()->with('memberProfile');
 
-        // 🔍 Search by ID, name, or email
+        // Search by ID, name, or email
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('id', $search)
@@ -32,19 +32,19 @@ class CreateMemberController extends Controller
             });
         }
 
-        // 🕒 Filter by new / old
+        // Filter by new / old
         if ($filter === 'new') {
             $query->where('created_at', '>=', now()->subDays(30));
         } elseif ($filter === 'old') {
             $query->where('created_at', '<', now()->subDays(30));
         }
 
-        // 🎭 Filter by role
+        // Filter by role
         if ($role !== 'all') {
             $query->where('role', $role);
         }
 
-        // If export requested, return JSON response
+        // If export requested, get all records without pagination
         if ($export) {
             $allUsers = $query->orderBy('created_at', 'desc')->get();
             
@@ -170,3 +170,4 @@ class CreateMemberController extends Controller
         return redirect()->route('users')->with('success', 'User created successfully.');
     }
 }
+

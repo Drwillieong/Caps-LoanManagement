@@ -1,5 +1,7 @@
 import { Head, Link } from '@inertiajs/react';
-import { ArrowLeft, User, Users, Phone, MapPin, Calendar, CreditCard, Banknote } from 'lucide-react';
+import { ArrowLeft, User, Users, Phone, MapPin, Calendar, CreditCard, Banknote, Download } from 'lucide-react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
@@ -71,6 +73,173 @@ export default function MembersProfile({ user, memberProfile, beneficiaries }: P
             currency: 'PHP',
         }).format(amount);
 
+    const exportPDF = () => {
+        if (!memberProfile) return;
+
+        const doc = new jsPDF();
+        
+        // Title
+        doc.setFontSize(18);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Member Profile Report', 14, 20);
+        
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Generated: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`, 14, 28);
+
+        // User Account Information
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('User Account Information', 14, 40);
+        
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        
+        const userInfo = [
+            ['Email:', user.email],
+            ['Role:', user.role],
+            ['Status:', user.is_active ? 'Active' : 'Inactive'],
+            ['Created At:', formatDate(user.created_at)],
+        ];
+        
+        autoTable(doc, {
+            startY: 45,
+            head: [['Field', 'Value']],
+            body: userInfo,
+            theme: 'striped',
+            headStyles: { fillColor: [59, 130, 246] },
+            margin: { left: 14, right: 100 },
+            tableWidth: 'wrap',
+        });
+
+        // Personal Information
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Personal Information', 14, (doc as any).lastAutoTable.finalY + 15);
+        
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        
+        const personalInfo = [
+            ['Employee ID:', memberProfile.employee_id],
+            ['First Name:', memberProfile.first_name],
+            ['Middle Name:', memberProfile.middle_name || 'N/A'],
+            ['Last Name:', memberProfile.last_name],
+            ['Date of Birth:', formatDate(memberProfile.date_of_birth)],
+            ['Sex:', memberProfile.sex],
+            ['Civil Status:', memberProfile.civil_status],
+            ['Spouse Name:', memberProfile.spouse_name || 'N/A'],
+        ];
+        
+        autoTable(doc, {
+            startY: (doc as any).lastAutoTable.finalY + 20,
+            head: [['Field', 'Value']],
+            body: personalInfo,
+            theme: 'striped',
+            headStyles: { fillColor: [59, 130, 246] },
+            margin: { left: 14, right: 100 },
+            tableWidth: 'wrap',
+        });
+
+        // Contact Information
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Contact Information', 14, (doc as any).lastAutoTable.finalY + 15);
+        
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        
+        const contactInfo = [
+            ['Mobile Number:', memberProfile.mobile_number],
+            ['Present Address:', memberProfile.present_address],
+            ['Permanent Address:', memberProfile.permanent_address],
+        ];
+        
+        autoTable(doc, {
+            startY: (doc as any).lastAutoTable.finalY + 20,
+            head: [['Field', 'Value']],
+            body: contactInfo,
+            theme: 'striped',
+            headStyles: { fillColor: [59, 130, 246] },
+            margin: { left: 14, right: 100 },
+            tableWidth: 'wrap',
+        });
+
+        // Employment Information
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Employment Information', 14, (doc as any).lastAutoTable.finalY + 15);
+        
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        
+        const employmentInfo = [
+            ['Position:', memberProfile.position],
+            ['Date Hired:', formatDate(memberProfile.date_hired)],
+            ['Basic Salary:', formatCurrency(memberProfile.basic_salary)],
+        ];
+        
+        autoTable(doc, {
+            startY: (doc as any).lastAutoTable.finalY + 20,
+            head: [['Field', 'Value']],
+            body: employmentInfo,
+            theme: 'striped',
+            headStyles: { fillColor: [59, 130, 246] },
+            margin: { left: 14, right: 100 },
+            tableWidth: 'wrap',
+        });
+
+        // Financial Information
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Financial Information', 14, (doc as any).lastAutoTable.finalY + 15);
+        
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        
+        const financialInfo = [
+            ['Share Capital Balance:', formatCurrency(memberProfile.share_capital_balance)],
+            ['Bank Account Number:', memberProfile.bank_account_number || 'N/A'],
+            ['TIN Number:', memberProfile.tin_number || 'N/A'],
+        ];
+        
+        autoTable(doc, {
+            startY: (doc as any).lastAutoTable.finalY + 20,
+            head: [['Field', 'Value']],
+            body: financialInfo,
+            theme: 'striped',
+            headStyles: { fillColor: [59, 130, 246] },
+            margin: { left: 14, right: 100 },
+            tableWidth: 'wrap',
+        });
+
+        // Beneficiaries
+        if (beneficiaries && beneficiaries.length > 0) {
+            doc.setFontSize(14);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Beneficiaries', 14, (doc as any).lastAutoTable.finalY + 15);
+            
+            const beneficiaryData = beneficiaries.map(b => [
+                b.full_name,
+                b.relationship,
+                formatDate(b.date_of_birth)
+            ]);
+            
+            autoTable(doc, {
+                startY: (doc as any).lastAutoTable.finalY + 20,
+                head: [['Full Name', 'Relationship', 'Date of Birth']],
+                body: beneficiaryData,
+                theme: 'striped',
+                headStyles: { fillColor: [59, 130, 246] },
+                margin: { left: 14, right: 14 },
+            });
+        }
+
+        // Save the PDF
+        const fileName = `${memberProfile.last_name}_${memberProfile.first_name}_Profile.pdf`;
+        doc.save(fileName);
+    };
+
     return (
         <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
             <Head title={`${memberProfile?.first_name || user.name}'s Profile`} />
@@ -105,6 +274,10 @@ export default function MembersProfile({ user, memberProfile, beneficiaries }: P
                         <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary capitalize">
                             {user.role}
                         </span>
+                        <Button variant="outline" size="sm" onClick={() => exportPDF()}>
+                            <Download className="mr-2 h-4 w-4" />
+                            Export PDF
+                        </Button>
                     </div>
                 </div>
 

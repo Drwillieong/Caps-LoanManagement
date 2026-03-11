@@ -1,11 +1,30 @@
 import { Head, Link, router } from '@inertiajs/react'
-import { Plus, Search, Filter } from 'lucide-react'
+import { Plus, Search, Filter, Download } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
 
 import AppLayout from '@/layouts/app-layout'
 import { Button } from '@/components/ui/button'
 import { LiveClock } from '@/components/live-clock'
 import { type BreadcrumbItem } from '@/types'
+
+interface MemberProfile {
+    employee_id: string
+    date_of_birth: string
+    sex: string
+    civil_status: string
+    spouse_name: string | null
+    mobile_number: string
+    present_address: string
+    permanent_address: string
+    position: string
+    date_hired: string
+    basic_salary: number
+    share_capital_balance: number
+    bank_account_number: string
+    tin_number: string
+}
 
 interface User {
     id: number
@@ -17,6 +36,7 @@ interface User {
     is_active: boolean
     created_at: string
     updated_at: string
+    member_profile: MemberProfile | null
 }
 
 interface Filters {
@@ -66,6 +86,135 @@ export default function SeeUsers({ users, filters, roles }: Props) {
         return `${user.first_name}${user.middle_name ? ' ' + user.middle_name : ''} ${user.last_name}`.trim()
     }
 
+    const formatCurrency = (amount: number) =>
+        new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'PHP',
+        }).format(amount)
+
+    const exportPDF = async () => {
+        try {
+            // Fetch all users with their member profiles
+            const response = await fetch('/dashboards/HR/SeeUsers?export=true', {
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include',
+            })
+            
+            if (!response.ok) {
+                throw new Error('Failed to fetch data')
+            }
+            
+            const data = await response.json()
+            const allUsers = data.users
+
+            if (!allUsers || allUsers.length === 0) {
+                alert('No members found to export')
+                return
+            }
+
+            const doc = new jsPDF()
+        
+            // Title
+            doc.setFontSize(18)
+            doc.setFont('helvetica', 'bold')
+            doc.text('Members Report', 14, 20)
+            
+            doc.setFontSize(10)
+            doc.setFont('helvetica', 'normal')
+            doc.text(`Generated: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`, 14, 28)
+            doc.text(`Total Members: ${allUsers.length}`, 14, 34)
+
+            // Prepare table data
+            const tableData = allUsers.map((user: User) => [
+                user.id,
+                getFullName(user),
+                user.email,
+                user.member_profile?.employee_id || 'N/A',
+                user.member_profile?.position || 'N/A',
+                user.member_profile ? formatCurrency(user.member_profile.basic_salary) : 'N/A',
+                user.member_profile ? formatCurrency(user.member_profile.share_capital_balance) : 'N/A',
+                user.role,
+                user.is_active ? 'Active' : 'Inactive',
+            ])
+
+            autoTable(doc, {
+                startY: 40,
+                head: [['ID', 'Name', 'Email', 'Employee ID', 'Position', 'Salary', 'Share Capital', 'Role', 'Status']],
+                body: tableData,
+                theme: 'striped',
+                headStyles: { fillColor: [59, 130, 246] },
+                styles: { fontSize: 8 },
+                columnStyles: {
+                    0: { cellWidth: 10 },
+                    1: { cellWidth: 30 },
+                    2: { cellWidth: 35 },
+                    3: { cellWidth: 20 },
+                    4: { cellWidth: 20 },
+                    5: { cellWidth: 20 },
+                    6: { cellWidth: 20 },
+                    7: { cellWidth: 15 },
+                    8: { cellWidth: 15 },
+                },
+            })
+
+            // Personal Information Details (new page)
+            let currentY = (doc as any).lastAutoTable.finalY + 15
+            
+            allUsers.forEach((user: User) => {
+                if (currentY > 250) {
+                    doc.addPage()
+                    currentY = 20
+                }
+
+                doc.setFontSize(12)
+                doc.setFont('helvetica', 'bold')
+                doc.text(`#${user.id} - ${getFullName(user)}`, 14, currentY)
+                currentY += 7
+
+                doc.setFontSize(10)
+                doc.setFont('helvetica', 'normal')
+
+                if (user.member_profile) {
+                    const details = [
+                        ['Employee ID:', user.member_profile.employee_id],
+                        ['Date of Birth:', formatDate(user.member_profile.date_of_birth)],
+                        ['Sex:', user.member_profile.sex],
+                        ['Civil Status:', user.member_profile.civil_status],
+                        ['Spouse Name:', user.member_profile.spouse_name || 'N/A'],
+                        ['Mobile Number:', user.member_profile.mobile_number],
+                        ['Present Address:', user.member_profile.present_address],
+                        ['Permanent Address:', user.member_profile.permanent_address],
+                        ['Position:', user.member_profile.position],
+                        ['Date Hired:', formatDate(user.member_profile.date_hired)],
+                        ['Basic Salary:', formatCurrency(user.member_profile.basic_salary)],
+                        ['Share Capital Balance:', formatCurrency(user.member_profile.share_capital_balance)],
+                        ['Bank Account Number:', user.member_profile.bank_account_number || 'N/A'],
+                        ['TIN Number:', user.member_profile.tin_number || 'N/A'],
+                    ]
+
+                    details.forEach(([label, value]) => {
+                        doc.text(`${label} ${value}`, 14, currentY)
+                        currentY += 5
+                    })
+                } else {
+                    doc.text('No member profile found', 14, currentY)
+                    currentY += 5
+                }
+
+                currentY += 10
+            })
+
+            // Save the PDF
+            doc.save('Members_Report.pdf')
+        } catch (error) {
+            console.error('Error exporting PDF:', error)
+            alert('Failed to export PDF. Please try again.')
+        }
+    }
+
     return (
        <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
     <Head title="Members" />
@@ -83,12 +232,18 @@ export default function SeeUsers({ users, filters, roles }: Props) {
                 </p>
             </div>
 
-            <Button asChild>
-                <Link href="/dashboards/HR/create">
-                    <Plus className="mr-2 h-4 w-4" />
-                    Create Member
-                </Link>
-            </Button>
+            <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => exportPDF()}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Export PDF
+                </Button>
+                <Button asChild>
+                    <Link href="/dashboards/HR/create">
+                        <Plus className="mr-2 h-4 w-4" />
+                        Create Member
+                    </Link>
+                </Button>
+            </div>
         </div>
 
         {/* Filters Card */}

@@ -91,15 +91,15 @@ export default function ApprovedLoan() {
             'released': { variant: 'default', label: 'Released' },
             'paid_off': { variant: 'outline', label: 'Paid Off' },
         };
-        
+
         const rejectedByGMStatusMap: Record<string, { variant: 'destructive' | 'secondary'; label: string }> = {
             'rejected_by_gm': { variant: 'destructive', label: 'Rejected by GM' },
             'rejected': { variant: 'destructive', label: 'Rejected' },
         };
-        
+
         const map = activeTab === 'approved' ? pendingCCReviewStatusMap : rejectedByGMStatusMap;
         const config = map[status] || { variant: 'secondary' as const, label: status };
-        
+
         return (
             <Badge variant={config.variant}>
                 {config.label}
@@ -140,7 +140,7 @@ export default function ApprovedLoan() {
                         <CardHeader className="pb-2">
                             <CardDescription className="flex items-center gap-2">
                                 <CheckCircle2 className="h-4 w-4 text-blue-600" />
-                                Pending CC Review
+                                Pending CC Review & Approved
                             </CardDescription>
                             <CardTitle className="text-2xl">{totalApproved}</CardTitle>
                         </CardHeader>
@@ -173,7 +173,7 @@ export default function ApprovedLoan() {
                         }`}
                     >
                         <CheckCircle2 className="h-4 w-4" />
-                        Pending CC Review ({totalApproved})
+                        Pending CC Review & Approved ({totalApproved})
                     </button>
                     <button
                         onClick={() => setActiveTab('disapproved')}
@@ -252,12 +252,12 @@ export default function ApprovedLoan() {
                                 <Ban className="h-12 w-12 text-muted-foreground mb-4" />
                             )}
                             <h3 className="text-lg font-medium text-foreground mb-2">
-                                No {activeTab === 'approved' ? 'Pending CC Review' : 'Rejected by GM'} Loans
+                                No {activeTab === 'approved' ? 'Pending CC Review & Approved' : 'Rejected by GM'} Loans
                             </h3>
                             <p className="text-sm text-muted-foreground text-center">
                                 {searchTerm 
                                     ? 'No loans match your search criteria.' 
-                                    : `There are no ${activeTab === 'approved' ? 'pending CC review' : 'rejected by GM'} loans in the history yet.`
+                                    : `There are no ${activeTab === 'approved' ? 'pending CC review or approved' : 'rejected by GM'} loans in the history yet.`
                                 }
                             </p>
                         </CardContent>

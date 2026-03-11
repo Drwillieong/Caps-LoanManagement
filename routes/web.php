@@ -536,8 +536,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     })->middleware('role:gm')->name('gm.completed-loan');
 
     Route::get('dashboards/Gm/ApprovedLoan', function () {
-        // Get loans pending CC review (after GM approval)
-        $pendingCCReviewLoans = Loan::where('status', 'pending_cc_review')
+        // Get loans pending CC review (after GM approval) AND fully approved loans
+        $pendingCCReviewLoans = Loan::whereIn('status', ['pending_cc_review', 'approved'])
             ->with(['user.memberProfile', 'loanType'])
             ->orderBy('created_at', 'desc')
             ->get()

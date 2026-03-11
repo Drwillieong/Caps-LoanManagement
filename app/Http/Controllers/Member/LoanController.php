@@ -39,6 +39,11 @@ class LoanController extends Controller
             ->where('status', 'awaiting_comaker')
             ->exists();
 
+        // Check if user has an active loan
+        $hasActiveLoan = Loan::where('user_id', $user->id)
+            ->whereIn('status', ['approved', 'released'])
+            ->exists();
+
         // Fetch previous loans with amortizations for "Previous Loan" display
         $previousLoans = Loan::where('user_id', $user->id)
             ->whereIn('status', ['approved', 'released', 'paid_off'])
@@ -110,6 +115,7 @@ class LoanController extends Controller
 
             'previousLoans' => $previousLoans,
             'hasAwaitingComaker' => $hasAwaitingComaker,
+            'hasActiveLoan' => $hasActiveLoan,
         ]);
     }
 
@@ -331,7 +337,10 @@ class LoanController extends Controller
                 'awaiting_comaker',
                 'pending_gm_review',
                 'approved',
-                'rejected'
+                'rejected',
+                'rejected_by_gm',
+                'rejected_by_credit_com',
+                'rejected_by_co_maker',
             ])
             ->with(['loanType', 'coMakers.user'])
             ->orderBy('created_at', 'desc')
@@ -353,6 +362,8 @@ class LoanController extends Controller
                     'monthly_amortization' => $loanItem->monthly_amortization,
                     'status' => $loanItem->status,
                     'remarks' => $loanItem->remarks,
+                    'rejected_by' => $loanItem->rejected_by,
+                    'rejected_at' => $loanItem->rejected_at?->format('Y-m-d H:i:s'),
                     'created_at' => $loanItem->created_at->format('Y-m-d H:i:s'),
                     'co_makers' => $loanItem->coMakers->map(function ($coMaker) {
                         return [
@@ -384,6 +395,8 @@ class LoanController extends Controller
                 'monthly_amortization' => $loan->monthly_amortization,
                 'status' => $loan->status,
                 'remarks' => $loan->remarks,
+                'rejected_by' => $loan->rejected_by,
+                'rejected_at' => $loan->rejected_at?->format('Y-m-d H:i:s'),
                 'created_at' => $loan->created_at->format('Y-m-d H:i:s'),
                 'co_makers' => $loan->coMakers->map(function ($coMaker) {
                     return [
@@ -454,6 +467,7 @@ class LoanController extends Controller
             'previousLoans' => [],
             'error' => null,
             'hasAwaitingComaker' => false,
+            'hasActiveLoan' => false,
             'editingLoan' => [
                 'id' => $loan->id,
                 'loan_type_id' => $loan->loan_type_id,

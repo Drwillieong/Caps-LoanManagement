@@ -29,6 +29,8 @@ class Loan extends Model
         'release_date',
         'status',
         'remarks',
+        'rejected_by',
+        'rejected_at',
     ];
 
     /**
@@ -45,6 +47,7 @@ class Loan extends Model
             'monthly_amortization' => 'decimal:2',
             'release_date' => 'date',
             'terms_months' => 'integer',
+            'rejected_at' => 'datetime',
         ];
     }
 

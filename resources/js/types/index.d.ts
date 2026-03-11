@@ -83,6 +83,7 @@ export interface ApplyLoanProps {
     previousLoans: PreviousLoan[];
     error?: string;
     hasAwaitingComaker?: boolean;
+    hasActiveLoan?: boolean;
     editingLoan?: {
         id: number;
         loan_type_id: number;

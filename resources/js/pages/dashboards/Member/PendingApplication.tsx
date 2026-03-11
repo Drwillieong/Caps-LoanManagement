@@ -43,6 +43,8 @@ interface LoanData {
     monthly_amortization: number;
     status: string;
     remarks: string | null;
+    rejected_by: string | null;
+    rejected_at: string | null;
     created_at: string;
     co_makers: Array<{
         id: number;
@@ -111,7 +113,7 @@ export default function PendingApplication({ loan, hasPendingLoan, loanHistory }
         }
     }
 
-    function getStatusMessage(status: string) {
+    function getStatusMessage(status: string, rejectedBy: string | null = null, rejectedAt: string | null = null) {
         switch (status) {
             case 'approved':
                 return {
@@ -131,10 +133,18 @@ export default function PendingApplication({ loan, hasPendingLoan, loanHistory }
             case 'rejected_by_co_maker':
             case 'rejected_by_gm':
             case 'rejected_by_credit_com':
+                let rejectedByText = '';
+                if (rejectedBy === 'gm') {
+                    rejectedByText = ' by the General Manager';
+                } else if (rejectedBy === 'credit_com') {
+                    rejectedByText = ' by the Credit Coordinator';
+                } else if (rejectedBy === 'co_maker') {
+                    rejectedByText = ' by your Co-Maker';
+                }
                 return {
                     icon: <XCircle className="h-12 w-12 text-red-500" />,
                     title: 'Loan Rejected',
-                    description: 'Your loan application was not approved.',
+                    description: `Your loan application was not approved${rejectedByText}.${rejectedAt ? ` Rejected on ${rejectedAt}.` : ''}`,
                     color: 'bg-red-50 border-red-200'
                 };
             case 'awaiting_comaker':
@@ -270,7 +280,7 @@ export default function PendingApplication({ loan, hasPendingLoan, loanHistory }
         );
     }
 
-    const statusInfo = getStatusMessage(currentLoan.status);
+    const statusInfo = getStatusMessage(currentLoan.status, currentLoan.rejected_by, currentLoan.rejected_at);
 
     return (
         <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
@@ -396,13 +406,13 @@ export default function PendingApplication({ loan, hasPendingLoan, loanHistory }
 
                 <div className="flex gap-4">
                     {currentLoan.status === 'approved' || currentLoan.status === 'released' ? (
-                        <Link
-                            href="/dashboards/Member/ActiveLoan"
-                            className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-white hover:opacity-90 transition"
-                        >
-                            <DollarSign className="h-4 w-4" />
-                            View Active Loan
-                        </Link>
+                       <Link
+  href="/dashboards/Member/MemberActiveLoan"
+  className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-white hover:opacity-90 transition"
+>
+  <span className="text-sm font-semibold">₱</span>
+  View Active Loan
+</Link>
                     ) : currentLoan.status === 'rejected' || currentLoan.status === 'rejected_by_co_maker' || currentLoan.status === 'rejected_by_gm' || currentLoan.status === 'rejected_by_credit_com' ? (
                         <Link
                             href="/dashboards/Member/ApplyLoan"
@@ -422,7 +432,7 @@ export default function PendingApplication({ loan, hasPendingLoan, loanHistory }
                     )}
                     
                     <Link
-                        href="/dashboards/Member/MemberDashboard"
+                        href="/dashboard"
                         className="inline-flex items-center gap-2 rounded-xl border px-4 py-2 hover:bg-muted transition"
                     >
                         Back to Dashboard

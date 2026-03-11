@@ -152,6 +152,8 @@ class CreditComController extends Controller
         $loan->update([
             'status' => 'rejected_by_credit_com',
             'remarks' => $validated['remarks'],
+            'rejected_by' => 'credit_com',
+            'rejected_at' => now(),
         ]);
 
         return redirect()
@@ -161,19 +163,38 @@ class CreditComController extends Controller
 
     /**
      * Generate amortization schedule for approved loan
+     * Creates two payments per month (10th and 25th)
      */
     private function generateAmortizationSchedule(Loan $loan)
     {
         $monthlyPayment = $loan->monthly_amortization;
         $terms = $loan->terms_months;
         $startDate = now()->addMonth();
-
-        for ($i = 1; $i <= $terms; $i++) {
+        
+        // Calculate bi-monthly payment (half of monthly payment)
+        $biMonthlyPayment = $monthlyPayment / 2;
+        
+        // Generate two installments per month (10th and 25th)
+        $installmentNumber = 1;
+        
+        for ($month = 0; $month < $terms; $month++) {
+            // First payment: 10th of each month
+            $dueDate10 = $startDate->copy()->addMonths($month)->day(10);
             LoanAmortization::create([
                 'loan_id' => $loan->id,
-                'installment_number' => $i,
-                'amount_due' => $monthlyPayment,
-                'due_date' => $startDate->copy()->addMonths($i - 1),
+                'installment_number' => $installmentNumber++,
+                'amount_due' => $biMonthlyPayment,
+                'due_date' => $dueDate10,
+                'status' => 'pending',
+            ]);
+            
+            // Second payment: 25th of each month
+            $dueDate25 = $startDate->copy()->addMonths($month)->day(25);
+            LoanAmortization::create([
+                'loan_id' => $loan->id,
+                'installment_number' => $installmentNumber++,
+                'amount_due' => $biMonthlyPayment,
+                'due_date' => $dueDate25,
                 'status' => 'pending',
             ]);
         }

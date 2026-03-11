@@ -1,21 +1,14 @@
-# TODO: Add Export to PDF functionality in SeeUsers.tsx
+# TODO: Update Amortization Schedule to Bi-Monthly (10th and 25th)
 
-## Plan
-1. Add "Export PDF" button in SeeUsers.tsx header
-2. Add export function to fetch all members data and generate PDF
-3. Include all member information in the PDF:
-   - User Account Info (name, email, role, status)
-   - Personal Info (employee_id, DOB, sex, civil_status)
-   - Contact Info (mobile, addresses)
-   - Employment Info (position, date_hired, salary)
-   - Financial Info (share_capital, bank_account, TIN)
+## Task
+Modify the amortization schedule generation to create two payments per month (10th and 25th) instead of one payment per month.
 
-## Files to Edit
-- resources/js/pages/dashboards/HR/SeeUsers.tsx
+## Steps Completed:
+- [x] 1. Update GmController::generateAmortizationSchedule() method
+- [x] 2. Update CreditComController::generateAmortizationSchedule() method
 
-## Dependencies (already installed)
-- jspdf
-- jspdf-autotable
-
-## Status: COMPLETED ✓
+## Changes Summary:
+- Each loan term month will have 2 installments (10th and 25th)
+- Payment amount per installment = monthly_amortization / 2
+- Total number of installments = terms_months * 2
 

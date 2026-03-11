@@ -33,6 +33,7 @@ export default function ApplyLoan({
     previousLoans,
     error,
     hasAwaitingComaker,
+    hasActiveLoan,
     editingLoan,
 }: ApplyLoanProps) {
     
@@ -53,6 +54,36 @@ export default function ApplyLoan({
                             Profile Not Verified
                         </h3>
                         <p className="text-sm text-red-600">{error}</p>
+                    </div>
+                </div>
+            </AppLayout>
+        );
+    }
+
+    // Show message if user has an active loan (only when not editing)
+    if (hasActiveLoan && !isEditing) {
+        return (
+            <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
+                <Head title="Apply Loan" />
+                <div className="space-y-6 px-6">
+                    <HeadingSmall
+                        title="Apply for a Loan"
+                        description="Loan application form"
+                    />
+                    <div className="rounded-lg border border-red-200 bg-red-50 p-6">
+                        <h3 className="mb-2 font-semibold text-red-800">
+                            Active Loan Already Exists
+                        </h3>
+                        <p className="mb-4 text-sm text-red-600">
+                            You currently have an active loan. You cannot apply for a new loan until your existing loan is fully paid off.
+                        </p>
+                        <Link
+                            href="/dashboards/Member/ActiveLoan"
+                            className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-white hover:opacity-90 transition"
+                        >
+                            View Active Loan
+                            <ArrowRight className="h-4 w-4" />
+                        </Link>
                     </div>
                 </div>
             </AppLayout>

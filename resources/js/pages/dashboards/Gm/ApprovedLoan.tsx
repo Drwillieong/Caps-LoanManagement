@@ -134,34 +134,6 @@ export default function ApprovedLoan() {
                     </Link>
                 </div>
 
-                {/* Stats Summary */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <Card className={activeTab === 'approved' ? 'border-blue-500 border-2' : ''}>
-                        <CardHeader className="pb-2">
-                            <CardDescription className="flex items-center gap-2">
-                                <CheckCircle2 className="h-4 w-4 text-blue-600" />
-                                Pending CC Review & Approved
-                            </CardDescription>
-                            <CardTitle className="text-2xl">{totalApproved}</CardTitle>
-                        </CardHeader>
-                        <CardContent className="pt-0">
-                            <p className="text-xs text-muted-foreground">{formatCurrency(totalApprovedAmount)}</p>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader className="pb-2">
-                            <CardDescription className="flex items-center gap-2">
-                                <XCircle className="h-4 w-4 text-red-600" />
-                                Rejected by GM
-                            </CardDescription>
-                            <CardTitle className="text-2xl">{totalDisapproved}</CardTitle>
-                        </CardHeader>
-                        <CardContent className="pt-0">
-                            <p className="text-xs text-muted-foreground">{formatCurrency(totalDisapprovedAmount)}</p>
-                        </CardContent>
-                    </Card>
-                </div>
-
                 {/* Tabs */}
                 <div className="flex items-center gap-4 border-b">
                     <button
@@ -207,7 +179,7 @@ export default function ApprovedLoan() {
                 {filteredLoans.length > 0 ? (
                     <div className="border rounded-md">
                         <table className="w-full text-sm">
-                            <thead className="bg-muted">
+                            <thead className="bg-emerald-50">
                                 <tr>
                                     <th className="px-4 py-3 text-left font-medium">Member ID</th>
                                     <th className="px-4 py-3 text-left font-medium">Member Name</th>
@@ -267,4 +239,3 @@ export default function ApprovedLoan() {
         </AppLayout>
     );
 }
-

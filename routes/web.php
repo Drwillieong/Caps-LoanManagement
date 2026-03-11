@@ -126,6 +126,68 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 ],
                 // Profile completion status
                 'profileCompleted' => $user->hasCompletedProfile(),
+                // Loan Notifications - when YOUR loan is accepted/rejected by co-maker, GM, or Credit Coordinator
+                'loan_notifications' => \App\Models\Loan::where('user_id', $user->id)
+                    ->whereIn('status', [
+                        'rejected_by_co_maker',    // Co-maker rejected your loan
+                        'pending_gm_review',       // Co-maker accepted, now pending GM
+                        'rejected_by_gm',          // GM rejected your loan
+                        'pending_cc_review',       // GM approved, now pending CC
+                        'rejected_by_credit_com',  // CC rejected your loan
+                        'approved',                // CC approved your loan
+                        'released',                // Loan has been released
+                    ])
+                    ->with('loanType')
+                    ->orderBy('updated_at', 'desc')
+                    ->limit(10)
+                    ->get()
+                    ->map(function ($loan) {
+                        // Determine the "from" and description based on status
+                        $from = '';
+                        $description = '';
+                        
+                        if ($loan->status === 'rejected_by_co_maker') {
+                            $from = 'Co-Maker';
+                            $description = 'Co-Maker Declined';
+                        } elseif ($loan->status === 'pending_gm_review') {
+                            $from = 'Co-Maker';
+                            $description = 'Co-Maker Accepted';
+                        } elseif ($loan->status === 'rejected_by_gm') {
+                            $from = 'General Manager';
+                            $description = 'Loan Rejected';
+                        } elseif ($loan->status === 'pending_cc_review') {
+                            $from = 'General Manager';
+                            $description = 'Loan Approved';
+                        } elseif ($loan->status === 'rejected_by_credit_com') {
+                            $from = 'Credit Coordinator';
+                            $description = 'Loan Rejected';
+                        } elseif ($loan->status === 'approved') {
+                            $from = 'Credit Coordinator';
+                            $description = 'Loan Approved';
+                        } elseif ($loan->status === 'released') {
+                            $from = 'System';
+                            $description = 'Loan Released';
+                        }
+                        
+                        return [
+                            'id' => $loan->id,
+                            'loan_type' => $loan->loanType->name ?? 'N/A',
+                            'date' => $loan->updated_at->format('Y-m-d'),
+                            'from' => $from,
+                            'description' => $description,
+                            'comment' => $loan->remarks ?? match ($loan->status) {
+                                'rejected_by_co_maker' => 'Your co-maker has declined to support your loan application.',
+                                'pending_gm_review' => 'Your co-maker has accepted. Your application is now pending GM review.',
+                                'rejected_by_gm' => 'Your loan application has been rejected by the General Manager.',
+                                'pending_cc_review' => 'Your application has been approved by GM and is now pending Credit Coordinator review.',
+                                'rejected_by_credit_com' => 'Your loan application has been rejected by the Credit Coordinator.',
+                                'approved' => 'Congratulations! Your loan has been approved.',
+                                'released' => 'Your loan has been released successfully.',
+                                default => 'No additional comments.',
+                            },
+                            'status' => $loan->status,
+                        ];
+                    }),
             ];
         }
         

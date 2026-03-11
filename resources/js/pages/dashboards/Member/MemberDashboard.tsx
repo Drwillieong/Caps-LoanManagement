@@ -49,6 +49,16 @@ interface LoanEligibility {
     has_active_loan: boolean;
 }
 
+interface LoanNotification {
+    id: number;
+    loan_type: string;
+    date: string;
+    from: string;
+    description: string;
+    comment: string;
+    status: string;
+}
+
 interface DashboardProps {
     comakerRequestCount?: number;
     share_capital_balance?: number;
@@ -59,6 +69,7 @@ interface DashboardProps {
     loan_progress?: LoanProgress | null;
     loan_eligibility?: LoanEligibility | null;
     profileCompleted?: boolean;
+    loan_notifications?: LoanNotification[];
 }
 
 export default function MemberDashboard({ 
@@ -71,6 +82,7 @@ export default function MemberDashboard({
     loan_progress = null,
     loan_eligibility = null,
     profileCompleted = true,
+    loan_notifications = [],
 }: DashboardProps) {
     const [coMakerCount, setCoMakerCount] = useState(comakerRequestCount);
     const [showValues, setShowValues] = useState(true);
@@ -515,6 +527,84 @@ export default function MemberDashboard({
                         </CardContent>
                     </Card>
                 </div>
+
+                {/* === LOAN NOTIFICATIONS SECTION === */}
+                <Card className="border-emerald-100">
+                    <CardHeader className="flex flex-row items-center justify-between">
+                        <div>
+                            <CardTitle className="text-emerald-900 dark:text-emerald-100">Loan Notifications</CardTitle>
+                            <CardDescription>Recent updates on your loan applications.</CardDescription>
+                        </div>
+                        <Bell className="h-5 w-5 text-emerald-600" />
+                    </CardHeader>
+                    <CardContent>
+                        {loan_notifications && loan_notifications.length > 0 ? (
+                            <div className="overflow-x-auto">
+                                <table className="w-full">
+                                    <thead>
+                                        <tr className="border-b border-emerald-100">
+                                            <th className="text-left py-3 px-4 text-xs font-semibold text-emerald-700 uppercase tracking-wider">Date</th>
+                                            <th className="text-left py-3 px-4 text-xs font-semibold text-emerald-700 uppercase tracking-wider">From</th>
+                                            <th className="text-left py-3 px-4 text-xs font-semibold text-emerald-700 uppercase tracking-wider">Loan Type</th>
+                                            <th className="text-left py-3 px-4 text-xs font-semibold text-emerald-700 uppercase tracking-wider">Description</th>
+                                            <th className="text-left py-3 px-4 text-xs font-semibold text-emerald-700 uppercase tracking-wider">Comment / Reason</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {loan_notifications.map((notification) => (
+                                            <tr 
+                                                key={notification.id} 
+                                                className={`border-b border-emerald-50 hover:bg-emerald-50/50 transition-colors ${
+                                                    notification.status === 'rejected_by_co_maker' || notification.status === 'rejected_by_gm' || notification.status === 'rejected_by_credit_com' 
+                                                        ? 'bg-red-50/30' 
+                                                        : notification.status === 'released'
+                                                            ? 'bg-blue-50/30'
+                                                            : notification.status === 'pending_gm_review' || notification.status === 'pending_cc_review'
+                                                                ? 'bg-yellow-50/30'
+                                                                : ''
+                                                }`}
+                                            >
+                                                <td className="py-3 px-4 text-sm text-gray-700">
+                                                    {formatDate(notification.date)}
+                                                </td>
+                                                <td className="py-3 px-4 text-sm text-gray-700 font-medium">
+                                                    {notification.from}
+                                                </td>
+                                                <td className="py-3 px-4 text-sm text-gray-700">
+                                                    {notification.loan_type}
+                                                </td>
+                                                <td className="py-3 px-4">
+                                                    <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${
+                                                        notification.status === 'rejected_by_co_maker' || notification.status === 'rejected_by_gm' || notification.status === 'rejected_by_credit_com'
+                                                            ? 'bg-red-100 text-red-700'
+                                                            : notification.status === 'released'
+                                                                ? 'bg-blue-100 text-blue-700'
+                                                                : notification.status === 'approved'
+                                                                    ? 'bg-green-100 text-green-700'
+                                                                    : 'bg-yellow-100 text-yellow-700'
+                                                    }`}>
+                                                        {notification.description}
+                                                    </span>
+                                                </td>
+                                                <td className="py-3 px-4 text-sm text-gray-600 max-w-xs truncate" title={notification.comment}>
+                                                    {notification.comment || 'No additional comments'}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ) : (
+                            <div className="flex flex-col items-center justify-center py-8 text-center">
+                                <Bell className="h-12 w-12 text-gray-300 mb-3" />
+                                <p className="text-gray-500">No loan notifications yet</p>
+                                <p className="text-sm text-gray-400 mt-1">
+                                    You will see notifications here when your loan applications are approved or rejected.
+                                </p>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
             </div>
         </AppLayout>
     );

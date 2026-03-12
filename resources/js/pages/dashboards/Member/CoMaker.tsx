@@ -6,13 +6,14 @@ import { toast } from 'react-hot-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { canSendEmail } from '@/hooks/use-internet-check';
 import { 
     Users, 
     UserCheck, 
     Clock, 
     CheckCircle2, 
     XCircle,
-    DollarSign,
+
     Calendar,
     FileText,
     ArrowRight,
@@ -60,7 +61,16 @@ export default function CoMaker({ coMakerRequests }: CoMakerProps) {
     }
 
     // Handle accept/reject actions
-    function handleResponse(loanId: number, action: 'accept' | 'reject') {
+    async function handleResponse(loanId: number, action: 'accept' | 'reject') {
+        // Check for internet connectivity before sending
+        const isConnected = await canSendEmail();
+        
+        if (!isConnected) {
+            // Show toast about no internet, but proceed with the request anyway
+            // because the backend will handle the email failure gracefully
+            toast.error('No internet connection. The email notification cannot be sent, but your response will still be saved.');
+        }
+
         router.post('/dashboards/Member/CoMaker/Respond', {
             loan_id: loanId,
             action: action,

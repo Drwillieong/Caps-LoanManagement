@@ -18,7 +18,6 @@ import {
     User,
     ArrowRight,
     Edit,
-    DollarSign
 } from 'lucide-react';
 import { Link } from '@inertiajs/react';
 

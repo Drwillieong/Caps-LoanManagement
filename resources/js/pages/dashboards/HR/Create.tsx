@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Transition } from '@headlessui/react'
 import AppLayout from '@/layouts/app-layout'
 import { Form, Head } from '@inertiajs/react'
@@ -12,6 +12,8 @@ import { Label } from '@/components/ui/label'
 import { Spinner } from '@/components/ui/spinner'
 import { type BreadcrumbItem } from '@/types'
 import { store } from '@/routes/users'
+import { canSendEmail } from '@/hooks/use-internet-check'
+import { toast } from 'react-hot-toast'
 
 interface Props {
     roles: string[]
@@ -48,6 +50,15 @@ export default function Create({ roles }: Props) {
     const [basicSalaryRaw, setBasicSalaryRaw] = useState('')
     const [shareCapitalRaw, setShareCapitalRaw] = useState('')
 
+    // Check for email notification failure flag after redirect
+    useEffect(() => {
+        const emailFailed = sessionStorage.getItem('emailNotificationFailed');
+        if (emailFailed) {
+            toast.error('No internet connection. The email notification cannot be sent, but the member has been created successfully.');
+            sessionStorage.removeItem('emailNotificationFailed');
+        }
+    }, []);
+
     return (
         <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
             <Head title="Create User" />
@@ -72,6 +83,16 @@ export default function Create({ roles }: Props) {
                         share_capital_balance: data.share_capital_balance ? String(data.share_capital_balance).replace(/,/g, '') : '',
                     })}
                     resetOnSuccess={['password', 'password_confirmation']}
+                    onSubmit={(e) => {
+                        // Check for internet connectivity before submitting
+                        canSendEmail().then((isConnected) => {
+                            if (!isConnected) {
+                                // Store a flag in sessionStorage to show toast after redirect
+                                sessionStorage.setItem('emailNotificationFailed', 'true');
+                            }
+                        });
+                        // Continue with form submission - data will still be saved
+                    }}
                 >
                     {({ processing, errors, recentlySuccessful }) => {
                         return (

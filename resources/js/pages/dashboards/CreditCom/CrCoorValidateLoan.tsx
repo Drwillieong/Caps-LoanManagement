@@ -13,7 +13,6 @@ import {
     Clock, 
     CheckCircle2, 
     XCircle,
-    DollarSign,
     Calendar,
     FileText,
     ArrowRight,

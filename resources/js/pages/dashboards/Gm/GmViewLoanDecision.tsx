@@ -15,7 +15,7 @@ import {
     XCircle,
     ArrowLeft,
     Calendar,
-    DollarSign,
+   
     Building2,
     Mail
 } from 'lucide-react';

@@ -10,11 +10,11 @@ import {
     CheckCircle2,
     AlertCircle,
     Calendar,
-    DollarSign,
+   
     FileText,
     ChevronDown,
     ChevronUp,
-    CircleDollarSign,
+   
     ArrowRight,
     TrendingDown,
 } from 'lucide-react';
@@ -187,7 +187,8 @@ export default function MemberActiveLoan({
                     <Card className="border-emerald-100 shadow-sm">
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium">Total Paid</CardTitle>
-                            <CircleDollarSign className="h-4 w-4 text-emerald-600" />
+                            <div className="h-4 w-4 text-emerald-600">₱</div>
+                           
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold text-emerald-600">
@@ -437,7 +438,7 @@ export default function MemberActiveLoan({
                                                 <Calendar className="h-4 w-4 text-emerald-600" />
                                                 Amortization Schedule
                                             </h4>
-                                            <div className="overflow-x-auto">
+                                            <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
                                                 <table className="w-full min-w-[600px]">
                                                     <thead className="bg-muted/60 border-b">
                                                         <tr>
@@ -508,11 +509,11 @@ export default function MemberActiveLoan({
                                         {/* Payment History */}
                                         <div className="p-6">
                                             <h4 className="font-semibold mb-4 flex items-center gap-2">
-                                                <DollarSign className="h-4 w-4 text-emerald-600" />
-                                                Payment History
+                                               
+                                               ₱ Payment History
                                             </h4>
                                             {loan.payments && loan.payments.length > 0 ? (
-                                                <div className="overflow-x-auto">
+                                                <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
                                                     <table className="w-full min-w-[500px]">
                                                         <thead className="bg-muted/60 border-b">
                                                             <tr>
@@ -552,7 +553,8 @@ export default function MemberActiveLoan({
                                                 </div>
                                             ) : (
                                                 <div className="text-center py-8 text-muted-foreground">
-                                                    <DollarSign className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                                                    <div className="h-8 w-8 mx-auto mb-2 opacity-50">₱</div>
+                                                
                                                     <p>No payments recorded yet</p>
                                                 </div>
                                             )}

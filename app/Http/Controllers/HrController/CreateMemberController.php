@@ -165,7 +165,12 @@ class CreateMemberController extends Controller
         ]);
 
         // Send email with credentials
-        Mail::to($request->email)->send(new SendMembersPass($request->email, $request->password));
+        try {
+            Mail::to($request->email)->send(new SendMembersPass($request->email, $request->password));
+        } catch (\Exception $e) {
+            // Log error but don't fail the request - data was already saved
+            \Log::error('Failed to send welcome email: ' . $e->getMessage());
+        }
 
         return redirect()->route('users')->with('success', 'User created successfully.');
     }

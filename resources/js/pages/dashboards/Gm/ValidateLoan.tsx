@@ -7,6 +7,7 @@ import { toast } from 'react-hot-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { canSendEmail } from '@/hooks/use-internet-check';
 import { 
     Users, 
     UserCheck, 
@@ -117,7 +118,14 @@ export default function ValidateLoan({ pendingLoans }: GmValidateLoanProps) {
         );
     }
 
-    function handleApprove(loanId: number) {
+    async function handleApprove(loanId: number) {
+        // Check for internet connectivity before submitting
+        const isConnected = await canSendEmail();
+        
+        if (!isConnected) {
+            toast.error('No internet connection. The email notification cannot be sent, but the loan will still be processed.');
+        }
+
         approveForm.post(`/dashboards/Gm/Loan/${loanId}/approve`, {
             onSuccess: () => {
                 toast.success('Loan application approved successfully!');
@@ -129,7 +137,14 @@ export default function ValidateLoan({ pendingLoans }: GmValidateLoanProps) {
         });
     }
 
-    function handleReject(loanId: number) {
+    async function handleReject(loanId: number) {
+        // Check for internet connectivity before submitting
+        const isConnected = await canSendEmail();
+        
+        if (!isConnected) {
+            toast.error('No internet connection. The email notification cannot be sent, but the loan will still be processed.');
+        }
+
         rejectForm.post(`/dashboards/Gm/Loan/${loanId}/reject`, {
             onSuccess: () => {
                 toast.success('Loan application rejected.');

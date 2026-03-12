@@ -78,7 +78,7 @@ export default function ApplyLoan({
                             You currently have an active loan. You cannot apply for a new loan until your existing loan is fully paid off.
                         </p>
                         <Link
-                            href="/dashboards/Member/ActiveLoan"
+                            href="/dashboards/Member/MemberActiveLoan"
                             className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-white hover:opacity-90 transition"
                         >
                             View Active Loan

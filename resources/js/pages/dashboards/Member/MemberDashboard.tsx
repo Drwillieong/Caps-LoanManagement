@@ -86,6 +86,16 @@ export default function MemberDashboard({
 }: DashboardProps) {
     const [coMakerCount, setCoMakerCount] = useState(comakerRequestCount);
     const [showValues, setShowValues] = useState(true);
+    
+    // Pagination state
+    const [currentPage, setCurrentPage] = useState(1);
+    const notificationsPerPage = 10;
+    const totalPages = Math.ceil(loan_notifications.length / notificationsPerPage);
+    
+    // Reset to page 1 when notifications change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [loan_notifications.length]);
 
     // Fetch co-maker request count on mount
     useEffect(() => {
@@ -538,62 +548,97 @@ export default function MemberDashboard({
                         <Bell className="h-5 w-5 text-emerald-600" />
                     </CardHeader>
                     <CardContent>
-                        {loan_notifications && loan_notifications.length > 0 ? (
-                            <div className="overflow-x-auto">
-                                <table className="w-full">
-                                    <thead>
-                                        <tr className="border-b border-emerald-100">
-                                            <th className="text-left py-3 px-4 text-xs font-semibold text-emerald-700 uppercase tracking-wider">Date</th>
-                                            <th className="text-left py-3 px-4 text-xs font-semibold text-emerald-700 uppercase tracking-wider">From</th>
-                                            <th className="text-left py-3 px-4 text-xs font-semibold text-emerald-700 uppercase tracking-wider">Loan Type</th>
-                                            <th className="text-left py-3 px-4 text-xs font-semibold text-emerald-700 uppercase tracking-wider">Description</th>
-                                            <th className="text-left py-3 px-4 text-xs font-semibold text-emerald-700 uppercase tracking-wider">Comment / Reason</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {loan_notifications.map((notification) => (
-                                            <tr 
-                                                key={notification.id} 
-                                                className={`border-b border-emerald-50 hover:bg-emerald-50/50 transition-colors ${
-                                                    notification.status === 'rejected_by_co_maker' || notification.status === 'rejected_by_gm' || notification.status === 'rejected_by_credit_com' 
-                                                        ? 'bg-red-50/30' 
-                                                        : notification.status === 'released'
-                                                            ? 'bg-blue-50/30'
-                                                            : notification.status === 'pending_gm_review' || notification.status === 'pending_cc_review'
-                                                                ? 'bg-yellow-50/30'
-                                                                : ''
-                                                }`}
-                                            >
-                                                <td className="py-3 px-4 text-sm text-gray-700">
-                                                    {formatDate(notification.date)}
-                                                </td>
-                                                <td className="py-3 px-4 text-sm text-gray-700 font-medium">
-                                                    {notification.from}
-                                                </td>
-                                                <td className="py-3 px-4 text-sm text-gray-700">
-                                                    {notification.loan_type}
-                                                </td>
-                                                <td className="py-3 px-4">
-                                                    <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${
-                                                        notification.status === 'rejected_by_co_maker' || notification.status === 'rejected_by_gm' || notification.status === 'rejected_by_credit_com'
-                                                            ? 'bg-red-100 text-red-700'
-                                                            : notification.status === 'released'
-                                                                ? 'bg-blue-100 text-blue-700'
-                                                                : notification.status === 'approved'
-                                                                    ? 'bg-green-100 text-green-700'
-                                                                    : 'bg-yellow-100 text-yellow-700'
-                                                    }`}>
-                                                        {notification.description}
-                                                    </span>
-                                                </td>
-                                                <td className="py-3 px-4 text-sm text-gray-600 max-w-xs truncate" title={notification.comment}>
-                                                    {notification.comment || 'No additional comments'}
-                                                </td>
+{loan_notifications && loan_notifications.length > 0 ? (
+                            <>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full">
+                                        <thead>
+                                            <tr className="border-b border-emerald-100">
+                                                <th className="text-left py-3 px-4 text-xs font-semibold text-emerald-700 uppercase tracking-wider">Date</th>
+                                                <th className="text-left py-3 px-4 text-xs font-semibold text-emerald-700 uppercase tracking-wider">From</th>
+                                                <th className="text-left py-3 px-4 text-xs font-semibold text-emerald-700 uppercase tracking-wider">Loan Type</th>
+                                                <th className="text-left py-3 px-4 text-xs font-semibold text-emerald-700 uppercase tracking-wider">Description</th>
+                                                <th className="text-left py-3 px-4 text-xs font-semibold text-emerald-700 uppercase tracking-wider">Comment / Reason</th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
+                                        </thead>
+                                        <tbody>
+                                            {(() => {
+                                                const startIndex = (currentPage - 1) * notificationsPerPage;
+                                                const endIndex = startIndex + notificationsPerPage;
+                                                const paginatedNotifications = loan_notifications.slice(startIndex, endIndex);
+                                                return paginatedNotifications.map((notification) => (
+                                                    <tr 
+                                                        key={notification.id} 
+                                                        className={`border-b border-emerald-50 hover:bg-emerald-50/50 transition-colors ${
+                                                            notification.status === 'rejected_by_co_maker' || notification.status === 'rejected_by_gm' || notification.status === 'rejected_by_credit_com' 
+                                                                ? 'bg-red-50/30' 
+                                                                : notification.status === 'released'
+                                                                    ? 'bg-blue-50/30'
+                                                                    : notification.status === 'pending_gm_review' || notification.status === 'pending_cc_review'
+                                                                        ? 'bg-yellow-50/30'
+                                                                        : ''
+                                                        }`}
+                                                    >
+                                                        <td className="py-3 px-4 text-sm text-gray-700">
+                                                            {formatDate(notification.date)}
+                                                        </td>
+                                                        <td className="py-3 px-4 text-sm text-gray-700 font-medium">
+                                                            {notification.from}
+                                                        </td>
+                                                        <td className="py-3 px-4 text-sm text-gray-700">
+                                                            {notification.loan_type}
+                                                        </td>
+                                                        <td className="py-3 px-4">
+                                                            <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${
+                                                                notification.status === 'rejected_by_co_maker' || notification.status === 'rejected_by_gm' || notification.status === 'rejected_by_credit_com'
+                                                                    ? 'bg-red-100 text-red-700'
+                                                                    : notification.status === 'released'
+                                                                        ? 'bg-blue-100 text-blue-700'
+                                                                        : notification.status === 'approved'
+                                                                            ? 'bg-green-100 text-green-700'
+                                                                            : 'bg-yellow-100 text-yellow-700'
+                                                            }`}>
+                                                                {notification.description}
+                                                            </span>
+                                                        </td>
+                                                        <td className="py-3 px-4 text-sm text-gray-600 max-w-xs truncate" title={notification.comment}>
+                                                            {notification.comment || 'No additional comments'}
+                                                        </td>
+                                                    </tr>
+                                                ));
+                                            })()}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                
+                                {/* Pagination Controls */}
+                                {totalPages > 1 && (
+                                    <div className="flex items-center justify-between mt-4 px-4 py-3 bg-emerald-50 border-t border-emerald-200 rounded-b-lg">
+                                        <div className="text-sm text-emerald-700">
+                                            Showing {Math.min((currentPage - 1) * notificationsPerPage + 1, loan_notifications.length)} to {Math.min(currentPage * notificationsPerPage, loan_notifications.length)} of {loan_notifications.length} notifications
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                                disabled={currentPage === 1}
+                                                className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg bg-white border border-emerald-300 text-emerald-700 hover:bg-emerald-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white transition-colors"
+                                            >
+                                                Previous
+                                            </button>
+                                            <span className="px-3 py-2 text-sm font-medium text-emerald-800 bg-emerald-100 rounded-lg min-w-[80px] text-center">
+                                                Page {currentPage} of {totalPages}
+                                            </span>
+                                            <button
+                                                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                                disabled={currentPage === totalPages}
+                                                className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg bg-white border border-emerald-300 text-emerald-700 hover:bg-emerald-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white transition-colors"
+                                            >
+                                                Next
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </>
                         ) : (
                             <div className="flex flex-col items-center justify-center py-8 text-center">
                                 <Bell className="h-12 w-12 text-gray-300 mb-3" />

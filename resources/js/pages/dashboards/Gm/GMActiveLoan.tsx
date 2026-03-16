@@ -268,9 +268,7 @@ export default function GMActiveLoan({ active_loans = [], stats = { total_active
                 </Card>
 
                 {/* Note */}
-                <Card className="border-amber-100 bg-amber-50">
-                  
-                </Card>
+               
             </div>
         </AppLayout>
     );

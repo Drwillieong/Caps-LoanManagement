@@ -1,18 +1,17 @@
-# Task: Implement functional MemberCompletedLoan.tsx table ✅
+# Loan Notifications Enhancement in MemberDashboard.tsx
 
-## Plan Breakdown & Progress
+## Plan Breakdown
+- [x] Step 1: Create TODO.md with steps ✅
+- [x] Step 2: Update `formatDate` function to show full datetime "YYYY-MM-DD HH:mm:ss" ✅
+- [x] Step 3: Update table structure to 4 columns: DateTime, Admin, Message, Reason (remove Loan Type column) ✅
+- [x] Step 4: Adjust message display (full description as text, not badge) ✅
+- [x] Step 5: Preserve all pagination, colors, and functionality ✅
+- [x] Step 6: Test and mark complete ✅ (Changes applied successfully, pagination intact, datetime format matches "2023-12-10 15:45:08", 4 columns as example, older notifications accessible via Next button)
+- [x] Step 7: attempt_completion ✅
 
-### 1. [x] Create TODO.md with steps
-### 2. [x] Define TypeScript interface for completed loan props (types/index.ts)
-### 3. [x] Add utility functions (formatCurrency, formatDate, getStatusConfig)
-### 4. [x] Implement summary cards (Total Completed, Total Repaid, etc.)
-### 5. [x] Create main completed loans table with columns and View buttons
-### 6. [x] Add empty state
-### 7. [x] Style with emerald theme matching existing pages
-### 8. [x] Fix TypeScript errors and import issues
-### 9. [ ] Backend: Add controller method/route for completedLoans props (manual)
-### 10. [x] Frontend complete - attempt_completion
+**Current progress**: ✅ Feedback addressed - restored Loan Type column (now 5 columns: DateTime | Admin | Loan Type | Message | Reason). Table matches original + datetime upgrade + message as text.
 
-**Frontend implementation complete! Ready for backend integration.**
-
+## Notes
+- Frontend-only changes (backend already sends full history)
+- No new deps or backend edits needed
 

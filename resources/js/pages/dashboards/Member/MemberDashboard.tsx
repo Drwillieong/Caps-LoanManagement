@@ -134,14 +134,17 @@ export default function MemberDashboard({
         })}`;
     }
 
-    // Format date for display
+// Format date for display - full datetime matching example
     function formatDate(dateStr: string | null): string {
         if (!dateStr) return 'N/A';
-        return new Date(dateStr).toLocaleDateString('en-PH', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-        });
+        const date = new Date(dateStr);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const seconds = String(date.getSeconds()).padStart(2, '0');
+        return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
     }
 
     // Calculate progress percentage
@@ -554,11 +557,11 @@ export default function MemberDashboard({
                                     <table className="w-full">
                                         <thead>
                                             <tr className="border-b border-emerald-100">
-                                                <th className="text-left py-3 px-4 text-xs font-semibold text-emerald-700 uppercase tracking-wider">Date</th>
-                                                <th className="text-left py-3 px-4 text-xs font-semibold text-emerald-700 uppercase tracking-wider">From</th>
+                                                <th className="text-left py-3 px-4 text-xs font-semibold text-emerald-700 uppercase tracking-wider">Date & Time</th>
+                                                <th className="text-left py-3 px-4 text-xs font-semibold text-emerald-700 uppercase tracking-wider">Admin</th>
                                                 <th className="text-left py-3 px-4 text-xs font-semibold text-emerald-700 uppercase tracking-wider">Loan Type</th>
-                                                <th className="text-left py-3 px-4 text-xs font-semibold text-emerald-700 uppercase tracking-wider">Description</th>
-                                                <th className="text-left py-3 px-4 text-xs font-semibold text-emerald-700 uppercase tracking-wider">Comment / Reason</th>
+                                                <th className="text-left py-3 px-4 text-xs font-semibold text-emerald-700 uppercase tracking-wider">Message</th>
+                                                <th className="text-left py-3 px-4 text-xs font-semibold text-emerald-700 uppercase tracking-wider">Reason</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -579,7 +582,7 @@ export default function MemberDashboard({
                                                                         : ''
                                                         }`}
                                                     >
-                                                        <td className="py-3 px-4 text-sm text-gray-700">
+                                                        <td className="py-3 px-4 text-sm text-gray-700 font-mono text-xs">
                                                             {formatDate(notification.date)}
                                                         </td>
                                                         <td className="py-3 px-4 text-sm text-gray-700 font-medium">
@@ -588,18 +591,8 @@ export default function MemberDashboard({
                                                         <td className="py-3 px-4 text-sm text-gray-700">
                                                             {notification.loan_type}
                                                         </td>
-                                                        <td className="py-3 px-4">
-                                                            <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${
-                                                                notification.status === 'rejected_by_co_maker' || notification.status === 'rejected_by_gm' || notification.status === 'rejected_by_credit_com'
-                                                                    ? 'bg-red-100 text-red-700'
-                                                                    : notification.status === 'released'
-                                                                        ? 'bg-blue-100 text-blue-700'
-                                                                        : notification.status === 'approved'
-                                                                            ? 'bg-green-100 text-green-700'
-                                                                            : 'bg-yellow-100 text-yellow-700'
-                                                            }`}>
-                                                                {notification.description}
-                                                            </span>
+                                                        <td className="py-3 px-4 text-sm font-medium text-gray-800 max-w-md" title={notification.description}>
+                                                            {notification.description}
                                                         </td>
                                                         <td className="py-3 px-4 text-sm text-gray-600 max-w-xs truncate" title={notification.comment}>
                                                             {notification.comment || 'No additional comments'}

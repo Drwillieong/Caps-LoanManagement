@@ -90,5 +90,44 @@ class Loan extends Model
     {
         return $this->hasMany(LoanPayment::class);
     }
+
+    /**
+     * Scoped queries for common loan status filters
+     */
+    public function scopeActive($query)
+    {
+        return $query->whereIn('status', ['released', 'approved']);
+    }
+
+    public function scopePendingGmReview($query)
+    {
+        return $query->where('status', 'pending_gm_review');
+    }
+
+    public function scopePendingCcReview($query)
+    {
+        return $query->where('status', 'pending_cc_review');
+    }
+
+    public function scopeByStatus($query, array $statuses)
+    {
+        return $query->whereIn('status', $statuses);
+    }
+
+    public function scopePaidOff($query)
+    {
+        return $query->where('status', 'paid_off');
+    }
+
+    public function scopeWithFullRelations($query)
+    {
+        return $query->with([
+            'user.memberProfile',
+            'loanType',
+            'coMakers.user',
+            'amortizations' => fn($q) => $q->orderBy('due_date'),
+            'payments'
+        ]);
+    }
 }
 

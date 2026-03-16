@@ -269,9 +269,7 @@ export default function GMActiveLoan({ active_loans = [], stats = { total_active
 
                 {/* Note */}
                 <Card className="border-amber-100 bg-amber-50">
-                    <CardContent className="p-4 text-sm text-amber-800">
-                        <strong>Note:</strong> Backend data will override mock data from GmDashboardController.
-                    </CardContent>
+                  
                 </Card>
             </div>
         </AppLayout>

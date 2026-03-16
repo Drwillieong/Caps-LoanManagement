@@ -127,10 +127,7 @@ export default function HRCompletedLoan({ completed_loans: initialLoans = [], st
                                     <Search className="h-4 w-4" />
                                 </Button>
                             </div>
-                            <Button variant="outline" size="sm">
-                                <Download className="h-4 w-4 mr-1" />
-                                Export CSV
-                            </Button>
+                           
                         </div>
                     </CardHeader>
                     <CardContent>

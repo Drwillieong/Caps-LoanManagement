@@ -219,6 +219,25 @@ export interface GmLoanApplicationProps {
     pendingLoans: GmLoanApplicationItem[];
 }
 
+export interface LoanTableRow {
+    id: number;
+    member_id: string;
+    member_name: string;
+    loan_type: string;
+    principal: number;
+    terms: number;
+    total_due: number;
+    date: string;
+    status: 'active' | 'completed' | 'pending' | 'overdue';
+}
+
+// GM Active Loan Types (for table)
+export interface ActiveLoan extends LoanTableRow {
+    remaining_balance: number;
+    next_due_date: string | null;
+    total_paid: number;
+}
+
 // Member Active Loan Types
 export interface MemberActiveLoanAmortization {
     id: number;

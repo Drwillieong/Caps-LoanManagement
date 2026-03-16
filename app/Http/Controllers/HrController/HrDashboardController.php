@@ -18,23 +18,34 @@ class HrDashboardController extends Controller
 
     public function activeLoans(Request $request)
     {
-        // Get HR view of all active loans (same logic as member dashboard HR data)
-        $activeLoans = Loan::active()
-            ->with(['user.memberProfile', 'loanType', 'amortizations', 'payments'])
-            ->orderBy('created_at', 'desc')
-            ->paginate(10);
+        $loans = Loan::whereIn('status', ['released', 'active', 'approved'])
+            ->with(['user:id,first_name,middle_name,last_name', 'loanType:name'])
+            ->orderBy('release_date', 'desc')
+            ->get()
+            ->map(function ($loan) {
+                return [
+                    'id' => $loan->id,
+                    'member_id' => 'MEM-' . str_pad($loan->user_id, 4, '0', STR_PAD_LEFT),
+                    'member_name' => trim($loan->user->first_name . ' ' . ($loan->user->middle_name ?? '') . ' ' . $loan->user->last_name),
+                    'loan_type' => $loan->loanType->name ?? 'Unknown',
+                    'principal' => $loan->principal_amount,
+                    'terms' => $loan->terms_months,
+                    'total_due' => $loan->total_amount_due,
+                    'date' => $loan->release_date ?? $loan->created_at,
+                    'status' => $loan->status,
+                ];
+            });
 
         $stats = [
-            'total_active_loans' => Loan::active()->count(),
-            'total_amount_due' => Loan::active()->sum('total_amount_due'),
-            'total_loan_portfolio' => Loan::active()->sum('total_amount_due'),
+            'total_active' => $loans->count(),
+            'total_principal' => $loans->sum('principal'),
+            'total_due' => $loans->sum('total_due'),
         ];
 
         return Inertia::render('dashboards/HR/HRActiveLoan', [
-            'active_loans' => $activeLoans,
-            'stats' => $stats,
+            'active_loans' => $loans,
+            'stats' => $stats
         ]);
-
     }
 
     public function completedLoans(Request $request)

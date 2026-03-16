@@ -10,7 +10,7 @@
 
 ### Step 4: [✅ DONE] Verify TypeScript compilation - npm run build succeeded
 
-### Step 5: [✅ FIXED] Added null-safety guards to BOTH Active & CompletedLoan pages
+### Step 5: [✅ FIXED] Backend logic - Copied exact GM query/transform logic to HR activeLoans()
 
 ### Step 6: [✅ TEST] Run `npm run dev` and navigate to HR Active Loans - data should now show
 

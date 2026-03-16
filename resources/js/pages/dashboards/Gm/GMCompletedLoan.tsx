@@ -92,7 +92,8 @@ export default function GMCompletedLoan({ completed_loans: initialLoans = [], st
                     <Card className="border-green-100 bg-white/50 shadow-sm">
                         <CardHeader className="flex flex-row items-center justify-between pb-2">
                             <CardTitle className="text-sm font-medium text-green-800">Principal Repaid</CardTitle>
-                            <DollarSign className="h-4 w-4 text-green-600" />
+                            <div  className="h-4 w-4 text-green-600">₱</div>
+                           
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{formatCurrency(stats.total_principal)}</div>
@@ -102,7 +103,7 @@ export default function GMCompletedLoan({ completed_loans: initialLoans = [], st
                     <Card className="border-green-100 bg-white/50 shadow-sm">
                         <CardHeader className="flex flex-row items-center justify-between pb-2">
                             <CardTitle className="text-sm font-medium text-green-800">Total Repaid</CardTitle>
-                            <DollarSign className="h-4 w-4 text-green-600" />
+                            <div  className="h-4 w-4 text-green-600">₱</div>
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{formatCurrency(stats.total_repaid)}</div>

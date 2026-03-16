@@ -31,9 +31,10 @@ class HrDashboardController extends Controller
         ];
 
         return Inertia::render('dashboards/HR/HRActiveLoan', [
-            'activeLoans' => $activeLoans,
+            'active_loans' => $activeLoans,
             'stats' => $stats,
         ]);
+
     }
 
     public function completedLoans(Request $request)
@@ -49,9 +50,10 @@ class HrDashboardController extends Controller
         ];
 
         return Inertia::render('dashboards/HR/HRCompletedLoan', [
-            'completedLoans' => $completedLoans,
+            'completed_loans' => $completedLoans,
             'stats' => $stats,
         ]);
+
     }
 }
 

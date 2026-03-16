@@ -159,7 +159,7 @@ export default function GMActiveLoan({ active_loans = [], stats = { total_active
                     <Card className="border-emerald-100 bg-white/50 shadow-sm">
                         <CardHeader className="flex flex-row items-center justify-between pb-2">
                             <CardTitle className="text-sm font-medium text-emerald-800">Total Principal</CardTitle>
-                            <DollarSign className="h-4 w-4 text-emerald-600" />
+                             <div  className="h-4 w-4 text-green-600">₱</div>
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{formatCurrency(displayStats.total_principal)}</div>
@@ -169,7 +169,7 @@ export default function GMActiveLoan({ active_loans = [], stats = { total_active
                     <Card className="border-emerald-100 bg-white/50 shadow-sm">
                         <CardHeader className="flex flex-row items-center justify-between pb-2">
                             <CardTitle className="text-sm font-medium text-emerald-800">Total Due</CardTitle>
-                            <DollarSign className="h-4 w-4 text-emerald-600" />
+                            <div  className="h-4 w-4 text-green-600">₱</div>
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{formatCurrency(displayStats.total_due)}</div>

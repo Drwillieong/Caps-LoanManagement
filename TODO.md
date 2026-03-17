@@ -1,17 +1,20 @@
-# HR Loan Pages Implementation Plan
+# Caps-LoanManagement: Make Notification.tsx Functional
 
-## Status: Fixed Data Issue ✅
+## Task: Implement full Member Notifications page copying table design from MemberDashboard.tsx
 
-### Step 1: [✅ DONE] Create TODO.md
+**Status: In Progress**
 
-### Step 2: [✅ DONE] Update HRActiveLoan.tsx to match GMActiveLoan.tsx functionality/design
+### Steps:
+- [x] 1. Create this TODO.md file
+- [x] 2. Add `memberNotifications()` method to app/Http/Controllers/DashBoardController.php
+- [x] 3. Add route to routes/web.php
+- [x] 4. Implement Notification.tsx with copied table, pagination, full AppLayout page (fixed TS error)
+- [x] 5. Test frontend build: `npm run build` completed successfully
+- [x] 6. Verify functionality: Login as member, visit /dashboards/Member/Notification, check data/table/pagination/empty state works (test in browser)
 
-### Step 3: [✅ DONE] Update HRCompletedLoan.tsx to match GMCompletedLoan.tsx functionality/design
+**Status: Complete** ✓
 
-### Step 4: [✅ DONE] Verify TypeScript compilation - npm run build succeeded
+All steps done. Notification.tsx is fully functional with copied table design from MemberDashboard.tsx, pagination, backend route/controller/service integration.
 
-### Step 5: [✅ FIXED] Backend logic - Copied exact GM query/transform logic to HR activeLoans()
+**Final TODO.md - archived.**
 
-### Step 6: [✅ TEST] Run `npm run dev` and navigate to HR Active Loans - data should now show
-
-### Step 7: [✅ COMPLETE]

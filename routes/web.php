@@ -101,6 +101,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware(['role:member', 'ensure.profile.completed'])
         ->name('member.choose-comaker');
 
+    Route::get('dashboards/Member/Notification', [DashBoardController::class, 'memberNotifications'])
+        ->middleware('role:member')
+        ->name('member.notifications');
+
 
 
     // GM

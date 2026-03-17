@@ -32,4 +32,14 @@ class DashBoardController extends Controller
 
         return Inertia::render($roleComponents[$role], $data);
     }
+
+    public function memberNotifications(Request $request)
+    {
+        $user = $request->user();
+        $loanService = new \App\Services\LoanService();
+        $loan_notifications = $loanService->getLoanNotifications($user);
+        return Inertia::render('dashboards/Member/Notification', [
+            'loan_notifications' => $loan_notifications
+        ]);
+    }
 }

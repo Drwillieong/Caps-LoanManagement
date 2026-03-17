@@ -1,7 +1,9 @@
 import { type ReactNode } from 'react';
+import { lazy, Suspense } from 'react';
 
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { SidebarTrigger } from '@/components/ui/sidebar';
+import { NotificationBell } from './notification-bell';
 import { type BreadcrumbItem as BreadcrumbItemType } from '@/types';
 
 export function AppSidebarHeader({
@@ -17,8 +19,11 @@ export function AppSidebarHeader({
                 <SidebarTrigger className="-ml-1" />
                 <Breadcrumbs breadcrumbs={breadcrumbs} />
             </div>
-            {headerRight && (
-                <div className="ml-auto flex items-center">
+{headerRight && (
+                <div className="ml-auto flex items-center gap-3">
+                    <Suspense fallback={<div className="size-9 rounded-full bg-muted/50 animate-pulse" />}>
+                        <NotificationBell />
+                    </Suspense>
                     {headerRight}
                 </div>
             )}

@@ -65,7 +65,8 @@ class DashboardService
             'loan_progress' => $loanProgress,
             'loan_eligibility' => $this->getLoanEligibility($user),
             'profileCompleted' => $user->hasCompletedProfile(),
-            'loan_notifications' => $this->loanService->getLoanNotifications($user),
+'loan_notifications' => $this->loanService->getLoanNotifications($user),
+            'unread_notifications_count' => $this->loanService->getUnreadNotificationsCount($user),
         ];
     }
 

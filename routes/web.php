@@ -105,6 +105,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware('role:member')
         ->name('member.notifications');
 
+    Route::post('dashboards/Member/Notification/mark-read', [DashBoardController::class, 'markNotificationsAsRead'])
+        ->middleware('role:member')
+        ->name('dashboards.member.notifications.mark-read');
+
 
 
     // GM

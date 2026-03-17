@@ -1,4 +1,4 @@
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, usePage, router } from '@inertiajs/react';
 import { 
     Bell, 
     Calendar,
@@ -45,6 +45,17 @@ export default function Notification({
     const [currentPage, setCurrentPage] = useState(1);
     const notificationsPerPage = 10;
     const totalPages = Math.ceil(loan_notifications.length / notificationsPerPage);
+
+    // Mark notifications as read on mount (non-Inertia request)
+    useEffect(() => {
+        fetch('/dashboards/Member/Notification/mark-read', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+            },
+        });
+    }, []);
 
     // Reset to page 1 when notifications change
     useEffect(() => {

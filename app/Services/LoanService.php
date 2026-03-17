@@ -52,6 +52,28 @@ class LoanService
     /**
      * Get loan notifications for user
      */
+    /**
+     * Get unread loan notifications count for bell
+     */
+    public function getUnreadNotificationsCount(User $user): int
+    {
+        return Loan::where('user_id', $user->id)
+            ->whereNull('notifications_read_at')
+            ->byStatus([
+                'rejected_by_co_maker',
+                'pending_gm_review',
+                'rejected_by_gm',
+                'pending_cc_review',
+                'rejected_by_credit_com',
+                'approved',
+                'released',
+            ])
+            ->count();
+    }
+
+    /**
+     * Get all loan notifications for notifications page (unread + read)
+     */
     public function getLoanNotifications(User $user)
     {
         return Loan::where('user_id', $user->id)
@@ -66,16 +88,17 @@ class LoanService
             ])
             ->with('loanType')
             ->orderBy('updated_at', 'desc')
-            ->limit(10)
+            ->limit(50)
             ->get()
             ->map(fn($loan) => [
                 'id' => $loan->id,
                 'loan_type' => $loan->loanType->name ?? 'N/A',
-                'date' => $loan->updated_at->format('Y-m-d'),
+                'date' => $loan->updated_at->format('Y-m-d H:i:s'),
                 'from' => $this->getNotificationFrom($loan->status),
                 'description' => $this->getNotificationDescription($loan->status),
                 'comment' => $loan->remarks ?? $this->getDefaultComment($loan->status),
                 'status' => $loan->status,
+                'is_read' => $loan->notifications_read_at !== null,
             ]);
     }
 

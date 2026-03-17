@@ -42,4 +42,24 @@ class DashBoardController extends Controller
             'loan_notifications' => $loan_notifications
         ]);
     }
+
+    public function markNotificationsAsRead(Request $request)
+    {
+        $user = $request->user();
+        
+        \App\Models\Loan::where('user_id', $user->id)
+            ->whereNull('notifications_read_at')
+            ->byStatus([
+                'rejected_by_co_maker',
+                'pending_gm_review',
+                'rejected_by_gm',
+                'pending_cc_review',
+                'rejected_by_credit_com',
+                'approved',
+                'released',
+            ])
+            ->update(['notifications_read_at' => now()]);
+
+        return response()->json(['message' => 'Notifications marked as read']);
+    }
 }

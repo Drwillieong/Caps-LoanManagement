@@ -148,6 +148,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware('role:gm')
         ->name('gm.approved-loan');
 
+    Route::get('dashboards/Gm/ActivityLog', \App\Http\Controllers\GmController\ActivityLogController::class)
+        ->middleware('role:gm')
+        ->name('gm.activity-log');
+
     // Credit Coordinator
     Route::get('dashboards/CreditCom/ValidateLoan', [CreditComController::class, 'index'])
         ->middleware('role:creditcom')

@@ -1,4 +1,5 @@
 import { Link } from '@inertiajs/react';
+import { cn } from '@/lib/utils';
 import {
   SidebarGroup,
   SidebarGroupLabel,
@@ -15,8 +16,8 @@ export function NavMain({ items = [] }: { items: NavItem[] }) {
   return (
     <SidebarGroup className="px-2">
       {/* SECTION LABEL */}
-      <SidebarGroupLabel className="mb-2 px-3 text-xs font-semibold uppercase tracking-wide text-sidebar-foreground/60">
-       Loan Management System
+      <SidebarGroupLabel className="mb-3 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/70 bg-sidebar/50 rounded-md backdrop-blur-sm">
+        Loan Management System
       </SidebarGroupLabel>
 
       <SidebarMenu className="space-y-1">
@@ -28,23 +29,19 @@ export function NavMain({ items = [] }: { items: NavItem[] }) {
               <SidebarMenuButton
                 asChild
                 isActive={isActive}
-                className={`
-                  relative h-11 rounded-xl px-3
-                  flex items-center gap-3
-                  text-sidebar-foreground/80
-                  transition-all
-
-                  hover:bg-sidebar-accent hover:text-sidebar-accent-foreground
-                  ${isActive ? 'bg-sidebar-accent text-sidebar-accent-foreground' : ''}
-                `}
+                className={cn(
+                  `relative h-11 rounded-xl px-3 flex items-center gap-3 shadow-sm hover:shadow-md transition-all duration-200`,
+                  `text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground`,
+                  isActive && `bg-sidebar-accent text-sidebar-accent-foreground shadow-md font-medium ring-1 ring-sidebar-primary/30`
+                )}
               >
                 <Link href={item.href} prefetch>
                   {/* LEFT ACTIVE BAR */}
                   {isActive && (
-                    <span className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r bg-sidebar-primary" />
+                    <span className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r bg-sidebar-primary shadow-sm" />
                   )}
 
-                  {item.icon && <item.icon className="size-4" />}
+                  {item.icon && <item.icon className="size-4 shrink-0 opacity-90" />}
                   <span className="truncate">{item.title}</span>
                 </Link>
               </SidebarMenuButton>

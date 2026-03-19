@@ -1,54 +1,71 @@
 import { type ComponentPropsWithoutRef } from 'react';
+import { Link } from '@inertiajs/react';
+import { cn } from '@/lib/utils';
+import { useActiveUrl } from '@/hooks/use-active-url';
 
-import { Icon } from '@/components/icon';
 import {
     SidebarGroup,
     SidebarGroupContent,
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
+
 } from '@/components/ui/sidebar';
-import { toUrl } from '@/lib/utils';
 import { type NavItem } from '@/types';
 
 export function NavFooter({
     items,
     className,
+    userRole,
     ...props
 }: ComponentPropsWithoutRef<typeof SidebarGroup> & {
     items: NavItem[];
+    userRole: string;
 }) {
+    const filteredItems = items.filter(item => !item.role || item.role === userRole);
+
     return (
         <SidebarGroup
             {...props}
-            className={`group-data-[collapsible=icon]:p-0 ${className || ''}`}
+            className={cn(
+                "relative bg-sidebar/70 backdrop-blur-sm border-t border-sidebar-border/50",
+                "group-data-[collapsible=icon]:p-1",
+                className
+            )}
         >
-            <SidebarGroupContent>
-                <SidebarMenu>
-                    {items.map((item) => (
-                        <SidebarMenuItem key={item.title}>
-                            <SidebarMenuButton
-                                asChild
-                                className="text-neutral-600 hover:text-neutral-800 dark:text-neutral-300 dark:hover:text-neutral-100"
-                            >
-                                <a
-                                    href={toUrl(item.href)}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                >
-                                    {item.icon && (
-                                        <Icon
-                                            iconNode={item.icon}
-                                            className="h-5 w-5"
-                                        />
+            <SidebarGroupContent className="p-2">
+                <SidebarMenu className="space-y-1">
+                    {filteredItems.map((item) => {
+                        const { urlIsActive } = useActiveUrl();
+                        const isActive = urlIsActive(item.href);
+
+                        return (
+                            <SidebarMenuItem key={item.title}>
+                                <SidebarMenuButton
+                                    asChild
+                                    isActive={isActive}
+                                    className={cn(
+                                        `relative h-11 rounded-xl px-3 flex items-center gap-3 transition-all shadow-sm hover:shadow-md`,
+                                        `text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground`,
+                                        isActive && `bg-sidebar-accent text-sidebar-accent-foreground shadow-md font-medium`
                                     )}
-                                    <span>{item.title}</span>
-                                </a>
-                            </SidebarMenuButton>
-                        </SidebarMenuItem>
-                    ))}
+                                >
+                                    <Link href={item.href} prefetch>
+                                        {isActive && (
+                                            <span className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r bg-sidebar-primary" />
+                                        )}
+                                        {item.icon && (
+                                            <item.icon className="size-4 shrink-0 opacity-90" />
+                                        )}
+                                        <span className="truncate">{item.title}</span>
+                                    </Link>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
+                        );
+                    })}
                 </SidebarMenu>
             </SidebarGroupContent>
         </SidebarGroup>
     );
 }
+

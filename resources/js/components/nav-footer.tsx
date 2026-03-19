@@ -28,8 +28,8 @@ export function NavFooter({
         <SidebarGroup
             {...props}
             className={cn(
-                "relative bg-sidebar/70 backdrop-blur-sm border-t border-sidebar-border/50",
-                "group-data-[collapsible=icon]:p-1",
+                "relative bg-sidebar/70 backdrop-blur-sm  border-sidebar-border/50",
+                "group-data-[collapsible=icon]:pr-1",
                 className
             )}
         >

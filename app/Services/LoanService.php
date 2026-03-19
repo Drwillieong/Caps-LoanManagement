@@ -59,7 +59,8 @@ class LoanService
     {
         return Loan::where('user_id', $user->id)
             ->whereNull('notifications_read_at')
-            ->byStatus([
+            ->whereIn('status', [
+                'awaiting_comaker',
                 'rejected_by_co_maker',
                 'pending_gm_review',
                 'rejected_by_gm',
@@ -77,7 +78,8 @@ class LoanService
     public function getLoanNotifications(User $user)
     {
         return Loan::where('user_id', $user->id)
-            ->byStatus([
+            ->whereIn('status', [
+                'awaiting_comaker',
                 'rejected_by_co_maker',
                 'pending_gm_review',
                 'rejected_by_gm',
@@ -105,9 +107,13 @@ class LoanService
     protected function getNotificationFrom(string $status): string
     {
         return match($status) {
-            'rejected_by_co_maker', 'pending_gm_review' => 'Co-Maker',
-            'rejected_by_gm', 'pending_cc_review' => 'General Manager',
-            'rejected_by_credit_com', 'approved' => 'Credit Coordinator',
+            'awaiting_comaker' => 'Loan Applicant',
+            'rejected_by_co_maker' => 'Co-Maker',
+            'pending_gm_review' => 'Co-Maker',
+            'rejected_by_gm' => 'General Manager',
+            'pending_cc_review' => 'General Manager',
+            'rejected_by_credit_com' => 'Credit Coordinator',
+            'approved' => 'Credit Coordinator',
             'released' => 'System',
             default => 'System',
         };
@@ -116,14 +122,15 @@ class LoanService
     protected function getNotificationDescription(string $status): string
     {
         return match($status) {
+            'awaiting_comaker' => 'Co-Maker Request Received',
             'rejected_by_co_maker' => 'Co-Maker Declined',
-            'pending_gm_review' => 'Co-Maker Accepted',
-            'rejected_by_gm' => 'Loan Rejected',
-            'pending_cc_review' => 'Loan Approved',
-            'rejected_by_credit_com' => 'Loan Rejected',
+            'pending_gm_review' => 'Co-Maker Accepted - Pending GM Review',
+            'rejected_by_gm' => 'Loan Rejected by GM',
+            'pending_cc_review' => 'Approved by GM - Pending Credit Com Review',
+            'rejected_by_credit_com' => 'Loan Rejected by Credit Com',
             'approved' => 'Loan Approved',
             'released' => 'Loan Released',
-            default => 'Updated',
+            default => 'Loan Updated',
         };
     }
 

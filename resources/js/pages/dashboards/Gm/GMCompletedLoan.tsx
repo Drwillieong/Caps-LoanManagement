@@ -7,7 +7,8 @@ import {
     CheckCircle2, 
     Filter, 
     Eye, 
-    Download 
+    Download,
+    Printer 
 } from 'lucide-react';
 import AppLayout from '@/layouts/app-layout';
 import { LiveClock } from '@/components/live-clock';
@@ -72,6 +73,81 @@ export default function GMCompletedLoan({ completed_loans: initialLoans = [], st
         loan.member_id.includes(search)
     );
 
+    const printTable = () => {
+        const printWindow = window.open('', '_blank');
+        const title = 'GM Completed Loans Report';
+        const statsHtml = `
+            <div style="margin-bottom: 2rem;">
+                <h2 style="color: #059669; font-size: 1.5rem; margin-bottom: 1rem;">${title}</h2>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+                    <div style="border: 1px solid #d1d5db; padding: 1rem; border-radius: 0.5rem; background: #f9fafb;">
+                        <h3 style="font-size: 0.875rem; font-weight: 600; color: #065f46; margin-bottom: 0.5rem;">Total Completed</h3>
+                        <div style="font-size: 1.5rem; font-weight: bold;">${stats.total_completed}</div>
+                    </div>
+                    <div style="border: 1px solid #d1d5db; padding: 1rem; border-radius: 0.5rem; background: #f9fafb;">
+                        <h3 style="font-size: 0.875rem; font-weight: 600; color: #065f46; margin-bottom: 0.5rem;">Principal Repaid</h3>
+                        <div style="font-size: 1.5rem; font-weight: bold;">${formatCurrency(stats.total_principal)}</div>
+                    </div>
+                    <div style="border: 1px solid #d1d5db; padding: 1rem; border-radius: 0.5rem; background: #f9fafb;">
+                        <h3 style="font-size: 0.875rem; font-weight: 600; color: #065f46; margin-bottom: 0.5rem;">Total Repaid</h3>
+                        <div style="font-size: 1.5rem; font-weight: bold;">${formatCurrency(stats.total_repaid)}</div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        let tableHtml = '<table style="width: 100%; border-collapse: collapse; margin-top: 1rem;"><thead><tr style="background: #f3f4f6; border-bottom: 2px solid #d1d5db;">';
+        const headers = ['ID', 'Member', 'Type', 'Principal', 'Terms', 'Total Due', 'Completion Date', 'Status'];
+        headers.forEach(header => {
+            tableHtml += `<th style="padding: 12px 8px; text-align: left; font-weight: 600; border: 1px solid #d1d5db; font-size: 0.875rem;">${header}</th>`;
+        });
+        tableHtml += '</tr></thead><tbody>';
+
+        filteredLoans.forEach(loan => {
+            tableHtml += '<tr style="border-bottom: 1px solid #e5e7eb;">';
+            tableHtml += `<td style="padding: 12px 8px; font-family: monospace; font-size: 0.875rem; font-weight: 500;">${loan.member_id}</td>`;
+            tableHtml += `<td style="padding: 12px 8px; font-weight: 500;">${loan.member_name}</td>`;
+            tableHtml += `<td style="padding: 12px 8px;">${loan.loan_type}</td>`;
+            tableHtml += `<td style="padding: 12px 8px; text-align: right; font-family: monospace;">${formatCurrency(loan.principal)}</td>`;
+            tableHtml += `<td style="padding: 12px 8px; text-align: right;">${loan.terms} mo</td>`;
+            tableHtml += `<td style="padding: 12px 8px; text-align: right; font-weight: 600; font-family: monospace;">${formatCurrency(loan.total_due)}</td>`;
+            tableHtml += `<td style="padding: 12px 8px;">${formatDate(loan.date)}</td>`;
+            tableHtml += `<td style="padding: 12px 8px;"><span style="padding: 4px 8px; border-radius: 4px; background: #ecfdf5; color: #059669; font-size: 0.75rem; font-weight: 500;">Completed</span></td>`;
+            tableHtml += '</tr>';
+        });
+
+        tableHtml += '</tbody></table>';
+
+        const printContent = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>${title}</title>
+                <style>
+                    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 40px; color: #111827; line-height: 1.5; }
+                    @media print { body { margin: 0; } }
+                    table th { background: #f3f4f6 !important; }
+                    table td, table th { border: 1px solid #d1d5db !important; }
+                    h2 { color: #059669 !important; }
+                </style>
+            </head>
+            <body>
+                ${statsHtml}
+                ${tableHtml}
+                <div style="margin-top: 2rem; font-size: 0.875rem; color: #6b7280; text-align: center;">
+                    Printed on ${new Date().toLocaleString('en-PH')}<br/>
+                    Filtered results: ${filteredLoans.length} shown
+                </div>
+            </body>
+            </html>
+        `;
+
+        printWindow?.document.write(printContent);
+        printWindow?.document.close();
+        printWindow?.focus();
+        printWindow?.print();
+    };
+
     return (
         <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
             <Head title="GM Completed Loans" />
@@ -123,11 +199,14 @@ export default function GMCompletedLoan({ completed_loans: initialLoans = [], st
                                     onChange={(e) => setSearch(e.target.value)}
                                     className="w-64 max-w-sm"
                                 />
-                                <Button variant="outline" size="sm" onClick={() => setSearch('')}>
+                            <Button variant="outline" size="sm" onClick={() => setSearch('')}>
                                     <Search className="h-4 w-4" />
                                 </Button>
                             </div>
-                          
+                            <Button variant="outline" size="sm" onClick={printTable}>
+                                <Printer className="h-4 w-4 mr-1" />
+                                Print
+                            </Button>
                         </div>
                     </CardHeader>
                     <CardContent>

@@ -126,6 +126,7 @@ const footerNavItems: NavItem[] = [
         icon: Clock,
         role: 'gm'
     },
+    
 ];
    
    

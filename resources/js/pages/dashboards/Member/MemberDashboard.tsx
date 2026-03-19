@@ -573,11 +573,11 @@ export default function MemberDashboard({
                                                     <tr 
                                                         key={notification.id} 
                                                         className={`border-b border-emerald-50 hover:bg-emerald-50/50 transition-colors ${
-                                                            notification.status === 'rejected_by_co_maker' || notification.status === 'rejected_by_gm' || notification.status === 'rejected_by_credit_com' 
-                                                                ? 'bg-red-50/30' 
+                                                            notification.status === 'rejected_by_co_maker' || notification.status === 'rejected_by_gm' || notification.status === 'rejected_by_credit_com'
+                                                                ? 'bg-red-50/30'
                                                                 : notification.status === 'released'
                                                                     ? 'bg-blue-50/30'
-                                                                    : notification.status === 'pending_gm_review' || notification.status === 'pending_cc_review'
+                                                                    : notification.status === 'pending_gm_review' || notification.status === 'pending_cc_review' || notification.status === 'comaker_request'
                                                                         ? 'bg-yellow-50/30'
                                                                         : ''
                                                         }`}

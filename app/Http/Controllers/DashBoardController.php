@@ -8,6 +8,8 @@ use Illuminate\Http\Request;
 
 class DashBoardController extends Controller
 {
+    use \App\Traits\HasNotificationCount;
+
     public function __construct(
         protected DashboardService $dashboardService
     ) {}
@@ -38,8 +40,10 @@ class DashBoardController extends Controller
         $user = $request->user();
         $loanService = new \App\Services\LoanService();
         $loan_notifications = $loanService->getLoanNotifications($user);
+        
         return Inertia::render('dashboards/Member/Notification', [
-            'loan_notifications' => $loan_notifications
+            'loan_notifications' => $loan_notifications,
+            'unread_notifications_count' => $this->getMemberUnreadNotificationCount($request)
         ]);
     }
 
@@ -49,7 +53,8 @@ class DashBoardController extends Controller
         
         \App\Models\Loan::where('user_id', $user->id)
             ->whereNull('notifications_read_at')
-            ->byStatus([
+            ->whereIn('status', [
+                'awaiting_comaker',
                 'rejected_by_co_maker',
                 'pending_gm_review',
                 'rejected_by_gm',

@@ -17,6 +17,7 @@ use Inertia\Inertia;
 
 class LoanController extends Controller
 {
+    use \App\Traits\HasNotificationCount;
     public function create()
     {
         $user = Auth::user();
@@ -25,13 +26,14 @@ class LoanController extends Controller
             ->first();
 
         if (!$memberProfile) {
-            return Inertia::render('dashboards/Member/ApplyLoan', [
-                'memberProfile' => null,
-                'loanTypes' => [],
-                'eligibleCoMakers' => [],
-                'previousLoans' => [],
-                'error' => 'Your profile is not yet completed. Please complete your profile.',
-            ]);
+        return Inertia::render('dashboards/Member/ApplyLoan', [
+            'memberProfile' => null,
+            'loanTypes' => [],
+            'eligibleCoMakers' => [],
+            'previousLoans' => [],
+            'error' => 'Your profile is not yet completed. Please complete your profile.',
+            'unread_notifications_count' => $this->getMemberUnreadNotificationCount(request()),
+        ]);
         }
 
         // Check if user has a pending application awaiting co-maker confirmation
@@ -116,6 +118,7 @@ class LoanController extends Controller
             'previousLoans' => $previousLoans,
             'hasAwaitingComaker' => $hasAwaitingComaker,
             'hasActiveLoan' => $hasActiveLoan,
+            'unread_notifications_count' => $this->getMemberUnreadNotificationCount(request()),
         ]);
     }
 
@@ -377,11 +380,12 @@ class LoanController extends Controller
             });
 
         if (!$loan) {
-            return Inertia::render('dashboards/Member/PendingApplication', [
-                'loan' => null,
-                'hasPendingLoan' => false,
-                'loanHistory' => $loanHistory,
-            ]);
+        return Inertia::render('dashboards/Member/PendingApplication', [
+            'loan' => null,
+            'hasPendingLoan' => false,
+            'loanHistory' => $loanHistory,
+            'unread_notifications_count' => $this->getMemberUnreadNotificationCount(request()),
+        ]);
         }
 
         return Inertia::render('dashboards/Member/PendingApplication', [
@@ -409,6 +413,7 @@ class LoanController extends Controller
             ],
             'hasPendingLoan' => true,
             'loanHistory' => $loanHistory,
+            'unread_notifications_count' => $this->getMemberUnreadNotificationCount(request()),
         ]);
     }
 
@@ -475,6 +480,7 @@ class LoanController extends Controller
                 'terms_months' => $loan->terms_months,
                 'co_maker_user_id' => $loan->coMakers->first()?->user_id ?? '',
             ],
+            'unread_notifications_count' => $this->getMemberUnreadNotificationCount(request()),
         ]);
     }
 
@@ -522,6 +528,7 @@ class LoanController extends Controller
 
         return Inertia::render('dashboards/Member/CoMaker', [
             'coMakerRequests' => $coMakerRequests,
+            'unread_notifications_count' => $this->getMemberUnreadNotificationCount(request()),
         ]);
     }
 
@@ -672,6 +679,7 @@ class LoanController extends Controller
 
         return Inertia::render('dashboards/Member/ChooseComaker', [
             'members' => $members,
+            'unread_notifications_count' => $this->getMemberUnreadNotificationCount(request()),
         ]);
     }
 }

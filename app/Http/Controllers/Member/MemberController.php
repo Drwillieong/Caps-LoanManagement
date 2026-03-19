@@ -10,6 +10,8 @@ use Inertia\Inertia;
 
 class MemberController extends Controller
 {
+    use \App\Traits\HasNotificationCount;
+
     public function __construct(
         protected LoanService $loanService
     ) {}
@@ -92,6 +94,7 @@ class MemberController extends Controller
             'hasActiveLoan' => $hasActiveLoan,
             'totalLoanBalance' => $totalLoanBalance,
             'totalAmountPaid' => $totalAmountPaid,
+            'unread_notifications_count' => $this->getMemberUnreadNotificationCount($request),
         ]);
     }
 
@@ -118,6 +121,7 @@ class MemberController extends Controller
 
         return Inertia::render('dashboards/Member/MemberCompletedLoan', [
             'completedLoans' => $completedLoans,
+            'unread_notifications_count' => $this->getMemberUnreadNotificationCount($request),
         ]);
     }
 }

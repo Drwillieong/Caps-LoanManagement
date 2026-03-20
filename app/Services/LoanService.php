@@ -49,5 +49,42 @@ class LoanService
         return max(0, (float) $loan->total_amount_due - $totalPaid);
     }
 
+    /**
+     * Check if user can apply for new loan: all active loans must be >=75% paid
+     */
+    public function canApplyForNewLoan(User $user): bool
+    {
+        $activeLoans = Loan::where('user_id', $user->id)
+            ->whereIn('status', ['approved', 'released'])
+            ->withCount([
+                'amortizations as total_amortizations',
+                'amortizations as paid_amortizations' => function ($query) {
+                    $query->where('status', 'paid');
+                }
+            ])
+            ->get();
+
+        foreach ($activeLoans as $loan) {
+            $percentPaid = $loan->total_amortizations > 0 
+                ? $loan->paid_amortizations / $loan->total_amortizations 
+                : 0;
+            if ($percentPaid < 0.75) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Get total monthly payment from all active loans
+     */
+    public function getActiveLoansTotalMonthlyPayment(User $user): float
+    {
+        return Loan::where('user_id', $user->id)
+            ->whereIn('status', ['approved', 'released'])
+            ->sum('monthly_amortization');
+    }
+
 }
 

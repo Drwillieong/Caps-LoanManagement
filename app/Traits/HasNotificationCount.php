@@ -10,7 +10,7 @@ trait HasNotificationCount
     protected function getMemberUnreadNotificationCount(Request $request): int
     {
         $user = $request->user();
-        $loanService = app(LoanService::class);
-        return $loanService->getUnreadNotificationsCount($user);
+        $notificationService = app(\App\Services\NotificationService::class);
+        return $notificationService->getUnreadCount($user);
     }
 }

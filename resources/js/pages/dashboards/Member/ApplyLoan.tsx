@@ -21,6 +21,9 @@ import { Search, User, Calendar, AlertCircle, CheckCircle2, Clock, Eye, EyeOff, 
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
+        title: 'Dashbaord',
+        href: '/dashboards/Member/ApplyLoan',
+    }, {
         title: 'Apply for a Loan',
         href: '/dashboards/Member/ApplyLoan',
     },

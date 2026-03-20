@@ -221,11 +221,21 @@ class LoanController extends Controller
                 'user_id' => $validated['co_maker_user_id'],
             ]);
 
-            // Send email notification to co-maker
+            $notificationService = app(\App\Services\NotificationService::class);
             $coMaker = User::find($validated['co_maker_user_id']);
             $borrower = $user;
             $loanTypeName = $loanType->name;
 
+            $notificationService->createNotification(
+                $coMaker,
+                'Co-Maker Request',
+                $borrower->first_name . ' ' . $borrower->last_name . ' selected you as co-maker for ' . $loanTypeName . ' loan of ₱' . number_format($loan->principal_amount) . '. Please review.',
+                'comaker_request',
+                $loan->id,
+                Loan::class
+            );
+
+            // Send email notification to co-maker
             if ($coMaker && $coMaker->email) {
                 Mail::to($coMaker->email)->send(new SendEmailCoMaker(
                     trim($coMaker->first_name . ($coMaker->middle_name ? ' ' . $coMaker->middle_name : '') . ' ' . $coMaker->last_name),
@@ -573,9 +583,18 @@ class LoanController extends Controller
             'responded_at' => now(),
         ]);
 
-        // If accepted, check if loan can proceed (if co-maker was required)
+        $notificationService = app(\App\Services\NotificationService::class);
+
         if ($status === 'accepted') {
-            // Check if all required co-makers have accepted
+            $notificationService->createNotification(
+                $borrower,
+                'Co-Maker Request Accepted',
+                'Your co-maker ' . $coMakerName . ' has accepted your loan application. Now pending GM review.',
+                'comaker_request',
+                $loan->id,
+                Loan::class
+            );
+            // If accepted, check if loan can proceed (if co-maker was required)
             $requiredCoMakers = $loanType->requires_comaker ? 1 : 0;
             $acceptedCoMakers = $loan->coMakers()->where('status', 'accepted')->count();
             
@@ -584,6 +603,14 @@ class LoanController extends Controller
                 $loan->update(['status' => 'pending_gm_review']);
             }
         } else {
+            $notificationService->createNotification(
+                $borrower,
+                'Co-Maker Request Rejected',
+                'Your co-maker ' . $coMakerName . ' has rejected your loan application.',
+                'comaker_request',
+                $loan->id,
+                Loan::class
+            );
             // If rejected, update loan status
             $loan->update(['status' => 'rejected_by_co_maker', 'remarks' => 'Co-maker declined the request.']);
         }

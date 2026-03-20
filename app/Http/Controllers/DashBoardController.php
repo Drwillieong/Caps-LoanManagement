@@ -38,32 +38,19 @@ class DashBoardController extends Controller
     public function memberNotifications(Request $request)
     {
         $user = $request->user();
-        $loanService = new \App\Services\LoanService();
-        $loan_notifications = $loanService->getLoanNotifications($user);
+        $notificationService = app(\App\Services\NotificationService::class);
         
         return Inertia::render('dashboards/Member/Notification', [
-            'loan_notifications' => $loan_notifications,
-            'unread_notifications_count' => $this->getMemberUnreadNotificationCount($request)
+            'loan_notifications' => $notificationService->getNotificationsForUser($user)->items(),
+            'unread_notifications_count' => $notificationService->getUnreadCount($user)
         ]);
     }
 
     public function markNotificationsAsRead(Request $request)
     {
         $user = $request->user();
-        
-        \App\Models\Loan::where('user_id', $user->id)
-            ->whereNull('notifications_read_at')
-            ->whereIn('status', [
-                'awaiting_comaker',
-                'rejected_by_co_maker',
-                'pending_gm_review',
-                'rejected_by_gm',
-                'pending_cc_review',
-                'rejected_by_credit_com',
-                'approved',
-                'released',
-            ])
-            ->update(['notifications_read_at' => now()]);
+        $notificationService = app(\App\Services\NotificationService::class);
+        $notificationService->markAllRead($user);
 
         return response()->json(['message' => 'Notifications marked as read']);
     }

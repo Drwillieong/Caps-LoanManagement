@@ -118,6 +118,18 @@ class GmController extends Controller
             return back()->with('error', 'This loan is not pending GM review.');
         }
 
+        $notificationService = app(\App\Services\NotificationService::class);
+        $borrower = $loan->user;
+
+        $notificationService->createNotification(
+            $borrower,
+            'Loan Approved by GM',
+            'Your loan application has been approved by General Manager' . ($validated['remarks'] ? ': ' . $validated['remarks'] : '.'),
+            'loan_status',
+            $loan->id,
+            Loan::class
+        );
+
         // Update loan status to pending_cc_review (Credit Coordinator Review)
         // Credit Coordinator will validate and then approve to generate amortization schedule
         $loan->update([
@@ -148,6 +160,18 @@ class GmController extends Controller
         if ($loan->status !== 'pending_gm_review') {
             return back()->with('error', 'This loan is not pending GM review.');
         }
+
+        $notificationService = app(\App\Services\NotificationService::class);
+        $borrower = $loan->user;
+
+        $notificationService->createNotification(
+            $borrower,
+            'Loan Rejected by GM',
+            'Your loan application has been rejected by General Manager: ' . $validated['remarks'],
+            'loan_status',
+            $loan->id,
+            Loan::class
+        );
 
         // Update loan status to rejected_by_gm
         $loan->update([

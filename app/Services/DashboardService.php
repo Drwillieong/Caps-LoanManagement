@@ -64,9 +64,9 @@ class DashboardService
             'has_pending_loan' => $hasPendingLoan,
             'loan_progress' => $loanProgress,
             'loan_eligibility' => $this->getLoanEligibility($user),
-            'profileCompleted' => $user->hasCompletedProfile(),
-'loan_notifications' => $this->loanService->getLoanNotifications($user),
-            'unread_notifications_count' => $this->loanService->getUnreadNotificationsCount($user),
+'profileCompleted' => $user->hasCompletedProfile(),
+            'loan_notifications' => app(NotificationService::class)->getDashboardNotifications($user),
+            'unread_notifications_count' => app(NotificationService::class)->getUnreadCount($user),
         ];
     }
 

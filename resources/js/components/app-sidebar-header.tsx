@@ -5,7 +5,7 @@ import { usePage } from '@inertiajs/react';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { NotificationBell } from './notification-bell';
-import { type BreadcrumbItem as BreadcrumbItemType } from '@/types';
+import { type BreadcrumbItem as BreadcrumbItemType, type Auth } from '@/types';
 
 
 export function AppSidebarHeader({
@@ -16,7 +16,8 @@ export function AppSidebarHeader({
     headerRight?: ReactNode;
 }) {
     const { auth } = usePage().props;
-    const isMember = auth?.user?.role === 'member';
+    const typedAuth = auth as Auth;
+    const isMember = typedAuth?.user?.role === 'member';
 
     return (
         <header className="flex h-16 shrink-0 items-center gap-2 border-b border-sidebar-border/50 px-6 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 md:px-4">

@@ -144,6 +144,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware('role:gm')
         ->name('gm.completed-loan');
 
+    Route::get('dashboards/Gm/active-loans/{loan}/view', [GmDashboardController::class, 'viewActiveLoan'])
+        ->middleware('role:gm')
+        ->name('gm.active-loan.view');
+
     Route::get('dashboards/Gm/ApprovedLoan', [GmDashboardController::class, 'approvedLoans'])
         ->middleware('role:gm')
         ->name('gm.approved-loan');

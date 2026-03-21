@@ -52,6 +52,6 @@ class DashBoardController extends Controller
         $notificationService = app(\App\Services\NotificationService::class);
         $notificationService->markAllRead($user);
 
-        return response()->json(['message' => 'Notifications marked as read']);
+       
     }
 }

@@ -1,10 +1,12 @@
-# TODO: Fix HR ActiveLoan View button 404
+# Sidebar Member Profile Visibility Fix
 
 ## Steps:
-- [x] Frontend Link href updated
-- [x] 1. Add route to routes/web.php
-- [x] 2. Add viewActiveLoan method to HrDashboardController.php  
-- [x] 3. Update frontend href to match route pattern
-- [x] 4. php artisan route:clear && test  
-- [x] 5. Complete
+1. [x] Create TODO.md (done)
+2. [x] Edit app-sidebar.tsx:
+   - Move NavUser to SidebarHeader above logo ✓
+   - Set collapsible role-based ('offcanvas' for member, 'icon' for others) ✓
+   - Add padding/spacing for header user section ✓
+3. [x] Test: npm run dev, login as member, verify profile visible in sidebar header (enhanced user-info.tsx)
+4. [x] Update TODO.md with completion
+5. [ ] Attempt completion
 

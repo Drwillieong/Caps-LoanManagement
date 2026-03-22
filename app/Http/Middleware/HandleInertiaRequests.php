@@ -37,12 +37,13 @@ public function share(Request $request): array
     {
         return [
             ...parent::share($request),
-            'name' => config('app.name'),
+'name' => config('app.name'),
             'auth' => [
-                'user' => $request->user(),
+                'user' => $request->user() ? $request->user()->load('memberProfile') : null,
                 'hasCompletedProfile' => $request->user() ? $request->user()->hasCompletedProfile() : null,
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+
         ];
     }
 }

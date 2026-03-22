@@ -1,12 +1,13 @@
 import { Transition } from '@headlessui/react';
 import { Form, Head, usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
     AlertCircle, 
     User, 
     MapPin, 
     Briefcase, 
     Heart, 
+    Camera, 
     Eye, 
     EyeOff 
 } from 'lucide-react';
@@ -59,6 +60,7 @@ interface MemberProfile {
     share_capital_balance?: number;
     bank_account_number?: string;
     tin_number?: string;
+    profile_picture?: string;
 }
 
 interface Props {
@@ -78,7 +80,17 @@ export default function UserProfile({ memberProfile, beneficiaries, isNewUser, i
     const isHREditingMember = isAdmin && targetUserId;
     
     // For HR editing, always enable editing
-    const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
+const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
+    
+    const [previewUrl, setPreviewUrl] = useState('');
+    
+    useEffect(() => {
+      if (memberProfile?.profile_picture) {
+        setPreviewUrl(`/storage/profiles/${memberProfile.profile_picture}`);
+      } else {
+        setPreviewUrl('');
+      }
+    }, [memberProfile]);
     
     // Initialize form data from existing profile or defaults
     const [formData, setFormData] = useState({
@@ -99,6 +111,7 @@ export default function UserProfile({ memberProfile, beneficiaries, isNewUser, i
         share_capital_balance: memberProfile?.share_capital_balance || '',
         bank_account_number: memberProfile?.bank_account_number || '',
         tin_number: memberProfile?.tin_number || '',
+        profile_picture: memberProfile?.profile_picture || '',
         beneficiaries: beneficiaries.length > 0 ? beneficiaries : [{ full_name: '', relationship: '', date_of_birth: '' }],
     });
 
@@ -229,7 +242,80 @@ export default function UserProfile({ memberProfile, beneficiaries, isNewUser, i
                                     </CardTitle>
                                 </div>
                             </CardHeader>
-                            <CardContent>
+    <CardContent>
+                                {/* Profile Picture */}
+                                <div className="mb-6 p-6 bg-emerald-50 rounded-2xl border-2 border-dashed border-emerald-200">
+                                  <div className="flex flex-col md:flex-row items-center gap-6">
+                                    <div className="flex-shrink-0">
+                                      <div className="relative w-32 h-32 rounded-full overflow-hidden border-4 border-emerald-200 shadow-lg bg-gradient-to-br from-emerald-50 to-emerald-100">
+                                        {previewUrl ? (
+                                          <img 
+                                            src={previewUrl} 
+                                            alt="Profile Picture" 
+                                            className="w-full h-full object-cover"
+                                            onError={(e) => {
+                                              e.currentTarget.style.display = 'none';
+                                            }}
+                                          />
+                                        ) : (
+                                          <div className="w-full h-full flex items-center justify-center text-emerald-600 font-bold text-xl bg-gradient-to-br from-emerald-400/20 to-emerald-500/20 backdrop-blur-sm">
+                                            {formData.first_name?.charAt(0)?.toUpperCase()}
+                                            {formData.last_name?.charAt(0)?.toUpperCase()}
+                                          </div>
+                                        )}
+                                        {isEditing && (
+                                          <label
+                                            htmlFor="profile_picture"
+                                            className="absolute -bottom-2 -right-2 bg-emerald-500 hover:bg-emerald-600 p-3 rounded-full shadow-2xl border-4 border-white cursor-pointer transition-all duration-200"
+                                          >
+                                            <Camera className="h-6 w-6 text-white" />
+                                          </label>
+                                        )}
+                                      </div>
+                                    </div>
+                                    {isEditing ? (
+                                      <div className="flex flex-col items-center gap-2">
+                                        <input
+                                          id="profile_picture"
+                                          name="profile_picture"
+                                          type="file"
+                                          accept="image/*"
+                                          className="hidden"
+                                          onChange={(e) => {
+                                            const file = e.target.files?.[0];
+                                            if (file) {
+                                              if (file.size > 2 * 1024 * 1024) {
+                                                alert('Image size must be less than 2MB.');
+                                                (e.target as HTMLInputElement).value = '';
+                                                return;
+                                              }
+                                              const reader = new FileReader();
+                                              reader.onloadend = () => {
+                                                setPreviewUrl(reader.result as string);
+                                              };
+                                              reader.readAsDataURL(file);
+                                              setFormData({
+                                                ...formData,
+                                                profile_picture: file as any,
+                                              });
+                                            }
+                                          }}
+                                        />
+                                        <label htmlFor="profile_picture" className="px-6 py-2 bg-emerald-500 text-white rounded-xl font-medium hover:bg-emerald-600 transition cursor-pointer shadow-md">
+                                          Change Profile Picture
+                                        </label>
+                                        <p className="text-xs text-muted-foreground text-center mt-1">
+                                          JPG, PNG, GIF • Max 2MB
+                                        </p>
+                                      </div>
+                                    ) : (
+                                      <div className="text-center">
+                                        <p className="text-sm font-medium text-emerald-800">Profile Picture</p>
+                                        <p className="text-xs text-muted-foreground">Click Edit to change</p>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
                                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                                     <div className="grid gap-2">
                                         <Label htmlFor="employee_id">

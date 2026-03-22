@@ -35,6 +35,7 @@ class MemberProfile extends Model
         'share_capital_balance',
         'bank_account_number',
         'tin_number',
+        'profile_picture',
     ];
 
     /**

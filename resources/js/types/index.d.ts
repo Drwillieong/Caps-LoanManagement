@@ -38,11 +38,12 @@ export interface User {
     email: string;
     role: string;
     avatar?: string;
+    memberProfile?: MemberProfile | null;
     email_verified_at: string | null;
     two_factor_enabled?: boolean;
     created_at: string;
     updated_at: string;
-    [key: string]: unknown; // This allows for additional properties...
+    [key: string]: unknown;
 }
 
 export interface LoanType {
@@ -54,9 +55,26 @@ export interface LoanType {
 }
 
 export interface MemberProfile {
+    id?: number;
+    user_id: number;
+    employee_id: string;
+    first_name: string;
+    middle_name?: string;
+    last_name: string;
+    date_of_birth: string;
+    sex: string;
+    civil_status: string;
+    spouse_name?: string;
+    mobile_number: string;
+    present_address: string;
+    permanent_address?: string;
+    position: string;
     date_hired: string;
     basic_salary: number;
-    share_capital_balance: number;
+    share_capital_balance?: number;
+    bank_account_number?: string;
+    tin_number?: string;
+    profile_picture?: string;
 }
 
 export interface EligibleCoMaker {

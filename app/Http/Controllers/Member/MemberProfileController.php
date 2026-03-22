@@ -9,6 +9,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redirect;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\Storage;
 
 class MemberProfileController extends Controller
 {
@@ -71,6 +72,7 @@ class MemberProfileController extends Controller
         $validated = $request->validate([
             // Identity
             'employee_id' => 'required|string|max:255|unique:member_profiles,employee_id,' . ($request->user()->memberProfile?->id ?? 'NULL'),
+            'profile_picture' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'first_name' => 'required|string|max:255',
             'middle_name' => 'nullable|string|max:255',
             'last_name' => 'required|string|max:255',
@@ -102,6 +104,16 @@ class MemberProfileController extends Controller
         ]);
 
         $user = $request->user();
+
+        if ($request->hasFile('profile_picture')) {
+            $memberProfile = MemberProfile::firstOrNew(['user_id' => $user->id]);
+            if ($memberProfile->profile_picture) {
+                Storage::disk('public')->delete('profiles/' . $memberProfile->profile_picture);
+            }
+            $filename = $user->id . '_' . time() . '.' . $request->file('profile_picture')->getClientOriginalExtension();
+            $request->file('profile_picture')->storeAs('profiles', $filename, 'public');
+            $validated['profile_picture'] = $filename;
+        }
 
         // Create or update member profile
         $memberProfile = MemberProfile::updateOrCreate(
@@ -146,6 +158,7 @@ class MemberProfileController extends Controller
         $validated = $request->validate([
             // Identity
             'employee_id' => 'required|string|max:255|unique:member_profiles,employee_id,' . ($targetUser->memberProfile?->id ?? 'NULL') . ',id',
+            'profile_picture' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'first_name' => 'required|string|max:255',
             'middle_name' => 'nullable|string|max:255',
             'last_name' => 'required|string|max:255',
@@ -175,6 +188,16 @@ class MemberProfileController extends Controller
             'beneficiaries.*.relationship' => 'nullable|string|max:255',
             'beneficiaries.*.date_of_birth' => 'nullable|date|before:today',
         ]);
+
+        if ($request->hasFile('profile_picture')) {
+            $memberProfile = MemberProfile::firstOrNew(['user_id' => $targetUser->id]);
+            if ($memberProfile->profile_picture) {
+                Storage::disk('public')->delete('profiles/' . $memberProfile->profile_picture);
+            }
+            $filename = $targetUser->id . '_' . time() . '.' . $request->file('profile_picture')->getClientOriginalExtension();
+            $request->file('profile_picture')->storeAs('profiles', $filename, 'public');
+            $validated['profile_picture'] = $filename;
+        }
 
         // Update member profile
         $memberProfile = MemberProfile::updateOrCreate(

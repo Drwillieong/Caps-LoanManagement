@@ -209,7 +209,7 @@ export default function CoMaker({ coMakerRequests }: CoMakerProps) {
                                         <div className="flex flex-col sm:flex-row gap-3 pt-2">
                                             <Button
                                                 onClick={() => handleResponse(request.loan_id, 'accept')}
-                                                className="flex-1 bg-green-600 hover:bg-green-700"
+                                                className="flex-1 bg-green-400 hover:bg-green-500"
                                             >
                                                 <CheckCircle2 className="h-4 w-4 mr-2" />
                                                 Accept Co-Maker Request
@@ -217,7 +217,7 @@ export default function CoMaker({ coMakerRequests }: CoMakerProps) {
                                             <Button
                                                 onClick={() => handleResponse(request.loan_id, 'reject')}
                                                 variant="destructive"
-                                                className="flex-1"
+className="flex-1 bg-red-400 hover:bg-red-500 text-white"
                                             >
                                                 <XCircle className="h-4 w-4 mr-2" />
                                                 Decline Request

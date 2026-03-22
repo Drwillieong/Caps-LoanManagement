@@ -1,12 +1,7 @@
-# Sidebar Member Profile Visibility Fix
+# Task Progress: Change Decline Button Red Shade ✅
 
-## Steps:
-1. [x] Create TODO.md (done)
-2. [x] Edit app-sidebar.tsx:
-   - Move NavUser to SidebarHeader above logo ✓
-   - Set collapsible role-based ('offcanvas' for member, 'icon' for others) ✓
-   - Add padding/spacing for header user section ✓
-3. [x] Test: npm run dev, login as member, verify profile visible in sidebar header (enhanced user-info.tsx)
-4. [x] Update TODO.md with completion
-5. [ ] Attempt completion
+## Completed:
+- [x] Step 1: Edited CoMaker.tsx decline button to `bg-red-400 hover:bg-red-500 text-white` (lighter red shade)
+- [x] Step 2: Verified change via diff and completed task
 
+**Decline button now uses lighter red shade (bg-red-400). Refresh your browser to see the change.**

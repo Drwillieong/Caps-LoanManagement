@@ -1,5 +1,5 @@
 import { Head, useForm, Link } from '@inertiajs/react';
-import { useState } from 'react';
+import React, { useState, ChangeEvent } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { LiveClock } from '@/components/live-clock';
 import { type BreadcrumbItem, type GmValidateLoanProps, type GmPendingLoan } from '@/types';
@@ -44,9 +44,9 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-export default function CrCoorValidateLoan({ pendingLoans }: GmValidateLoanProps) {
+export default function CrCoorValidateLoan({ pendingLoans }: React.PropsWithChildren<GmValidateLoanProps>): JSX.Element {
     const [selectedLoan, setSelectedLoan] = useState<GmPendingLoan | null>(null);
-    const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
+    const [isRejectDialogOpen, setIsRejectDialogOpen] = useState<boolean>(false);
 
     const approveForm = useForm({
         remarks: '',
@@ -117,10 +117,10 @@ export default function CrCoorValidateLoan({ pendingLoans }: GmValidateLoanProps
 
     function handleApprove(loanId: number) {
         approveForm.post(`/dashboards/CreditCom/Loan/${loanId}/approve`, {
-            onSuccess: () => {
+onSuccess: () => {
                 toast.success('Loan application approved successfully!');
             },
-            onError: (errors) => {
+            onError: (errors: Record<string, string>) => {
                 console.error('Error approving loan:', errors);
                 toast.error('Failed to approve loan. Please try again.');
             },
@@ -129,13 +129,13 @@ export default function CrCoorValidateLoan({ pendingLoans }: GmValidateLoanProps
 
     function handleReject(loanId: number) {
         rejectForm.post(`/dashboards/CreditCom/Loan/${loanId}/reject`, {
-            onSuccess: () => {
+onSuccess: () => {
                 toast.success('Loan application rejected.');
                 setIsRejectDialogOpen(false);
                 setSelectedLoan(null);
                 rejectForm.reset();
             },
-            onError: (errors) => {
+            onError: (errors: Record<string, string>) => {
                 console.error('Error rejecting loan:', errors);
                 toast.error('Failed to reject loan. Please try again.');
             },
@@ -176,7 +176,7 @@ export default function CrCoorValidateLoan({ pendingLoans }: GmValidateLoanProps
                 {/* Pending Loan Applications */}
                 {pendingLoans && pendingLoans.length > 0 ? (
                     <div className="space-y-6">
-                        {pendingLoans.map((loan) => (
+{pendingLoans.map((loan: GmPendingLoan) => (
                             <Card key={loan.id} className="shadow-sm">
                                 <CardHeader className="pb-4 border-b">
                                     <div className="flex items-center justify-between">
@@ -283,7 +283,7 @@ export default function CrCoorValidateLoan({ pendingLoans }: GmValidateLoanProps
                                                     Co-Maker{loan.co_makers.length > 1 ? 's' : ''}
                                                 </h4>
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                                    {loan.co_makers.map((coMaker) => (
+                                                    {loan.co_makers.map((coMaker: any) => (
                                                         <div key={coMaker.id} className="flex items-center gap-2 p-2 rounded-md border">
                                                             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
                                                                 <Users className="h-4 w-4 text-muted-foreground" />
@@ -321,7 +321,7 @@ export default function CrCoorValidateLoan({ pendingLoans }: GmValidateLoanProps
                                                             </tr>
                                                         </thead>
                                                         <tbody>
-                                                            {loan.past_loans.map((pastLoan) => (
+                                                            {loan.past_loans.map((pastLoan: any) => (
                                                                 <tr key={pastLoan.id} className="border-t">
                                                                     <td className="px-3 py-2">{pastLoan.loan_type_name}</td>
                                                                     <td className="px-3 py-2">{formatCurrency(pastLoan.principal_amount)}</td>
@@ -359,7 +359,7 @@ export default function CrCoorValidateLoan({ pendingLoans }: GmValidateLoanProps
                                                 Approve Application
                                             </Button>
                                             
-                                            <Dialog open={isRejectDialogOpen && selectedLoan?.id === loan.id} onOpenChange={(open) => {
+                                            <Dialog open={isRejectDialogOpen && selectedLoan?.id === loan.id} onOpenChange={(open: boolean) => {
                                                 setIsRejectDialogOpen(open);
                                                 if (!open) setSelectedLoan(null);
                                             }}>
@@ -389,7 +389,7 @@ export default function CrCoorValidateLoan({ pendingLoans }: GmValidateLoanProps
                                                             id="remarks"
                                                             placeholder="Enter reason for rejection..."
                                                             value={rejectForm.data.remarks}
-                                                            onChange={(e) => rejectForm.setData('remarks', e.target.value)}
+                                                            onChange={(e: ChangeEvent<HTMLInputElement>) => rejectForm.setData('remarks', e.target.value)}
                                                             className="mt-2"
                                                         />
                                                         {rejectForm.errors.remarks && (

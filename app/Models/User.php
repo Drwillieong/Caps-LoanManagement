@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
+use Illuminate\Support\Facades\Storage;
 
 class User extends Authenticatable
 {
@@ -124,5 +125,15 @@ class User extends Authenticatable
     public function coMakerLoans(): HasMany
     {
         return $this->hasMany(LoanCoMaker::class);
+    }
+
+    /**
+     * Get the user's avatar URL.
+     */
+    public function getAvatarAttribute(): ?string
+    {
+        return $this->memberProfile?->profile_picture 
+            ? Storage::url('profiles/' . $this->memberProfile->profile_picture)
+            : null;
     }
 }

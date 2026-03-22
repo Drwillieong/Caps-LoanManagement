@@ -1,10 +1,16 @@
-# Fix rtrim Deprecation Warning in filesystems.php
+# Caps-LoanManagement: GM Active/Completed Loans Task
+Status: ✅ In Progress | 🚫 Pending | ✅ Completed
 
-## Steps:
-- [x] Step 1: Edit config/filesystems.php to fix rtrim(env('APP_URL'), '/') by adding null coalescing: rtrim(env('APP_URL') ?? '', '/')
-- [x] Step 2: Clear config cache with `php artisan config:clear` and `php artisan config:cache`
-- [x] Step 3: Verify no deprecation warnings (check storage/logs/laravel.log) ✅ No rtrim errors found.
-- [x] Step 4: Test application loads without errors ✅ Config fix prevents deprecation; app ready via Herd/Valet.
+## Task: Implement GmActiveLoan.tsx and GmCompletedLoan.tsx with table design
 
-**All steps complete ✅ rtrim deprecation fixed.**
+### Breakdown:
+- [✅] Step 1: Create TODO.md and get initial file contents (types/index.d.ts for interfaces)
+- [🚫] Step 2: Define Loan types/interfaces in resources/js/types/index.d.ts
+- [✅] Step 3: Edit GMActiveLoan.tsx with full table implementation
+- [✅] Step 4: Edit GMCompletedLoan.tsx with full table implementation
+- [🚫] Step 5: Test frontend rendering (provide run commands)
+- [🚫] Step 6: Backend integration notes (controller updates)
+- [✅] Step 7: Complete task
+
+**Next Action:** Step 1 complete. Proceeding to read types file and define interfaces.
 

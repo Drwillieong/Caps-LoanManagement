@@ -76,6 +76,7 @@ const memberNavItems: NavItem[] = [
 ];
 
 const gmNavItems: NavItem[] = [
+    ...mainNavItems.filter(item => item.title !== 'Dashboard'), // Avoid duplicate dashboard
     {
         title: 'Loan Application',
         href: '/dashboards/Gm/LoanApplication',
@@ -97,6 +98,9 @@ const gmNavItems: NavItem[] = [
         icon: Archive,
     },
     
+    
+
+    
 ];
 
 const creditcomNavItems: NavItem[] = [
@@ -105,18 +109,30 @@ const creditcomNavItems: NavItem[] = [
         href: '/dashboards/CreditCom/LoanApplication',
         icon: FileText,
     },
-    {
-        title: 'Approved History',
+
+     {
+        title: 'Approved Loan',
         href: '/dashboards/CreditCom/ApprovedHistory',
         icon: BookOpen,
     },
     
+  
+
+    
 ];
 
 const footerNavItems: NavItem[] = [
-   
-   
+    {
+        title: 'Activity Log',
+        href: '/dashboards/Gm/ActivityLog',
+        icon: Clock,
+        role: 'gm'
+    },
+    
 ];
+   
+   
+
 
 export function AppSidebar() {
     const { auth } = usePage<SharedData>().props;
@@ -146,28 +162,29 @@ export function AppSidebar() {
     ];
 
     return (
-        <Sidebar collapsible="icon" variant="inset">
-          <SidebarHeader>
-    <SidebarMenu>
-        <SidebarMenuItem className="flex justify-center">
-            <SidebarMenuButton
-                size="lg"
-                asChild
-                 className="h-15 flex items-center justify-center"
-            >
-                <Link href={dashboard()} prefetch className="flex justify-center w-full">
+        <Sidebar collapsible="icon" variant="inset" className="border-r border-sidebar-border/50 shadow-sm">
+          <SidebarHeader className="p-3 pt-4 border-b border-sidebar-border/30">
+            <SidebarMenu>
+              <SidebarMenuItem className="flex justify-center">
+                <SidebarMenuButton
+                  size="lg"
+                  asChild
+                  className="h-14 w-full flex items-center justify-center transition-all duration-300 hover:shadow-md hover:bg-sidebar-accent/50 rounded-xl group"
+                >
+                  <Link href={dashboard()} prefetch className="flex items-center justify-center w-full h-full">
                     <AppLogo />
-                </Link>
-            </SidebarMenuButton>
-        </SidebarMenuItem>
-    </SidebarMenu>
-</SidebarHeader>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarHeader>
             <SidebarContent>
                 <NavMain items={allNavItems} />
             </SidebarContent>
 
-            <SidebarFooter>
-                <NavFooter items={footerNavItems} className="mt-auto" />
+            <SidebarFooter className="mt-auto border-t border-sidebar-border/30 pt-3">
+                <NavFooter items={footerNavItems} className="px-1 pb-2" userRole={userRole} />
+                <div className="h-px mx-3 my-3 bg-gradient-to-r from-sidebar-primary/50 via-transparent to-sidebar-primary/30 rounded-full" />
                 <NavUser />
             </SidebarFooter>
         </Sidebar>

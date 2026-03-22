@@ -50,72 +50,41 @@ class LoanService
     }
 
     /**
-     * Get loan notifications for user
+     * Check if user can apply for new loan: all active loans must be >=75% paid
      */
-    public function getLoanNotifications(User $user)
+    public function canApplyForNewLoan(User $user): bool
+    {
+        $activeLoans = Loan::where('user_id', $user->id)
+            ->whereIn('status', ['approved', 'released'])
+            ->withCount([
+                'amortizations as total_amortizations',
+                'amortizations as paid_amortizations' => function ($query) {
+                    $query->where('status', 'paid');
+                }
+            ])
+            ->get();
+
+        foreach ($activeLoans as $loan) {
+            $percentPaid = $loan->total_amortizations > 0 
+                ? $loan->paid_amortizations / $loan->total_amortizations 
+                : 0;
+            if ($percentPaid < 0.75) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Get total monthly payment from all active loans
+     */
+    public function getActiveLoansTotalMonthlyPayment(User $user): float
     {
         return Loan::where('user_id', $user->id)
-            ->byStatus([
-                'rejected_by_co_maker',
-                'pending_gm_review',
-                'rejected_by_gm',
-                'pending_cc_review',
-                'rejected_by_credit_com',
-                'approved',
-                'released',
-            ])
-            ->with('loanType')
-            ->orderBy('updated_at', 'desc')
-            ->limit(10)
-            ->get()
-            ->map(fn($loan) => [
-                'id' => $loan->id,
-                'loan_type' => $loan->loanType->name ?? 'N/A',
-                'date' => $loan->updated_at->format('Y-m-d'),
-                'from' => $this->getNotificationFrom($loan->status),
-                'description' => $this->getNotificationDescription($loan->status),
-                'comment' => $loan->remarks ?? $this->getDefaultComment($loan->status),
-                'status' => $loan->status,
-            ]);
+            ->whereIn('status', ['approved', 'released'])
+            ->sum('monthly_amortization');
     }
 
-    protected function getNotificationFrom(string $status): string
-    {
-        return match($status) {
-            'rejected_by_co_maker', 'pending_gm_review' => 'Co-Maker',
-            'rejected_by_gm', 'pending_cc_review' => 'General Manager',
-            'rejected_by_credit_com', 'approved' => 'Credit Coordinator',
-            'released' => 'System',
-            default => 'System',
-        };
-    }
-
-    protected function getNotificationDescription(string $status): string
-    {
-        return match($status) {
-            'rejected_by_co_maker' => 'Co-Maker Declined',
-            'pending_gm_review' => 'Co-Maker Accepted',
-            'rejected_by_gm' => 'Loan Rejected',
-            'pending_cc_review' => 'Loan Approved',
-            'rejected_by_credit_com' => 'Loan Rejected',
-            'approved' => 'Loan Approved',
-            'released' => 'Loan Released',
-            default => 'Updated',
-        };
-    }
-
-    protected function getDefaultComment(string $status): string
-    {
-        return match($status) {
-            'rejected_by_co_maker' => 'Your co-maker has declined to support your loan application.',
-            'pending_gm_review' => 'Your co-maker has accepted. Pending GM review.',
-            'rejected_by_gm' => 'Your loan application has been rejected by GM.',
-            'pending_cc_review' => 'Approved by GM. Pending Credit Coordinator review.',
-            'rejected_by_credit_com' => 'Rejected by Credit Coordinator.',
-            'approved' => 'Congratulations! Your loan has been approved.',
-            'released' => 'Loan released successfully.',
-            default => 'No comments.',
-        };
-    }
 }
 

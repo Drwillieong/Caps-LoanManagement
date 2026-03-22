@@ -31,6 +31,7 @@ class Loan extends Model
         'remarks',
         'rejected_by',
         'rejected_at',
+        'notifications_read_at',
     ];
 
     /**
@@ -48,6 +49,7 @@ class Loan extends Model
             'release_date' => 'date',
             'terms_months' => 'integer',
             'rejected_at' => 'datetime',
+            'notifications_read_at' => 'datetime',
         ];
     }
 

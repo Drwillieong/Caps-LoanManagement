@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services\Loan;
+namespace App\Service\ApplyLoan;
 
 class LoanComputationService
 {

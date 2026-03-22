@@ -43,6 +43,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware('role:hr')
         ->name('hr.completed-loan');
 
+    Route::get('dashboards/HR/active-loans/{loan}/view', [HrDashboardController::class, 'viewActiveLoan'])
+        ->middleware('role:hr')
+        ->name('hr.active-loan.view'); 
+
 
     // Member - Loan Routes
     Route::get('dashboards/Member/ApplyLoan', [LoanController::class, 'create'])
@@ -101,6 +105,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware(['role:member', 'ensure.profile.completed'])
         ->name('member.choose-comaker');
 
+    Route::get('dashboards/Member/Notification', [DashBoardController::class, 'memberNotifications'])
+        ->middleware('role:member')
+        ->name('member.notifications');
+
+    Route::post('dashboards/Member/Notification/mark-read', [DashBoardController::class, 'markNotificationsAsRead'])
+        ->middleware('role:member')
+        ->name('dashboards.member.notifications.mark-read');
+
 
 
     // GM
@@ -136,9 +148,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware('role:gm')
         ->name('gm.completed-loan');
 
+    Route::get('dashboards/Gm/active-loans/{loan}/view', [GmDashboardController::class, 'viewActiveLoan'])
+        ->middleware('role:gm')
+        ->name('gm.active-loan.view');
+
     Route::get('dashboards/Gm/ApprovedLoan', [GmDashboardController::class, 'approvedLoans'])
         ->middleware('role:gm')
         ->name('gm.approved-loan');
+
+    Route::get('dashboards/Gm/ActivityLog', \App\Http\Controllers\GmController\ActivityLogController::class)
+        ->middleware('role:gm')
+        ->name('gm.activity-log');
 
     // Credit Coordinator
     Route::get('dashboards/CreditCom/ValidateLoan', [CreditComController::class, 'index'])

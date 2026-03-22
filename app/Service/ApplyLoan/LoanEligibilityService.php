@@ -1,10 +1,11 @@
 <?php
 
-namespace App\Services\Loan;
+namespace App\Service\ApplyLoan;
 
 use App\Models\Loan;
 use App\Models\User;
 use App\Models\LoanType;
+use App\Services\LoanService;
 
 class LoanEligibilityService
 {
@@ -40,13 +41,19 @@ class LoanEligibilityService
             }
         }
 
-        // Existing active loan
-        $hasActiveLoan = Loan::where('user_id', $borrower->id)
-            ->whereIn('status', ['approved', 'released'])
-            ->exists();
+        // Check existing loans are all >=75% paid
+        $loanService = new LoanService();
+        if (!$loanService->canApplyForNewLoan($borrower)) {
+            abort(422, 'Cannot apply: One or more active loans must be at least 75% paid.');
+        }
 
-        if ($hasActiveLoan) {
-            abort(422, 'You already have an active loan.');
+        // Combined monthly payment (existing + new) must not exceed 50% salary
+        $existingMonthly = $loanService->getActiveLoansTotalMonthlyPayment($borrower);
+        $combinedMonthly = $existingMonthly + $computed['monthly'];
+        $maxMonthlyPayment = $profile->basic_salary / 2;
+        
+        if ($combinedMonthly > $maxMonthlyPayment) {
+            abort(422, 'Combined monthly payments (₱' . number_format($combinedMonthly, 2) . ') exceed 50% of salary (₱' . number_format($maxMonthlyPayment, 2) . '). Please adjust amount or term.');
         }
 
         // Co-maker validation

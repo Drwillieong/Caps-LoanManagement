@@ -20,6 +20,7 @@ export interface NavItem {
     href: NonNullable<InertiaLinkProps['href']>;
     icon?: LucideIcon | null;
     isActive?: boolean;
+    role?: string;
 }
 
 export interface SharedData {
@@ -306,6 +307,26 @@ export interface CompletedLoan {
         id: number;
         member_name: string;
     }>;
+}
+
+export interface ActivityLog {
+    id: number;
+    user_id: number;
+    loan_id: number | null;
+    action_type: string;
+    description: string;
+    reject_reason: string | null;
+    ip_address: string | null;
+    created_at: string;
+    updated_at: string;
+    user: {
+        id: number;
+        name: string;
+    };
+    loan: {
+        id: number;
+        principal_amount: number;
+    } | null;
 }
 
 export interface MemberCompletedLoanProps {

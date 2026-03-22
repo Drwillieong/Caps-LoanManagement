@@ -12,6 +12,7 @@ use Inertia\Inertia;
 
 class MemberProfileController extends Controller
 {
+    use \App\Traits\HasNotificationCount;
     /**
      * Display the user's profile form.
      */
@@ -30,6 +31,7 @@ class MemberProfileController extends Controller
             'isNewUser' => !$user->hasCompletedProfile(),
             'isAdmin' => $isAdmin,
             'profileCompleted' => $user->hasCompletedProfile(),
+            'unread_notifications_count' => $this->getMemberUnreadNotificationCount($request),
         ]);
     }
 
@@ -57,6 +59,7 @@ class MemberProfileController extends Controller
             'profileCompleted' => $targetUser->hasCompletedProfile(),
             'targetUserId' => $targetUser->id,
             'targetUserName' => $targetUser->first_name . ' ' . $targetUser->last_name,
+            'unread_notifications_count' => $this->getMemberUnreadNotificationCount($request),
         ]);
     }
 

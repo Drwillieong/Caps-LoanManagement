@@ -8,6 +8,8 @@ use Illuminate\Http\Request;
 
 class DashBoardController extends Controller
 {
+    use \App\Traits\HasNotificationCount;
+
     public function __construct(
         protected DashboardService $dashboardService
     ) {}
@@ -31,5 +33,25 @@ class DashBoardController extends Controller
         $data = $this->dashboardService->getDashboardData($role);
 
         return Inertia::render($roleComponents[$role], $data);
+    }
+
+    public function memberNotifications(Request $request)
+    {
+        $user = $request->user();
+        $notificationService = app(\App\Services\NotificationService::class);
+        
+        return Inertia::render('dashboards/Member/Notification', [
+            'loan_notifications' => $notificationService->getNotificationsForUser($user)->items(),
+            'unread_notifications_count' => $notificationService->getUnreadCount($user)
+        ]);
+    }
+
+    public function markNotificationsAsRead(Request $request)
+    {
+        $user = $request->user();
+        $notificationService = app(\App\Services\NotificationService::class);
+        $notificationService->markAllRead($user);
+
+       
     }
 }

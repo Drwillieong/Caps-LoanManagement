@@ -17,9 +17,15 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { useMemo, useState, useEffect } from 'react';
 import type { ApplyLoanProps, EligibleCoMaker, PreviousLoan, SharedData, BreadcrumbItem } from '@/types';
-import { Search, User, Calendar, AlertCircle, CheckCircle2, Clock, Eye, EyeOff, ArrowRight } from 'lucide-react';
+
+interface PreviousLoanWithPercent extends PreviousLoan {
+  percent_paid?: number;
+}
+import { Search, User, Calendar, AlertCircle, CheckCircle2, Clock, Eye, EyeOff, ArrowRight, CheckCircle } from 'lucide-react';
+// import { toast } from 'sonner'; // Remove if sonner not available
 
 const breadcrumbs: BreadcrumbItem[] = [
+   
     {
         title: 'Apply for a Loan',
         href: '/dashboards/Member/ApplyLoan',
@@ -72,10 +78,10 @@ export default function ApplyLoan({
                     />
                     <div className="rounded-lg border border-red-200 bg-red-50 p-6">
                         <h3 className="mb-2 font-semibold text-red-800">
-                            Active Loan Already Exists
+                            Active Loan Eligibility Failed
                         </h3>
                         <p className="mb-4 text-sm text-red-600">
-                            You currently have an active loan. You cannot apply for a new loan until your existing loan is fully paid off.
+                            You can apply for a new loan if all active loans are at least 75% paid and combined monthly payments (existing + new) do not exceed 50% of salary. Check your loan status below.
                         </p>
                         <Link
                             href="/dashboards/Member/MemberActiveLoan"
@@ -144,35 +150,29 @@ export default function ApplyLoan({
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search);
         const coMakerId = urlParams.get('co_maker_id');
-        if (coMakerId && eligibleCoMakers.some(cm => cm.id.toString() === coMakerId)) {
-            setData('co_maker_user_id', coMakerId);
+        if (coMakerId) {
+            const matchingCoMaker = eligibleCoMakers.find(cm => cm.id.toString() === coMakerId);
+            if (matchingCoMaker) {
+                setData('co_maker_user_id', coMakerId);
+                setPreSelectedCoMaker(matchingCoMaker);
+                setIsPreSelecting(true);
+                console.log(`✅ Co-maker "${matchingCoMaker.name}" has been pre-selected!`);
+                // Clear URL param after handling
+                const newUrl = window.location.pathname;
+                window.history.replaceState({}, document.title, newUrl);
+            }
         }
     }, [eligibleCoMakers]);
 
     // toggle for showing applicant info (can be used for future expansion)
     const [showApplicantInfo, setShowApplicantInfo] = useState(false);
 
-    function maskCurrency(value: number | string, visible: boolean) {
-    if (!visible) return '₱•••••';
-
-    if (value === null || value === undefined || value === '') {
-        return '₱0.00';
-    }
-
-    const number = typeof value === 'string'
-        ? Number(value.replace(/,/g, ''))
-        : value;
-
-    if (isNaN(number)) return '₱0.00';
-
-    return `₱${number.toLocaleString('en-US', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-    })}`;
-}
-
     // Co-maker search state
     const [coMakerSearch, setCoMakerSearch] = useState('');
+
+    // Pre-selected co-maker from ChooseComaker page
+    const [preSelectedCoMaker, setPreSelectedCoMaker] = useState<EligibleCoMaker | null>(null);
+    const [isPreSelecting, setIsPreSelecting] = useState(false);
 
     // Filter co-makers based on search
     const filteredCoMakers = useMemo(() => {
@@ -187,6 +187,55 @@ export default function ApplyLoan({
         );
     }, [eligibleCoMakers, coMakerSearch]);
 
+    // ===== UNIFIED FORMATTING FUNCTIONS =====
+    // Format currency display (safe)
+    const formatCurrency = (amount: number | string | null | undefined): string => {
+        if (amount == null || amount === '') return '₱0.00';
+        const num = typeof amount === 'string' ? parseFloat(amount.toString().replace(/,/g, '')) : Number(amount);
+        return isNaN(num) ? '₱0.00' : `₱${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    };
+
+    // Format for input display (no ₱, with commas)
+    const formatNumberInput = (value: string): string => {
+        const num = parseFloat(value.replace(/,/g, ''));
+        return isNaN(num) || num === 0 ? '' : num.toLocaleString('en-US', { maximumFractionDigits: 0 });
+    };
+
+    // Parse input to number for computations
+    const parseNumber = (value: string): number => {
+        const num = parseFloat(value.replace(/,/g, ''));
+        return isNaN(num) ? 0 : num;
+    };
+
+    // Mask currency based on visibility
+    const maskCurrency = (amount: number | string | null, visible: boolean): string => {
+        if (!visible) return '₱•••••';
+        return formatCurrency(amount);
+    };
+
+    // Format date
+    const formatDate = (dateStr: string | null): string => {
+        if (!dateStr) return 'N/A';
+        try {
+            return new Date(dateStr).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' });
+        } catch {
+            return 'N/A';
+        }
+    };
+
+    // Status badge
+    const getStatusBadge = (status: string) => {
+        switch (status) {
+            case 'released':
+            case 'approved':
+                return <Badge className="bg-green-500 hover:bg-green-600">Active</Badge>;
+            case 'paid_off':
+                return <Badge className="bg-blue-500 hover:bg-blue-600">Paid Off</Badge>;
+            default:
+                return <Badge variant="secondary">{status.replace('_', ' ').toUpperCase()}</Badge>;
+        }
+    };
+
     /* ===============================
      *  REAL-TIME COMPUTATIONS
      * =============================== */
@@ -194,25 +243,39 @@ export default function ApplyLoan({
         (type) => type.id === Number(data.loan_type_id)
     );
 
-    const computed = useMemo(() => {
+const computed = useMemo(() => {
         if (!selectedLoanType || !data.principal_amount || !data.terms_months) {
             return null;
         }
 
-        const interest =
-            (Number(data.principal_amount) *
-                (selectedLoanType.interest_rate_per_annum / 100)) *
-            (Number(data.terms_months) / 12);
+        const principal = parseNumber(data.principal_amount);
+        const terms = parseNumber(data.terms_months);
+        const rate = selectedLoanType.interest_rate_per_annum ?? 0;
 
-        const total = Number(data.principal_amount) + interest;
-        const monthly = total / Number(data.terms_months);
+        if (principal <= 0 || terms <= 0) return null;
+
+        const interest = (principal * (rate / 100)) * (terms / 12);
+        const total = principal + interest;
+        const monthly = total / terms;
 
         return {
             interest: interest.toFixed(2),
             total: total.toFixed(2),
             monthly: monthly.toFixed(2),
         };
-    }, [data, selectedLoanType]);
+    }, [data.principal_amount, data.terms_months, selectedLoanType]);
+
+    const activeMonthlyTotal = useMemo(() => 
+    (previousLoans as PreviousLoanWithPercent[] || [])
+        ?.filter((loan) => ['approved', 'released'].includes(loan.status as string))
+        ?.reduce((sum, loan) => sum + Number(loan.monthly_amortization || 0), 0) || 0
+, [previousLoans]);
+
+    const allActive75Percent = useMemo(() => 
+    (previousLoans as PreviousLoanWithPercent[] || [])
+        ?.filter((loan) => ['approved', 'released'].includes(loan.status as string))
+        ?.every((loan) => ((loan as any).percent_paid || 0) >= 75) || true
+, [previousLoans]);
 
     /* ===============================
      *  ELIGIBILITY CHECK (FRONTEND)
@@ -222,13 +285,15 @@ export default function ApplyLoan({
         data.principal_amount &&
         Number(data.principal_amount) > maxLoanAllowed;
 
-    // Check if monthly payment exceeds 50% of basic salary
+    // Frontend eligibility checks
     const maxMonthlyPayment = memberProfile.basic_salary / 2;
-    const exceedsMonthlyLimit = computed && Number(computed.monthly) > maxMonthlyPayment;
+    const newMonthlyExceedsLimit = computed && Number(computed.monthly) > maxMonthlyPayment;
+    const combinedMonthlyExceedsLimit = computed && (Number(computed.monthly) + activeMonthlyTotal) > maxMonthlyPayment;
+    const eligibleForActiveLoans = allActive75Percent;
 
     // Calculate loan usage percentage
     const loanUsagePercentage = data.principal_amount 
-        ? Math.min((Number(data.principal_amount) / maxLoanAllowed) * 100, 100)
+        ? Math.min((parseFloat(data.principal_amount.replace(/,/g, '')) / maxLoanAllowed) * 100, 100)
         : 0;
 
     function submit(e: React.FormEvent) {
@@ -238,55 +303,6 @@ export default function ApplyLoan({
         } else {
             post('/dashboards/Member/ApplyLoan' as string);
         }
-    }
-
-    // Format date for display
-    function formatDate(dateStr: string | null): string {
-        if (!dateStr) return 'N/A';
-        return new Date(dateStr).toLocaleDateString('en-PH', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-        });
-    }
-
-    // Format currency with commas and 2 decimal places
-    function formatCurrency(amount: number | string): string {
-        if (amount === null || amount === undefined || amount === '') return '₱0.00';
-
-        const number = typeof amount === 'string' ? Number(amount) : amount;
-
-        if (isNaN(number)) return '₱0.00';
-
-        return `₱${number.toLocaleString('en-US', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-        })}`;
-    }
-
-    // Get status badge variant
-    function getStatusBadge(status: string) {
-        switch (status) {
-            case 'released':
-            case 'approved':
-                return <Badge className="bg-green-500">Active</Badge>;
-            case 'paid_off':
-                return <Badge className="bg-blue-500">Paid Off</Badge>;
-            default:
-                return <Badge>{status}</Badge>;
-        }
-    }
-    // Auto-format Loan Amount input with commas and 2 decimals while typing
-    function formatNumberWithCommas(value: string | number) {
-        if (!value) return '';
-        return Number(value).toLocaleString('en-US', {
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 2,
-        });
-    }
-
-    function stripCommas(value: string) {
-        return value.replace(/,/g, '');
     }
 
     return (
@@ -322,24 +338,33 @@ export default function ApplyLoan({
                         <div className="space-y-4">
                             {/* Main eligibility status */}
                             <div className={`flex items-center gap-3 rounded-lg p-4 ${
-                                exceedsShareCapital || exceedsMonthlyLimit
+                                exceedsShareCapital || newMonthlyExceedsLimit || combinedMonthlyExceedsLimit || !eligibleForActiveLoans
                                     ? 'bg-red-50 border border-red-200' 
                                     : 'bg-emerald-50 border border-emerald-200'
                             }`}>
-                                {exceedsShareCapital || exceedsMonthlyLimit ? (
+                                {exceedsShareCapital || newMonthlyExceedsLimit || combinedMonthlyExceedsLimit || !eligibleForActiveLoans ? (
                                     <>
                                         <AlertCircle className="h-6 w-6 text-red-500" />
                                         <div>
-                                            <p className="font-semibold text-red-700">
-                                                {exceedsShareCapital 
-                                                    ? 'Loan amount exceeds allowed limit' 
-                                                    : 'Monthly payment exceeds 50% of basic salary'}
-                                            </p>
-                                            <p className="text-sm text-red-600">
-                                                {exceedsShareCapital 
-                                                    ? `Maximum allowed: ₱${formatNumberWithCommas(maxLoanAllowed)}`
-                                                    : `Maximum monthly: ₱${formatNumberWithCommas(maxMonthlyPayment)} (50% of ₱${formatNumberWithCommas(memberProfile.basic_salary)})`}
-                                            </p>
+                                            {exceedsShareCapital && (
+                                                <div className="mb-1">
+                                                    <p className="font-semibold text-red-700">Share capital limit exceeded</p>
+{formatCurrency(maxLoanAllowed)}
+                                                </div>
+                                            )}
+                                            {combinedMonthlyExceedsLimit && (
+                                                <div className="mb-1">
+                                                    <p className="font-semibold text-red-700">Combined monthly exceeds 50% salary</p>
+                                    <p className="text-sm text-red-600">
+                                                        Combined: {formatCurrency(Number(computed?.monthly || 0) + activeMonthlyTotal)} / Max {formatCurrency(maxMonthlyPayment)}
+                                                    </p>
+                                                </div>
+                                            )}
+                                            {!eligibleForActiveLoans && (
+                                                <div className="mb-1">
+                                                    <p className="font-semibold text-red-700">Active loan(s) not 75% paid</p>
+                                                </div>
+                                            )}
                                         </div>
                                     </>
                                 ) : (
@@ -347,10 +372,10 @@ export default function ApplyLoan({
                                         <CheckCircle2 className="h-6 w-6 text-emerald-500" />
                                         <div>
                                             <p className="font-semibold text-emerald-700">
-                                                ✅ Loan amount within allowed limit
+                                                ✅ All checks passed
                                             </p>
                                             <p className="text-sm text-emerald-600">
-                                                You can apply up to {maskCurrency(maxLoanAllowed, showApplicantInfo)}
+                                                Active monthly: {formatCurrency(activeMonthlyTotal)} | Max: {formatCurrency(maxMonthlyPayment)}
                                             </p>
                                         </div>
                                     </>
@@ -385,19 +410,19 @@ export default function ApplyLoan({
                                     <div className="text-center">
                                         <p className="text-xs text-emerald-600">Interest</p>
                                         <p className="font-semibold text-emerald-700">
-                                            ₱{formatNumberWithCommas(computed.interest)}
+                                            {formatCurrency(computed.interest)}
                                         </p>
                                     </div>
                                     <div className="text-center">
                                         <p className="text-xs text-emerald-600">Monthly</p>
                                         <p className="font-semibold text-emerald-700">
-                                            ₱{formatNumberWithCommas(computed.monthly)}
+{formatCurrency(computed.monthly)}
                                         </p>
                                     </div>
                                     <div className="text-center">
                                         <p className="text-xs text-emerald-600">Total Payable</p>
                                         <p className="font-semibold text-emerald-700">
-                                            ₱{formatNumberWithCommas(computed.total)}
+{formatCurrency(computed.total)}
                                         </p>
                                     </div>
                                 </div>
@@ -422,7 +447,7 @@ export default function ApplyLoan({
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-4">
-                                {previousLoans.map((loan: PreviousLoan) => (
+{(previousLoans as (PreviousLoan & {percent_paid?: number; loan_type_name?: string; balance?: number | string; next_due_date?: string; monthly_amortization?: number | string})[]).map((loan) => (
                                     <div 
                                         key={loan.id}
                                         className="flex flex-col gap-3 rounded-lg border p-4 md:flex-row md:items-center md:justify-between"
@@ -433,14 +458,19 @@ export default function ApplyLoan({
                                                     {loan.loan_type_name}
                                                 </span>
                                                 {getStatusBadge(loan.status)}
+                                                {loan.percent_paid !== undefined && (
+                                                    <Badge variant={loan.percent_paid >= 75 ? "default" : "destructive"} className="ml-1 text-xs">
+                                                        {loan.percent_paid}%
+                                                    </Badge>
+                                                )}
                                             </div>
                                             <div className="flex flex-wrap gap-4 text-sm text-gray-600">
                                                 <span>
-                                                    Principal: {formatCurrency(loan.principal_amount)}
-                                                </span>
-                                                <span>
-                                                    Balance: {formatCurrency(loan.balance)}
-                                                </span>
+                                        {formatCurrency(loan.principal_amount)}
+                                    </span>
+                                    <span>
+                                        Balance: {formatCurrency(loan.balance)}
+                                    </span>
                                                 {loan.next_due_date && (
                                                     <span className="flex items-center gap-1">
                                                         <Calendar className="h-3 w-3" />
@@ -451,9 +481,9 @@ export default function ApplyLoan({
                                         </div>
                                         <div className="text-right">
                                             <p className="text-xs text-gray-500">Monthly</p>
-                                            <p className="font-semibold">
-                                                {formatCurrency(loan.monthly_amortization)}
-                                            </p>
+                                    <p className="font-semibold">
+                                        {formatCurrency(loan.monthly_amortization)}
+                                    </p>
                                         </div>
                                     </div>
                                 ))}
@@ -520,43 +550,36 @@ export default function ApplyLoan({
                             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                                 <div className="space-y-2">
                                     <Label>Loan Type</Label>
-                                    <select
-                                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                                        value={data.loan_type_id}
-                                        onChange={(e) =>
-                                            setData('loan_type_id', e.target.value)
-                                        }
-                                    >
-                                        <option value="">Select loan type</option>
-                                        {loanTypes.map((type) => (
-                                            <option key={type.id} value={type.id}>
-                                                {type.name} ({type.interest_rate_per_annum}% p.a.)
-                                            </option>
-                                        ))}
-                                    </select>
+                                    <Select value={data.loan_type_id} onValueChange={(value) => setData('loan_type_id', value)}>
+                                        <SelectTrigger className="w-full">
+                                            <SelectValue placeholder="Select loan type" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {loanTypes.map((type) => (
+                                                <SelectItem key={type.id} value={type.id.toString()}>
+                                                    {type.name} ({type.interest_rate_per_annum}% p.a.)
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                     <InputError message={errors.loan_type_id} />
                                 </div>
 
                                 <div className="space-y-2">
                                     <Label>Loan Amount (₱)</Label>
-                                    <Input
+<Input
                                         type="text"
                                         inputMode="numeric"
-                                        placeholder="Enter amount"
-                                        value={formatNumberWithCommas(data.principal_amount)}
+                                        placeholder="0"
+                                        value={formatNumberInput(data.principal_amount || '')}
                                         onChange={(e) => {
-                                            // Remove commas from input value
                                             const rawValue = e.target.value.replace(/,/g, '');
-                                            
-                                            // Allow empty, numbers with optional decimal
-                                            if (rawValue !== '' && !/^\d*\.?\d*$/.test(rawValue)) return;
-                                            
-                                            // Don't allow leading zeros like 00, 01 etc (except for decimals like 0.5)
-                                            if (/^0\d/.test(rawValue)) return;
-
-                                            setData('principal_amount', rawValue);
+                                            if (rawValue === '' || /^\d*\.?\d{0,2}$/.test(rawValue)) {
+                                                setData('principal_amount', rawValue);
+                                            }
                                         }}
                                     />
+                                    <InputError message={errors.principal_amount} />
                                 </div>
 
                               <div className="space-y-2">
@@ -610,30 +633,30 @@ export default function ApplyLoan({
                                         className="pl-10"
                                         value={coMakerSearch}
                                         onChange={(e) => setCoMakerSearch(e.target.value)}
+                                        disabled={isPreSelecting}
                                     />
                                 </div>
 
                                 {/* Co-maker dropdown */}
-                                <select
-                                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                                    value={data.co_maker_user_id}
-                                    onChange={(e) =>
-                                        setData('co_maker_user_id', e.target.value)
-                                    }
-                                >
-                                    <option value="">
-                                        {filteredCoMakers.length > 0
-                                            ? `Select co-maker (${filteredCoMakers.length} available)`
-                                            : 'No matching co-makers found'}
-                                    </option>
-
-                                    {filteredCoMakers.map((coMaker: EligibleCoMaker) => (
-                                        <option key={coMaker.id} value={coMaker.id}>
-                                            {coMaker.name} ({coMaker.email})
-                                        </option>
-                                    ))}
-                                </select>
-
+                                <Select value={data.co_maker_user_id} onValueChange={(value) => setData('co_maker_user_id', value)}>
+                                    <SelectTrigger className="w-full">
+                                        {isPreSelecting && preSelectedCoMaker ? (
+                                            <div className="flex items-center gap-2 p-2">
+                                                <CheckCircle className="h-4 w-4 text-emerald-500" />
+                                                <span>{preSelectedCoMaker.name} ({preSelectedCoMaker.email})</span>
+                                            </div>
+                                        ) : (
+                                            <SelectValue placeholder={filteredCoMakers.length > 0 ? `Select co-maker (${filteredCoMakers.length} available)` : 'No matching co-makers found'} />
+                                        )}
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {filteredCoMakers.map((coMaker: EligibleCoMaker) => (
+                                            <SelectItem key={coMaker.id} value={coMaker.id.toString()}>
+                                                {coMaker.name} ({coMaker.email})
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                                 <InputError message={errors.co_maker_user_id} />
 
                                 {/* Optional hint */}
@@ -645,6 +668,42 @@ export default function ApplyLoan({
                             </div>
                         </CardContent>
                     </Card>
+
+                    {/* =========================================
+                        PRE-SELECTED CO-MAKER SUMMARY (Visible when coming from ChooseComaker)
+                    ========================================= */}
+                    {isPreSelecting && preSelectedCoMaker && (
+                        <Card className="border-emerald-200 bg-emerald-50 shadow-md">
+                            <CardContent className="pt-6">
+                                <div className="flex items-center gap-3 p-4 rounded-lg bg-emerald-100 border border-emerald-200">
+                                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500 text-white font-bold">
+                                        {preSelectedCoMaker.name.charAt(0).toUpperCase()}
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="font-semibold text-emerald-900 text-lg">{preSelectedCoMaker.name}</p>
+                                        <p className="text-emerald-700">{preSelectedCoMaker.email}</p>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <CheckCircle className="h-4 w-4 text-emerald-600" />
+                                            <span className="text-sm text-emerald-700 font-medium">Pre-selected from Choose Co-maker page</span>
+                                        </div>
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => {
+                                            setData('co_maker_user_id', '');
+                                            setPreSelectedCoMaker(null);
+                                            setIsPreSelecting(false);
+                                            setCoMakerSearch('');
+                                        }}
+                                    >
+                                        Change
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
                     
                     {/* =========================================
                         SUBMIT BUTTON
@@ -660,7 +719,8 @@ export default function ApplyLoan({
                         )}
                         <Button
                             size="lg"
-                            disabled={Boolean(processing) || Boolean(exceedsShareCapital) || Boolean(exceedsMonthlyLimit)}
+                            disabled={processing || exceedsShareCapital || newMonthlyExceedsLimit || combinedMonthlyExceedsLimit || !eligibleForActiveLoans}
+                            title={processing ? 'Processing...' : exceedsShareCapital ? 'Exceeds share capital limit' : newMonthlyExceedsLimit ? 'Monthly exceeds salary limit' : combinedMonthlyExceedsLimit ? 'Combined monthly exceeds limit' : !eligibleForActiveLoans ? 'Active loans not 75% paid' : ''}
                             className="min-w-[200px]"
                         >
                             {processing 

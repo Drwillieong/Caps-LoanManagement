@@ -14,9 +14,12 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
+use App\Service\ApplyLoan\LoanEligibilityService;
+use App\Services\LoanService;
 
 class LoanController extends Controller
 {
+    use \App\Traits\HasNotificationCount;
     public function create()
     {
         $user = Auth::user();
@@ -25,13 +28,14 @@ class LoanController extends Controller
             ->first();
 
         if (!$memberProfile) {
-            return Inertia::render('dashboards/Member/ApplyLoan', [
-                'memberProfile' => null,
-                'loanTypes' => [],
-                'eligibleCoMakers' => [],
-                'previousLoans' => [],
-                'error' => 'Your profile is not yet completed. Please complete your profile.',
-            ]);
+        return Inertia::render('dashboards/Member/ApplyLoan', [
+            'memberProfile' => null,
+            'loanTypes' => [],
+            'eligibleCoMakers' => [],
+            'previousLoans' => [],
+            'error' => 'Your profile is not yet completed. Please complete your profile.',
+            'unread_notifications_count' => $this->getMemberUnreadNotificationCount(request()),
+        ]);
         }
 
         // Check if user has a pending application awaiting co-maker confirmation
@@ -39,10 +43,10 @@ class LoanController extends Controller
             ->where('status', 'awaiting_comaker')
             ->exists();
 
-        // Check if user has an active loan
-        $hasActiveLoan = Loan::where('user_id', $user->id)
-            ->whereIn('status', ['approved', 'released'])
-            ->exists();
+        // Check new eligibility rules using service helpers
+        $loanService = new LoanService();
+        $hasActiveLoan = !$loanService->canApplyForNewLoan($user);
+        $activeLoansTotalMonthly = $loanService->getActiveLoansTotalMonthlyPayment($user);
 
         // Fetch previous loans with amortizations for "Previous Loan" display
         $previousLoans = Loan::where('user_id', $user->id)
@@ -51,6 +55,12 @@ class LoanController extends Controller
                 $q->where('status', '!=', 'paid')
                   ->orderBy('due_date', 'asc');
             }])
+            ->withCount([
+                'amortizations as total_amortizations',
+                'amortizations as paid_amortizations' => function ($q) {
+                    $q->where('status', 'paid');
+                }
+            ])
             ->get()
             ->map(function ($loan) {
                 // Calculate total paid from amortizations
@@ -72,6 +82,7 @@ class LoanController extends Controller
                     'loan_type_name' => $loan->loanType->name ?? 'N/A',
                     'principal_amount' => $loan->principal_amount,
                     'total_amount_due' => $loan->total_amount_due,
+                    'percent_paid' => $loan->total_amortizations > 0 ? round(($loan->paid_amortizations / $loan->total_amortizations) * 100, 1) : 0,
                     'balance' => max(0, $balance),
                     'next_due_date' => $nextDue?->due_date?->format('Y-m-d'),
                     'monthly_amortization' => $loan->monthly_amortization,
@@ -114,8 +125,10 @@ class LoanController extends Controller
                 }),
 
             'previousLoans' => $previousLoans,
+            'activeLoansTotalMonthly' => $activeLoansTotalMonthly,
             'hasAwaitingComaker' => $hasAwaitingComaker,
             'hasActiveLoan' => $hasActiveLoan,
+            'unread_notifications_count' => $this->getMemberUnreadNotificationCount(request()),
         ]);
     }
 
@@ -146,67 +159,37 @@ class LoanController extends Controller
             ]);
         }
 
-        // Share capital rule (x2)
-        $maxLoan = $profile->share_capital_balance * 2;
-        if ($validated['principal_amount'] > $maxLoan) {
-            return back()->withErrors([
-                'principal_amount' => 'Loan amount exceeds allowed share capital limit.'
-            ]);
-        }
+        // Comprehensive eligibility checks
+        $eligibilityService = new LoanEligibilityService();
+        $eligibilityService->check(
+            $user,
+            $validated['principal_amount'],
+            $validated['co_maker_user_id'],
+            $validated['loan_type_id'],
+            $validated['terms_months']
+        );
 
-        // Monthly payment must not exceed 50% of basic salary
-        $loanType = LoanType::findOrFail($validated['loan_type_id']);
-        $interest = ($validated['principal_amount'] * ($loanType->interest_rate_per_annum / 100))
-            * ($validated['terms_months'] / 12);
-        $total = $validated['principal_amount'] + $interest;
-        $monthly = $total / $validated['terms_months'];
-        
-        $maxMonthlyPayment = $profile->basic_salary / 2;
-        if ($monthly > $maxMonthlyPayment) {
-            return back()->withErrors([
-                'principal_amount' => 'Monthly payment exceeds 50% of your basic salary. Please increase the loan term or reduce the amount.'
-            ]);
-        }
+        $loanType = LoanType::findOrFail($validated['loan_type_id']); // Needed for create
 
-        // No active loan rule
-        $hasActiveLoan = Loan::where('user_id', $user->id)
-            ->whereIn('status', ['approved', 'released'])
-            ->exists();
-
-        if ($hasActiveLoan) {
-            return back()->withErrors([
-                'principal_amount' => 'You already have an active loan.'
-            ]);
-        }
-
-        // Co-maker restriction rule - check if co-maker is bound to any non-final loan
-        if (!empty($validated['co_maker_user_id'])) {
-            $coMakerHasBoundLoan = Loan::whereHas('coMakers', function ($q) use ($validated) {
-                $q->where('user_id', $validated['co_maker_user_id'])
-                  ->where('status', 'accepted');
-            })
-            ->whereNotIn('status', ['rejected', 'paid_off'])
-            ->exists();
-
-            if ($coMakerHasBoundLoan) {
-                return back()->withErrors([
-                    'co_maker_user_id' => 'Selected co-maker is already bound to another loan. Please wait until their loan is rejected or paid off.'
-                ]);
-            }
-        }
+        $computationService = new \App\Service\ApplyLoan\LoanComputationService();
+        $computed = $computationService->compute(
+            $validated['principal_amount'],
+            $validated['terms_months'],
+            $loanType->interest_rate_per_annum
+        );
 
         /** ===============================
          *  CREATE LOAN
          * =============================== */
 
-        $loan = Loan::create([
-            'user_id' => $user->id,
-            'loan_type_id' => $loanType->id,
+         $loan = Loan::create([
+             'user_id' => $user->id,
+             'loan_type_id' => $validated['loan_type_id'],
             'principal_amount' => $validated['principal_amount'],
             'terms_months' => $validated['terms_months'],
-            'interest_amount' => round($interest, 2),
-            'total_amount_due' => round($total, 2),
-            'monthly_amortization' => round($monthly, 2),
+            'interest_amount' => $computed['interest'],
+            'total_amount_due' => $computed['total'],
+            'monthly_amortization' => $computed['monthly'],
             'status' => $loanType->requires_comaker
                 ? 'awaiting_comaker'
                 : 'pending_gm_review',
@@ -218,11 +201,21 @@ class LoanController extends Controller
                 'user_id' => $validated['co_maker_user_id'],
             ]);
 
-            // Send email notification to co-maker
+            $notificationService = app(\App\Services\NotificationService::class);
             $coMaker = User::find($validated['co_maker_user_id']);
             $borrower = $user;
             $loanTypeName = $loanType->name;
 
+            $notificationService->createNotification(
+                $coMaker,
+                'Co-Maker Request',
+                $borrower->first_name . ' ' . $borrower->last_name . ' selected you as co-maker for ' . $loanTypeName . ' loan of ₱' . number_format($loan->principal_amount) . '. Please review.',
+                'comaker_request',
+                $loan->id,
+                Loan::class
+            );
+
+            // Send email notification to co-maker
             if ($coMaker && $coMaker->email) {
                 Mail::to($coMaker->email)->send(new SendEmailCoMaker(
                     trim($coMaker->first_name . ($coMaker->middle_name ? ' ' . $coMaker->middle_name : '') . ' ' . $coMaker->last_name),
@@ -377,11 +370,12 @@ class LoanController extends Controller
             });
 
         if (!$loan) {
-            return Inertia::render('dashboards/Member/PendingApplication', [
-                'loan' => null,
-                'hasPendingLoan' => false,
-                'loanHistory' => $loanHistory,
-            ]);
+        return Inertia::render('dashboards/Member/PendingApplication', [
+            'loan' => null,
+            'hasPendingLoan' => false,
+            'loanHistory' => $loanHistory,
+            'unread_notifications_count' => $this->getMemberUnreadNotificationCount(request()),
+        ]);
         }
 
         return Inertia::render('dashboards/Member/PendingApplication', [
@@ -409,6 +403,7 @@ class LoanController extends Controller
             ],
             'hasPendingLoan' => true,
             'loanHistory' => $loanHistory,
+            'unread_notifications_count' => $this->getMemberUnreadNotificationCount(request()),
         ]);
     }
 
@@ -475,6 +470,7 @@ class LoanController extends Controller
                 'terms_months' => $loan->terms_months,
                 'co_maker_user_id' => $loan->coMakers->first()?->user_id ?? '',
             ],
+            'unread_notifications_count' => $this->getMemberUnreadNotificationCount(request()),
         ]);
     }
 
@@ -522,6 +518,7 @@ class LoanController extends Controller
 
         return Inertia::render('dashboards/Member/CoMaker', [
             'coMakerRequests' => $coMakerRequests,
+            'unread_notifications_count' => $this->getMemberUnreadNotificationCount(request()),
         ]);
     }
 
@@ -566,9 +563,18 @@ class LoanController extends Controller
             'responded_at' => now(),
         ]);
 
-        // If accepted, check if loan can proceed (if co-maker was required)
+        $notificationService = app(\App\Services\NotificationService::class);
+
         if ($status === 'accepted') {
-            // Check if all required co-makers have accepted
+            $notificationService->createNotification(
+                $borrower,
+                'Co-Maker Request Accepted',
+                'Your co-maker ' . $coMakerName . ' has accepted your loan application. Now pending GM review.',
+                'comaker_request',
+                $loan->id,
+                Loan::class
+            );
+            // If accepted, check if loan can proceed (if co-maker was required)
             $requiredCoMakers = $loanType->requires_comaker ? 1 : 0;
             $acceptedCoMakers = $loan->coMakers()->where('status', 'accepted')->count();
             
@@ -577,6 +583,14 @@ class LoanController extends Controller
                 $loan->update(['status' => 'pending_gm_review']);
             }
         } else {
+            $notificationService->createNotification(
+                $borrower,
+                'Co-Maker Request Rejected',
+                'Your co-maker ' . $coMakerName . ' has rejected your loan application.',
+                'comaker_request',
+                $loan->id,
+                Loan::class
+            );
             // If rejected, update loan status
             $loan->update(['status' => 'rejected_by_co_maker', 'remarks' => 'Co-maker declined the request.']);
         }
@@ -672,6 +686,7 @@ class LoanController extends Controller
 
         return Inertia::render('dashboards/Member/ChooseComaker', [
             'members' => $members,
+            'unread_notifications_count' => $this->getMemberUnreadNotificationCount(request()),
         ]);
     }
 }

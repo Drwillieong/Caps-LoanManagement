@@ -535,6 +535,7 @@ export default function UserProfile({ memberProfile, beneficiaries, isNewUser, i
                                             placeholder="e.g., 10000.00"
                                             disabled={!canEditEmployment}
                                         />
+                                      
                                         <InputError message={errors.share_capital_balance} />
                                     </div>
 
@@ -548,9 +549,15 @@ export default function UserProfile({ memberProfile, beneficiaries, isNewUser, i
                                             placeholder="e.g., 1234567890"
                                             disabled={!canEditEmployment}
                                         />
+                                         
                                         <InputError message={errors.bank_account_number} />
+                                        
                                     </div>
+                                    
                                 </div>
+                                 <p className="text-xs text-muted-foreground p-2">
+                                            Note: If you want to add your share capital balance, you should go to the main office.
+                                        </p>
                             </CardContent>
                         </Card>
 

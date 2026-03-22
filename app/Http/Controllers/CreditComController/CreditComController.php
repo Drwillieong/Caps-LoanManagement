@@ -118,6 +118,18 @@ class CreditComController extends Controller
             return back()->with('error', 'This loan is not pending Credit Coordinator review.');
         }
 
+        $notificationService = app(\App\Services\NotificationService::class);
+        $borrower = $loan->user;
+
+        $notificationService->createNotification(
+            $borrower,
+            'Loan Approved by Credit Coordinator',
+            'Your loan application has been fully approved' . ($validated['remarks'] ? ': ' . $validated['remarks'] : '.'),
+            'loan_status',
+            $loan->id,
+            Loan::class
+        );
+
         // Update loan status to approved
         $loan->update([
             'status' => 'approved',
@@ -147,6 +159,18 @@ class CreditComController extends Controller
         if (!in_array($loan->status, ['pending_cc_review', 'endorsed_by_gm'])) {
             return back()->with('error', 'This loan is not pending Credit Coordinator review.');
         }
+
+        $notificationService = app(\App\Services\NotificationService::class);
+        $borrower = $loan->user;
+
+        $notificationService->createNotification(
+            $borrower,
+            'Loan Rejected by Credit Coordinator',
+            'Your loan application has been rejected by Credit Coordinator: ' . $validated['remarks'],
+            'loan_status',
+            $loan->id,
+            Loan::class
+        );
 
         // Update loan status to rejected_by_credit_com
         $loan->update([

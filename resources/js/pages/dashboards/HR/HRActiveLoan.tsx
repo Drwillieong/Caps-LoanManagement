@@ -32,7 +32,7 @@ import { Input } from '@/components/ui/input';
 import { useState } from 'react';
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'HR Dashboard', href: '/dashboards/HR/HRDashboard' },
+    
     { title: 'Active Loans', href: '/dashboards/HR/HRActiveLoan' },
 ];
 
@@ -182,7 +182,7 @@ export default function HRActiveLoan({ active_loans = [], stats = { total_active
                                                 </TableCell>
                                                 <TableCell>
                                                     <Button variant="outline" size="sm" asChild>
-                                                        <Link href={`/dashboards/HR/Loan/${loan.id}`}>
+<Link href={`/dashboards/HR/active-loans/${loan.id}/view`}>
                                                             <Eye className="h-4 w-4" />
                                                             View
                                                         </Link>

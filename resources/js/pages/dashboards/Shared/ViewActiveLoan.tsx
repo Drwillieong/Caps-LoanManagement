@@ -76,9 +76,9 @@ interface Props {
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'GM Dashboard', href: '/dashboards/Gm/GmDashboard' },
+
     { title: 'Active Loans', href: '/dashboards/Gm/GMActiveLoan' },
-    { title: 'Loan Details', href: '#' },
+
 ];
 
 export default function ViewActiveLoan({ loan }: Props) {
@@ -448,6 +448,7 @@ export default function ViewActiveLoan({ loan }: Props) {
                                 <CardDescription>Manage this loan application</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4">
+                                  {/* 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <Button className="w-full" variant="outline">
                                         <Edit3 className="h-4 w-4 mr-2" />
@@ -465,7 +466,7 @@ export default function ViewActiveLoan({ loan }: Props) {
                                             Mark as Completed
                                         </Button>
                                     )}
-                                </div>
+                                </div> Tab Container */}
                             </CardContent>
                         </Card>
                     )}

@@ -33,7 +33,7 @@ import { Input } from '@/components/ui/input';
 import { useState } from 'react';
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'HR Dashboard', href: '/dashboards/HR/HRDashboard' },
+   
     { title: 'Completed Loans', href: '/dashboards/HR/HRCompletedLoan' },
 ];
 

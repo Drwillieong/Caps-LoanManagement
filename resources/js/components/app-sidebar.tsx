@@ -109,12 +109,14 @@ const creditcomNavItems: NavItem[] = [
         href: '/dashboards/CreditCom/LoanApplication',
         icon: FileText,
     },
-    {
-       
-        title: 'Activity Log',
-        href: '/dashboards/Gm/ActivityLog',
-        icon: Clock,
+
+     {
+        title: 'Approved Loan',
+        href: '/dashboards/CreditCom/ApprovedHistory',
+        icon: BookOpen,
     },
+    
+  
 
     
 ];

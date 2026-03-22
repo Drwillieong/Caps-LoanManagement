@@ -19,7 +19,7 @@ interface Props {
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
-  { title: 'Dashboard', href: '/dashboard' },
+  { title: 'Activity Logs', href: '/dashboard' },
 ];
 
 export default function ActivityLogPage({ activities }: Props) {

@@ -34,7 +34,7 @@ import { Input } from '@/components/ui/input';
 import { useState } from 'react';
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'GM Dashboard', href: '/dashboards/Gm/GmDashboard' },
+ 
     { title: 'Completed Loans', href: '/dashboards/Gm/GMCompletedLoan' },
 ];
 

@@ -25,10 +25,7 @@ import { Search, User, Calendar, AlertCircle, CheckCircle2, Clock, Eye, EyeOff, 
 // import { toast } from 'sonner'; // Remove if sonner not available
 
 const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'Dashboard',
-        href: '/dashboards',
-    },
+   
     {
         title: 'Apply for a Loan',
         href: '/dashboards/Member/ApplyLoan',

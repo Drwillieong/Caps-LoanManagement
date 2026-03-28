@@ -58,6 +58,11 @@ class User extends Authenticatable
     }
 
     /**
+     * The accessors to append to the model's array form.
+     */
+    protected $appends = ['avatar'];
+
+    /**
      * Get the member profile associated with the user.
      */
     public function memberProfile(): HasOne

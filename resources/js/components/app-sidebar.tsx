@@ -48,31 +48,49 @@ const hrNavItems: NavItem[] = [
 
 const memberNavItems: NavItem[] = [
     {
-        title: 'Application Form',
-        href: '/dashboards/Member/ApplyLoan',
-        icon: FileText,
+        title: 'Application',
+        icon: FilePlus,
+        items: [
+            {
+                title: 'Create Application',
+                href: '/dashboards/Member/ApplyLoan',
+              
+            },
+            {
+                title: 'Choose CoMaker',
+                href: '/dashboards/Member/ChooseComaker',
+               
+            },
+            {
+                title: 'Pending Application',
+                href: '/dashboards/Member/PendingApplication',
+                
+            },
+        ],
     },
     {
-        title: 'Choose CoMaker',
-        href: '/dashboards/Member/ChooseComaker',
-        icon: UsersRound,
-    },
-    {
+        title: 'Loans',
+        icon: Archive,
+        items: [
+            {
         title: 'Active Loan',
         href: '/dashboards/Member/MemberActiveLoan',
-        icon: Clock,
+       
     },
-    {
+     {
         title: 'Completed Loan',
         href: '/dashboards/Member/MemberCompletedLoan',
-        icon: Archive,
+      
     },
+        ],
+    },
+   
+   
     {
         title: 'User Profile',
         href: '/dashboards/Member/UserProfile',
         icon: UsersRound,
     },
-
 ];
 
 const gmNavItems: NavItem[] = [

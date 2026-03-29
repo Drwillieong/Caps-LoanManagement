@@ -99,31 +99,33 @@ export default function ApplyLoan({
     // Show message if user has a pending application awaiting co-maker confirmation (only when not editing)
     if (hasAwaitingComaker && !isEditing) {
         return (
-            <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
-                <Head title="Apply Loan" />
-                <div className="space-y-6 px-6">
-                    <HeadingSmall
-                        title="Apply for a Loan"
-                        description="Loan application form"
-                    />
-                    <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-6">
-                        <h3 className="mb-2 font-semibold text-yellow-800">
-                            Pending Application
-                        </h3>
-                        <p className="mb-4 text-sm text-yellow-700">
-                            You have a loan application awaiting co-maker confirmation. 
-                            Please wait for the co-maker to respond before applying for a new loan.
-                        </p>
-                        <Link
-                            href="/dashboards/Member/PendingApplication"
-                            className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-white hover:opacity-90 transition"
-                        >
-                            View Pending Application
-                            <ArrowRight className="h-4 w-4" />
-                        </Link>
-                    </div>
-                </div>
-            </AppLayout>
+           <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
+    <Head title="Apply Loan" />
+    <div className="space-y-6 px-6">
+        <HeadingSmall
+            title="Loan Application"
+            description="Submit a new loan request"
+        />
+
+        <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-6">
+            <h3 className="mb-2 font-semibold text-yellow-800">
+                Application in Progress
+            </h3>
+            <p className="mb-4 text-sm text-yellow-700">
+                You currently have a loan application pending co-maker approval. 
+                Kindly wait for your co-maker to confirm before submitting a new request.
+            </p>
+
+            <Link
+                href="/dashboards/Member/PendingApplication"
+                className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-white transition hover:opacity-90"
+            >
+                View Application Status
+                <ArrowRight className="h-4 w-4" />
+            </Link>
+        </div>
+    </div>
+</AppLayout>
         );
     }
 

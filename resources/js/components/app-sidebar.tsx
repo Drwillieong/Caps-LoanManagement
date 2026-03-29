@@ -52,7 +52,7 @@ const memberNavItems: NavItem[] = [
         icon: FilePlus,
         items: [
             {
-                title: 'Application Form',
+                title: 'Create Application',
                 href: '/dashboards/Member/ApplyLoan',
               
             },

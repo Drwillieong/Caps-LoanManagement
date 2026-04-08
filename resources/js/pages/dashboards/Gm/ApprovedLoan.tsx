@@ -8,6 +8,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from "@/components/ui/separator";
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow
+} from '@/components/ui/table';
 import { Input } from "@/components/ui/input";
 import { 
     CheckCircle2,
@@ -176,44 +184,44 @@ export default function ApprovedLoan() {
                 <Separator />
 
                 {/* Table */}
-                {filteredLoans.length > 0 ? (
-                    <div className="border rounded-md">
-                        <table className="w-full text-sm">
-                            <thead className="bg-emerald-50">
-                                <tr>
-                                    <th className="px-4 py-3 text-left font-medium">Member ID</th>
-                                    <th className="px-4 py-3 text-left font-medium">Member Name</th>
-                                    <th className="px-4 py-3 text-left font-medium">Loan Type</th>
-                                    <th className="px-4 py-3 text-left font-medium">Principal</th>
-                                    <th className="px-4 py-3 text-left font-medium">Terms</th>
-                                    <th className="px-4 py-3 text-left font-medium">Total Due</th>
-                                    <th className="px-4 py-3 text-left font-medium">Date</th>
-                                    <th className="px-4 py-3 text-left font-medium">Status</th>
-                                    <th className="px-4 py-3 text-right font-medium">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filteredLoans.map((loanItem, index) => (
-                                    <tr key={loanItem.id} className={`border-t ${index % 2 === 0 ? 'bg-white' : 'bg-muted/30'}`}>
-                                        <td className="px-4 py-3 font-medium">{loanItem.member.member_id}</td>
-                                        <td className="px-4 py-3">{loanItem.member.name}</td>
-                                        <td className="px-4 py-3">{loanItem.loan_type_name}</td>
-                                        <td className="px-4 py-3">{formatCurrency(loanItem.principal_amount)}</td>
-                                        <td className="px-4 py-3">{loanItem.terms_months} mo</td>
-                                        <td className="px-4 py-3">{formatCurrency(loanItem.total_amount_due)}</td>
-                                        <td className="px-4 py-3">{formatDate(loanItem.created_at)}</td>
-                                        <td className="px-4 py-3">{getStatusBadge(loanItem.status)}</td>
-                                        <td className="px-4 py-3 text-right">
+{filteredLoans.length > 0 ? (
+                    <div className="rounded-md border border-emerald-100 overflow-hidden">
+                        <Table>
+                            <TableHeader>
+                                <TableRow className="hover:bg-transparent border-b border-emerald-200">
+                                    <TableHead className="w-16 font-semibold text-emerald-800">Member ID</TableHead>
+                                    <TableHead className="font-semibold text-emerald-800">Member Name</TableHead>
+                                    <TableHead className="font-semibold text-emerald-800">Loan Type</TableHead>
+                                    <TableHead className="font-semibold text-emerald-800 text-right">Principal</TableHead>
+                                    <TableHead className="w-20 font-semibold text-emerald-800 text-right">Terms</TableHead>
+                                    <TableHead className="font-semibold text-emerald-800 text-right">Total Due</TableHead>
+                                    <TableHead className="w-28 font-semibold text-emerald-800">Date</TableHead>
+                                    <TableHead className="w-24 font-semibold text-emerald-800">Status</TableHead>
+                                    <TableHead className="w-24 font-semibold text-emerald-800 text-right">Action</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {filteredLoans.map((loanItem) => (
+                                    <TableRow key={loanItem.id} className="hover:bg-emerald-50/50 border-b border-emerald-50 transition-colors">
+                                        <TableCell className="font-mono text-sm font-medium">{loanItem.member.member_id}</TableCell>
+                                        <TableCell className="font-medium">{loanItem.member.name}</TableCell>
+                                        <TableCell>{loanItem.loan_type_name}</TableCell>
+                                        <TableCell className="text-right font-mono">{formatCurrency(loanItem.principal_amount)}</TableCell>
+                                        <TableCell className="text-right">{loanItem.terms_months} mo</TableCell>
+                                        <TableCell className="text-right font-mono font-semibold">{formatCurrency(loanItem.total_amount_due)}</TableCell>
+                                        <TableCell>{formatDate(loanItem.created_at)}</TableCell>
+                                        <TableCell>{getStatusBadge(loanItem.status)}</TableCell>
+                                        <TableCell className="text-right">
                                             <Link href={`/dashboards/Gm/Loan/${loanItem.id}/viewDecision`}>
                                                 <Button variant="outline" size="sm">
                                                     View
                                                 </Button>
                                             </Link>
-                                        </td>
-                                    </tr>
+                                        </TableCell>
+                                    </TableRow>
                                 ))}
-                            </tbody>
-                        </table>
+                            </TableBody>
+                        </Table>
                     </div>
                 ) : (
                     <Card className="border-dashed">

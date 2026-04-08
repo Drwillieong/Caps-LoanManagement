@@ -98,25 +98,34 @@ export default function ActivityLogPage({ activities }: Props) {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20 shadow-lg">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-3xl lg:text-4xl font-bold text-primary">{totalActivities.toLocaleString()}</CardTitle>
-              <CardDescription className="text-primary/80 font-medium">Total Activities</CardDescription>
+          <Card className="border-emerald-100 bg-white/50 shadow-sm">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-emerald-800">Total Activities</CardTitle>
+              <Activity className="h-4 w-4 text-emerald-600" />
             </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{totalActivities.toLocaleString()}</div>
+            </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-destructive/5 to-destructive/10 border-destructive/20 shadow-lg">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-3xl lg:text-4xl font-bold text-destructive">{todayActivities.toLocaleString()}</CardTitle>
-              <CardDescription className="text-destructive/80 font-medium">Today</CardDescription>
+          <Card className="border-emerald-100 bg-white/50 shadow-sm">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-emerald-800">Today</CardTitle>
+              <Activity className="h-4 w-4 text-emerald-600" />
             </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{todayActivities.toLocaleString()}</div>
+            </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-3xl lg:text-4xl font-bold">{filteredActivities.length.toLocaleString()}</CardTitle>
-              <CardDescription className="font-medium">Filtered Results</CardDescription>
+          <Card className="border-emerald-100 bg-white/50 shadow-sm">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-emerald-800">Filtered Results</CardTitle>
+              <Activity className="h-4 w-4 text-emerald-600" />
             </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{filteredActivities.length.toLocaleString()}</div>
+            </CardContent>
           </Card>
         </div>
 
@@ -151,32 +160,32 @@ export default function ActivityLogPage({ activities }: Props) {
             )}
           </CardHeader>
 
-          <div className="border-t">
+          <div className="rounded-md border border-emerald-100 overflow-hidden">
             <Table>
               <TableHeader>
-                <TableRow className="border-b-2 border-border/50">
-                  <TableHead className="w-[50px]"></TableHead>
-                  <TableHead className="w-[150px]">
-                    <div className="font-medium text-xs uppercase tracking-wide text-muted-foreground/80 flex items-center gap-1 h-12">
+                <TableRow className="hover:bg-transparent border-b border-emerald-200">
+                  <TableHead className="w-[50px] font-semibold text-emerald-800"></TableHead>
+                  <TableHead className="w-[150px] font-semibold text-emerald-800">
+                    <div className="font-medium text-xs uppercase tracking-wide text-emerald-700/80 flex items-center gap-1 h-12">
                       <ArrowUpDown className="h-3 w-3" />
                       Date & Time
                     </div>
                   </TableHead>
-                  <TableHead className="w-[110px]">
-                    <div className="font-medium text-xs uppercase tracking-wide text-muted-foreground/80 flex items-center gap-1 h-12">
+                  <TableHead className="w-[110px] font-semibold text-emerald-800">
+                    <div className="font-medium text-xs uppercase tracking-wide text-emerald-700/80 flex items-center gap-1 h-12">
                       <ArrowUpDown className="h-3 w-3" />
                       Action
                     </div>
                   </TableHead>
-                  <TableHead className="hidden sm:table-cell">User</TableHead>
-                  <TableHead className="hidden md:table-cell w-[150px]">Loan</TableHead>
-                  <TableHead className="w-[1%] max-w-[260px]">Description</TableHead>
-                  <TableHead className="hidden lg:table-cell w-[220px]">Reject Reason</TableHead>
+                  <TableHead className="hidden sm:table-cell font-semibold text-emerald-800">User</TableHead>
+                  <TableHead className="hidden md:table-cell w-[150px] font-semibold text-emerald-800">Loan</TableHead>
+                  <TableHead className="w-[1%] max-w-[260px] font-semibold text-emerald-800">Description</TableHead>
+                  <TableHead className="hidden lg:table-cell w-[220px] font-semibold text-emerald-800">Reject Reason</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {paginatedActivities.map((activity) => (
-                  <TableRow key={activity.id} className="[&:has([data-state=checked]):hover]:bg-accent/50 [&:last-child]:border-b">
+                  <TableRow key={activity.id} className="hover:bg-emerald-50/50 border-b border-emerald-50 transition-colors [&:has([data-state=checked]):hover]:bg-emerald-100/50 [&:last-child]:border-b">
                     <TableCell>
                       <Checkbox
                         checked={selected.has(activity.id.toString())}

@@ -1,8 +1,11 @@
-# Collapsible Application Section in Member Sidebar
+# TODO: Match ApprovedLoan.tsx Table Design to GMActiveLoan.tsx
 
 ## Steps:
-1. [x] Create/update NavItem type to support nesting (inline or types file)
-2. [x] Update `resources/js/components/nav-main.tsx` to render nested items with Collapsible (fixed TS errors)
-3. [x] Update `resources/js/components/app-sidebar.tsx` memberNavItems to nested structure with Application group
-4. [x] Test collapsible functionality, active states, links (verified via code review: Collapsible uses Radix, active logic covers groups/children, paths match existing pages)
-5. [x] Complete task
+- [x] 1. Create TODO.md with approved plan breakdown
+- [x] 2. Add shadcn/ui Table imports to ApprovedLoan.tsx
+- [x] 3. Update table wrapper div to emerald theme
+- [x] 4. Replace HTML table with shadcn TableHeader/TableBody structure
+- [x] 5. Style TableHead/TableRow/TableCell to match GMActiveLoan.tsx exactly
+- [x] 6. Test visual changes in browser
+- [x] 7. Mark complete and attempt_completion
+

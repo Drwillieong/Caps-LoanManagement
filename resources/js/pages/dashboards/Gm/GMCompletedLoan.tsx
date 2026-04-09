@@ -212,7 +212,7 @@ export default function GMCompletedLoan({ completed_loans: initialLoans = [], st
                     <CardContent>
                         <div className="rounded-md border border-emerald-100 overflow-hidden">
                             <Table>
-                                <TableHeader>
+                                <thead>
                                     <TableRow className="hover:bg-transparent border-b border-emerald-200">
                                         <TableHead className="w-16 font-semibold text-emerald-800">ID</TableHead>
                                         <TableHead className="font-semibold text-emerald-800">Member</TableHead>
@@ -224,7 +224,7 @@ export default function GMCompletedLoan({ completed_loans: initialLoans = [], st
                                         <TableHead className="w-24 font-semibold text-emerald-800">Status</TableHead>
                                         <TableHead className="w-24 font-semibold text-emerald-800">Action</TableHead>
                                     </TableRow>
-                                </TableHeader>
+                                </thead>
                                 <TableBody>
                                     {filteredLoans.length > 0 ? (
                                         filteredLoans.map((loan) => (
@@ -280,4 +280,3 @@ export default function GMCompletedLoan({ completed_loans: initialLoans = [], st
         </AppLayout>
     );
 }
-

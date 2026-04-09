@@ -237,7 +237,8 @@ export default function ViewActiveLoan({ loan }: Props) {
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between pb-2">
                             <CardTitle className="text-sm font-medium">Principal Amount</CardTitle>
-                            <DollarSign className="h-4 w-4 text-emerald-600" />
+                           
+                            <div className="h-4 w-4 text-emerald-600">₱</div>
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{formatCurrency(displayLoan.principal)}</div>
@@ -246,7 +247,7 @@ export default function ViewActiveLoan({ loan }: Props) {
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between pb-2">
                             <CardTitle className="text-sm font-medium">Remaining Balance</CardTitle>
-                            <DollarSign className="h-4 w-4 text-orange-600" />
+                            <div className="h-4 w-4 text-orange-600">₱</div>
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold text-destructive">{formatCurrency(displayLoan.remaining_balance)}</div>
@@ -255,7 +256,7 @@ export default function ViewActiveLoan({ loan }: Props) {
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between pb-2">
                             <CardTitle className="text-sm font-medium">Total Paid</CardTitle>
-                            <DollarSign className="h-4 w-4 text-emerald-600" />
+                            <div className="h-4 w-4 text-emerald-600">₱</div>
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold text-emerald-600">{formatCurrency(displayLoan.total_paid)}</div>
@@ -367,7 +368,7 @@ export default function ViewActiveLoan({ loan }: Props) {
                                 <CardTitle>Amortization Schedule</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <div className="rounded-md border">
+                                 <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
                                     <Table>
                                         <TableHeader>
                                             <TableRow>

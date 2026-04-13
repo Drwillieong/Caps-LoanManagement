@@ -107,7 +107,7 @@ export default function ViewActiveLoan({ loan }: Props) {
             { period: 3, due_date: '2024-04-15', principal_payment: 4200, interest_payment: 300, total_payment: 4500, status: 'due' },
         ],
         payments: [
-            { id: 1, date: '2024-01-20', amount: 4500, method: 'Cash', reference: 'PMT001' },
+            { id: 1, date: '2024-01-20', amount: 4500, method: 'Salary Deduct', reference: 'PMT001' },
         ],
     };
 
@@ -190,7 +190,7 @@ export default function ViewActiveLoan({ loan }: Props) {
                 </div>
                 <div class="card">
                     <h2>Recent Payments</h2>
-                    ${displayLoan.payments.map(p => `<div><strong>${formatDate(p.date)}:</strong> ${formatCurrency(p.amount)} (${p.method})</div>`).join('')}
+                    ${displayLoan.payments.map(p => `<div><strong>${formatDate(p.date)}:</strong> ${formatCurrency(p.amount)} (Salary Deduct)</div>`).join('')}
                 </div>
                 <div style="text-align: center; margin-top: 2rem; font-size: 0.875rem; color: #6b7280;">
                     Printed on ${new Date().toLocaleString('en-PH')}
@@ -424,7 +424,7 @@ export default function ViewActiveLoan({ loan }: Props) {
                                                     <TableRow key={payment.id}>
                                                         <TableCell>{formatDate(payment.date)}</TableCell>
                                                         <TableCell className="font-mono font-semibold">{formatCurrency(payment.amount)}</TableCell>
-                                                        <TableCell>{payment.method}</TableCell>
+                                                        <TableCell>Salary Deduct</TableCell>
                                                         <TableCell>{payment.reference}</TableCell>
                                                     </TableRow>
                                                 ))

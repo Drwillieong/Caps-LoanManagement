@@ -1,14 +1,11 @@
-# TODO Steps for Filtering Roles Dropdown to Members Only in Create.tsx
+# Loan Seeder Implementation Progress
 
-## Status: [IN PROGRESS] 
+## Plan Steps:
+- [x] Create LoanSeeder.php with sample completed, active, and rejected loans for test members (Jairus & Kevin)
+- [x] Update DatabaseSeeder.php to call LoanSeeder after LoanTypeSeeder
+- [ ] Test seeding: Run `php artisan migrate:fresh --seed`
+- [ ] Verify data in tinker or DB: `php artisan tinker` then `Loan::with(['user', 'loanCoMakers', 'loanAmortizations', 'loanPayments'])->get()`
 
-**Breakdown of Approved Plan:**
-1. **[COMPLETE]** Create TODO.md with steps.
-2. **[COMPLETE]** Edit `resources/js/pages/dashboards/HR/Create.tsx`: Filter roles dropdown to only show 'member'.
-3. **[COMPLETE]** Update TODO.md with completion status.
-4. **[COMPLETE]** Test the form submission.
-5. **[COMPLETE]** Attempt task completion.
-
-**Next Step:** Test the dropdown renders only 'MEMBER' option at `/dashboards/HR/create` (restart Vite dev server if needed: `npm run dev`).
-
+## Next:
+Run the test command to populate sample data. All files created/updated successfully.
 

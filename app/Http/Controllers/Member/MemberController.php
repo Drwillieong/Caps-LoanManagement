@@ -124,5 +124,45 @@ class MemberController extends Controller
             'unread_notifications_count' => $this->getMemberUnreadNotificationCount($request),
         ]);
     }
+
+    /**
+     * API Search members for admin create application
+     */
+    public function search(Request $request)
+    {
+        $query = $request->get('q', '');
+        
+        if (strlen($query) < 2) {
+            return response()->json(['data' => []]);
+        }
+
+        $members = \App\Models\User::where('role', 'member')
+            ->where(function ($q) use ($query) {
+                $q->where('email', 'like', "%{$query}%")
+                  ->orWhere('first_name', 'like', "%{$query}%")
+                  ->orWhere('last_name', 'like', "%{$query}%")
+                  ->orWhere('middle_name', 'like', "%{$query}%")
+                  ->orWhereHas('memberProfile', fn($q) => $q->where('employee_id', 'like', "%{$query}%"));
+            })
+            ->with(['memberProfile' => fn($q) => $q->select('user_id', 'basic_salary', 'share_capital_balance', 'employee_id')])
+            ->limit(10)
+            ->get()
+            ->map(function ($user) {
+                return [
+                    'id' => $user->id,
+                    'name' => trim($user->first_name . ' ' . ($user->middle_name ?? '') . ' ' . $user->last_name),
+                    'email' => $user->email,
+                    'employee_id' => $user->memberProfile->employee_id ?? 'N/A',
+                    'basic_salary' => (float) $user->memberProfile->basic_salary,
+                    'share_capital_balance' => (float) $user->memberProfile->share_capital_balance,
+                ];
+            });
+
+        return response()->json([
+            'data' => $members,
+            'query' => $query,
+        ]);
+    }
 }
+
 

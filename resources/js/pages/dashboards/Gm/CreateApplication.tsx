@@ -153,13 +153,13 @@ export default function CreateApplication({ loanTypes, eligibleCoMakers }: Admin
         handleMemberSelect(member);
     }, [setData, handleMemberSelect]);
 
-    const submit = (e: React.FormEvent) => {
+function submit(e: React.FormEvent) {
         e.preventDefault();
         if (!selectedMember) {
             alert('Please select a member first');
             return;
         }
-        post('/api/admin/loan-applications');
+post('/dashboards/Gm/CreateApplication' as string);
     };
 
     return (

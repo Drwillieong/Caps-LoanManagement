@@ -9,6 +9,7 @@ use App\Models\LoanAmortization;
 use App\Models\LoanPayment;
 use App\Models\MemberProfile;
 use App\Models\User;
+use App\Service\ApplyLoan\LoanEligibilityService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -394,7 +395,19 @@ class GmController extends Controller
         return Inertia::render('dashboards/Gm/CreateApplication', [
             'test' => 'GM CreateApplication LOADED SUCCESSFULLY!',
             'loanTypes' => $loanTypes,
-            'eligibleCoMakers' => [],
+            'eligibleCoMakers' => User::where('role', 'member')
+                ->whereDoesntHave('coMakerLoans.loan', function($q) {
+                    $q->whereIn('status', ['approved', 'released']);
+                })
+                ->select('id', 'first_name', 'middle_name', 'last_name', 'email')
+                ->get()
+                ->map(function ($user) {
+                    return [
+                        'id' => $user->id,
+                        'name' => trim($user->first_name . ($user->middle_name ? ' ' . $user->middle_name . ' ' : ' ') . $user->last_name),
+                        'email' => $user->email,
+                    ];
+                })->toArray(),
         ]);
     }
 
@@ -485,6 +498,20 @@ class GmController extends Controller
         $maxLoan = $profile->share_capital_balance * 2;
         if ($validated['principal_amount'] > $maxLoan) {
             return response()->json(['error' => 'Amount exceeds share capital limit'], 422);
+        }
+
+        // Full eligibility check using LoanEligibilityService
+        $eligibilityService = new LoanEligibilityService();
+        try {
+            $eligibilityService->check(
+                $member,
+                $validated['principal_amount'],
+                $validated['co_maker_user_id'] ?? null,
+                $validated['loan_type_id'],
+                $validated['terms_months']
+            );
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 422);
         }
 
         $interest = ($validated['principal_amount'] * ($loanType->interest_rate_per_annum / 100)) * ($validated['terms_months'] / 12);

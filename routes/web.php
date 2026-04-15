@@ -124,6 +124,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/api/members/search', [MemberController::class, 'search'])
         ->middleware('auth')
         ->name('api.members.search');
+    
+    Route::get('/api/members/{memberId}/eligible', [MemberController::class, 'checkEligibility'])
+        ->middleware('auth')
+        ->name('api.members.eligible');
 
     Route::post('/api/admin/loan-applications', [GmController::class, 'storeApplicationApi'])
         ->middleware(['auth', 'role:gm'])

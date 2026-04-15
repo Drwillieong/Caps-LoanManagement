@@ -163,6 +163,30 @@ class MemberController extends Controller
             'query' => $query,
         ]);
     }
+
+    /**
+     * Check if member is eligible for new loan (for frontend feedback)
+     */
+    public function checkEligibility($memberId)
+    {
+        $member = \App\Models\User::where('role', 'member')->findOrFail($memberId);
+        
+        $loanService = new \App\Services\LoanService();
+        $profile = $member->memberProfile;
+        
+        $eligible = $profile && $loanService->canApplyForNewLoan($member);
+        
+        return response()->json([
+            'eligible' => $eligible,
+            'hasActiveLoans' => Loan::where('user_id', $memberId)
+                ->whereIn('status', ['approved', 'released'])
+                ->exists(),
+            'activeLoansCount' => Loan::where('user_id', $memberId)
+                ->whereIn('status', ['approved', 'released'])
+                ->count(),
+            'reason' => !$eligible ? 'Member has active loans that must be at least 75% paid' : null,
+        ]);
+    }
 }
 
 

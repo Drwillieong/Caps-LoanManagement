@@ -1,8 +1,7 @@
-import { Head, useForm, Link, usePage, router } from '@inertiajs/react';
+import { Head, useForm, Link, usePage } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { LiveClock } from '@/components/live-clock';
 import HeadingSmall from '@/components/heading-small';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import InputError from '@/components/input-error';
@@ -15,9 +14,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from '@/components/ui/badge';
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { Search, User, Calendar, AlertCircle, CheckCircle2, Clock, Eye, EyeOff, ArrowRight, CheckCircle, Loader2 } from 'lucide-react';
+import { useState, useMemo, useCallback } from 'react';
+import { useRef } from 'react';
+import { Search, User, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import type { SharedData, BreadcrumbItem } from '@/types';
+
+import { useMemberSearch } from '@/hooks/useMemberSearch';
+import { useLoanCalculator } from '@/hooks/useLoanCalculator';
+import { CurrencyInput } from '@/components/CurrencyInput';
+import { NumberInput } from '@/components/NumberInput';
+import { Input } from '@/components/ui/input';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -47,6 +53,25 @@ interface EligibleCoMaker {
     email: string;
 }
 
+interface ComputedValues {
+  interest: string;
+  total: string;
+  monthly: string;
+}
+
+interface Validations {
+  maxLoanAllowed: number;
+  exceedsShareCapital: boolean;
+  maxMonthlyPayment: number;
+  newMonthlyExceedsLimit: boolean;
+  loanUsagePercentage: number;
+}
+
+interface LoanCalcResult {
+  computed: ComputedValues;
+  validations: Validations;
+}
+
 interface AdminCreateLoanProps {
     loanTypes: LoanType[];
     eligibleCoMakers: EligibleCoMaker[];
@@ -55,15 +80,22 @@ interface AdminCreateLoanProps {
 export default function CreateApplication({ loanTypes, eligibleCoMakers }: AdminCreateLoanProps) {
     const { auth } = usePage<SharedData>().props;
 
-    const [selectedMember, setSelectedMember] = useState<MemberSearchResult | null>(null);
-    const [memberSearch, setMemberSearch] = useState('');
-    const [searchResults, setSearchResults] = useState<MemberSearchResult[]>([]);
-    const [loadingMember, setLoadingMember] = useState(false);
-    const [showApplicantInfo, setShowApplicantInfo] = useState(false);
-    const [coMakerSearch, setCoMakerSearch] = useState('');
-const debounceRef = useRef<number | null>(null);
+    const {
+        memberSearch,
+        setMemberSearch,
+        searchResults,
+        loadingMember,
+        selectedMember,
+        setSelectedMember,
+        memberEligible,
+        memberHasActiveLoans,
+        memberEligibilityLoading,
+        handleMemberSelect,
+    } = useMemberSearch();
 
-    const { data, setData, post, processing, errors, setError } = useForm({
+    const [coMakerSearch, setCoMakerSearch] = useState('');
+
+    const { data, setData, post, processing, errors } = useForm({
         member_id: '',
         loan_type_id: '',
         principal_amount: '',
@@ -71,39 +103,21 @@ const debounceRef = useRef<number | null>(null);
         co_maker_user_id: '',
     });
 
-    // Debounced member search
-    const debouncedSearch = useCallback((query: string) => {
-        if (debounceRef.current) clearTimeout(debounceRef.current);
-        debounceRef.current = setTimeout(async () => {
-            if (query.length < 2) {
-                setSearchResults([]);
-                return;
-            }
-            setLoadingMember(true);
-            try {
-                const response = await fetch(`/api/members/search?q=${encodeURIComponent(query)}`);
-                const results = await response.json();
-                setSearchResults(results.data || []);
-            } catch (error) {
-                console.error('Search error');
-            } finally {
-                setLoadingMember(false);
-            }
-        }, 300);
-    }, [setError]);
+    const loanCalc: LoanCalcResult | null = useLoanCalculator({
+        loanTypes,
+        principalAmount: data.principal_amount,
+        termsMonths: data.terms_months,
+        loanTypeId: data.loan_type_id,
+        selectedMember,
+    });
 
-    useEffect(() => {
-        debouncedSearch(memberSearch);
-        return () => {
-            if (debounceRef.current) clearTimeout(debounceRef.current);
-        };
-    }, [memberSearch, debouncedSearch]);
-
-    const handleMemberSelect = (member: MemberSearchResult) => {
-        setSelectedMember(member);
-        setData('member_id', member.id.toString());
-        setMemberSearch('');
-        setSearchResults([]);
+    const computedValues = loanCalc?.computed;
+    const validations = loanCalc?.validations || {
+      maxLoanAllowed: 0,
+      exceedsShareCapital: false,
+      maxMonthlyPayment: 0,
+      newMonthlyExceedsLimit: false,
+      loanUsagePercentage: 0,
     };
 
     const filteredCoMakers = useMemo(() => {
@@ -117,68 +131,27 @@ const debounceRef = useRef<number | null>(null);
         );
     }, [eligibleCoMakers, coMakerSearch]);
 
-    // ===== FORMATTING FUNCTIONS (Exact from ApplyLoan) =====
     const formatCurrency = (amount: number | string | null | undefined): string => {
         if (amount == null || amount === '') return '₱0.00';
         const num = typeof amount === 'string' ? parseFloat(amount.toString().replace(/,/g, '')) : Number(amount);
         return isNaN(num) ? '₱0.00' : `₱${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     };
 
-    const formatNumberInput = (value: string): string => {
-        const num = parseFloat(value.replace(/,/g, ''));
-        return isNaN(num) || num === 0 ? '' : num.toLocaleString('en-US', { maximumFractionDigits: 0 });
-    };
-
     const parseNumber = (value: string): number => {
-        const num = parseFloat(value.replace(/,/g, ''));
-        return isNaN(num) ? 0 : num;
+      return parseFloat(value.replace(/,/g, '')) || 0;
     };
 
-    const maskCurrency = (amount: number | string | null, visible: boolean): string => {
-        if (!visible) return '₱•••••';
-        return formatCurrency(amount);
+    const formatNumberInput = (value: string): string => {
+      const num = parseNumber(value);
+      return num.toLocaleString('en-US');
     };
 
-    const formatDate = (dateStr: string | null): string => {
-        if (!dateStr) return 'N/A';
-        try {
-            return new Date(dateStr).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' });
-        } catch {
-            return 'N/A';
-        }
-    };
+    const isEligible = !validations.exceedsShareCapital && !validations.newMonthlyExceedsLimit && memberEligible !== false;
 
-    // ===== COMPUTATIONS (Exact from ApplyLoan) =====
-    const selectedLoanType = loanTypes.find(type => type.id === Number(data.loan_type_id));
-
-    const computed = useMemo(() => {
-        if (!selectedLoanType || !data.principal_amount || !data.terms_months || !selectedMember) {
-            return null;
-        }
-        const principal = parseNumber(data.principal_amount);
-        const terms = parseNumber(data.terms_months);
-        const rate = selectedLoanType.interest_rate_per_annum ?? 0;
-        if (principal <= 0 || terms <= 0) return null;
-        const interest = (principal * (rate / 100)) * (terms / 12);
-        const total = principal + interest;
-        const monthly = total / terms;
-        return {
-            interest: interest.toFixed(2),
-            total: total.toFixed(2),
-            monthly: monthly.toFixed(2),
-        };
-    }, [data.principal_amount, data.terms_months, data.loan_type_id, selectedLoanType, selectedMember]);
-
-    const maxLoanAllowed = selectedMember ? selectedMember.share_capital_balance * 2 : 0;
-    const exceedsShareCapital = data.principal_amount && parseNumber(data.principal_amount) > maxLoanAllowed;
-    const maxMonthlyPayment = selectedMember ? selectedMember.basic_salary / 2 : 0;
-    const newMonthlyExceedsLimit = computed && parseNumber(computed.monthly) > maxMonthlyPayment;
-
-    const isEligible = !exceedsShareCapital && !newMonthlyExceedsLimit;
-
-    const loanUsagePercentage = data.principal_amount && selectedMember
-        ? Math.min((parseNumber(data.principal_amount) / maxLoanAllowed) * 100, 100)
-        : 0;
+    const onMemberSelect = useCallback((member: MemberSearchResult) => {
+        setData('member_id', member.id.toString());
+        handleMemberSelect(member);
+    }, [setData, handleMemberSelect]);
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -229,7 +202,7 @@ const debounceRef = useRef<number | null>(null);
                                     {searchResults.map((member) => (
                                         <button
                                             key={member.id}
-                                            onClick={() => handleMemberSelect(member)}
+                                            onClick={() => onMemberSelect(member)}
                                             className="w-full p-3 text-left hover:bg-accent border-b last:border-b-0 flex items-center gap-3"
                                         >
                                             <div className="flex-1 min-w-0">
@@ -254,19 +227,22 @@ const debounceRef = useRef<number | null>(null);
                     <>
                         {/* Applicant Info Card */}
                         <Card>
-                            <CardHeader className="flex row items-center justify-between">
+                            <CardHeader className="flex items-center justify-between">
                                 <CardTitle>Member Information</CardTitle>
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => {
-                                        setSelectedMember(null);
-                                        setData('member_id', '');
-                                    }}
-                                >
-                                    Change Member
-                                </Button>
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => setSelectedMember(null)}
+                                    >
+                                        Change Member
+                                    </Button>
+                                {memberHasActiveLoans && (
+                                    <Badge variant="destructive" className="flex items-center gap-1">
+                                        <AlertCircle className="h-3 w-3" />
+                                        Has Active Loans
+                                    </Badge>
+                                )}
                             </CardHeader>
                             <CardContent>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -288,11 +264,11 @@ const debounceRef = useRef<number | null>(null);
                                     </div>
                                     <div className="space-y-1">
                                         <p className="text-sm font-medium">Share Capital</p>
-                                        <p className="font-semibold">{formatCurrency(selectedMember.share_capital_balance)}</p>
+                                    <p className="font-semibold">{formatCurrency(selectedMember.share_capital_balance)}</p>
                                     </div>
                                     <div className="space-y-1">
                                         <p className="text-sm font-medium">Max Loan</p>
-                                        <p className="font-semibold">{formatCurrency(maxLoanAllowed)}</p>
+                                        <p className="font-semibold">{formatCurrency(validations.maxLoanAllowed)}</p>
                                     </div>
                                 </div>
                             </CardContent>
@@ -307,45 +283,47 @@ const debounceRef = useRef<number | null>(null);
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-4">
-                                {exceedsShareCapital && (
+                                {validations.exceedsShareCapital && (
                                     <div className="flex items-center gap-2 p-3 bg-red-100 border border-red-200 rounded-lg">
                                         <AlertCircle className="h-4 w-4 text-red-500" />
-                                        <span>Share capital limit exceeded: Max {formatCurrency(maxLoanAllowed)}</span>
+                                        <span>Share capital limit exceeded: Max {formatCurrency(validations.maxLoanAllowed)}</span>
                                     </div>
                                 )}
-                                {newMonthlyExceedsLimit && computed && (
+                                {validations.newMonthlyExceedsLimit && computedValues && (
                                     <div className="flex items-center gap-2 p-3 bg-red-100 border border-red-200 rounded-lg">
                                         <AlertCircle className="h-4 w-4 text-red-500" />
-                                        <span>Monthly exceeds 50% salary: {formatCurrency(parseFloat(computed.monthly))} &gt; {formatCurrency(maxMonthlyPayment)}</span>
+{formatCurrency(computedValues?.monthly ? parseFloat(computedValues.monthly) : 0)} exceeds {formatCurrency(validations.maxMonthlyPayment)}
                                     </div>
                                 )}
                                 
-                                {isEligible && computed && (
+{isEligible && computedValues && (
                                     <div className="grid grid-cols-3 gap-4 p-4 bg-emerald-100 border border-emerald-200 rounded-lg">
                                         <div className="text-center">
                                             <p className="text-xs text-emerald-700">Interest</p>
-                                            <p className="font-semibold">{formatCurrency(computed.interest)}</p>
+{formatCurrency(computedValues?.interest || '0')}
                                         </div>
                                         <div className="text-center">
                                             <p className="text-xs text-emerald-700">Monthly</p>
-                                            <p className="font-semibold">{formatCurrency(computed.monthly)}</p>
+{formatCurrency(computedValues?.monthly || '0')}
                                         </div>
                                         <div className="text-center">
                                             <p className="text-xs text-emerald-700">Total</p>
-                                            <p className="font-semibold">{formatCurrency(computed.total)}</p>
+{formatCurrency(computedValues?.total || '0')}
                                         </div>
                                     </div>
                                 )}
                                 {data.principal_amount && (
                                     <div className="space-y-2">
                                         <div className="flex justify-between text-sm">
-                                            <span>Loan Usage</span>
-                                            <span>{formatCurrency(parseNumber(data.principal_amount))} / {formatCurrency(maxLoanAllowed)}</span>
+<span>Loan Usage</span>
+                                            <span>{formatCurrency(validations.maxLoanAllowed)}</span>
                                         </div>
                                         <div className="h-2 bg-gray-200 rounded-full">
                                             <div
-                                                className={`h-full rounded-full transition-all ${exceedsShareCapital ? 'bg-red-500' : 'bg-emerald-500'}`}
-                                                style={{ width: `${loanUsagePercentage}%` }}
+                                                className={`${
+                                                    validations.exceedsShareCapital ? 'bg-red-500' : 'bg-emerald-500'
+                                                } h-2 rounded-full transition-all`}
+                                                style={{ width: `${validations.loanUsagePercentage}%` }}
                                             />
                                         </div>
                                     </div>
@@ -407,40 +385,76 @@ const debounceRef = useRef<number | null>(null);
                                     </div>
                                 </CardContent>
                             </Card>
+{/* Co-maker */}
+<Card className="shadow-sm border-muted/50">
+  <CardHeader className="pb-3">
+    <CardTitle className="flex items-center justify-between text-base font-semibold">
+      <div className="flex items-center gap-2">
+        <User className="h-4 w-4 text-muted-foreground" />
+        Co-maker
+      </div>
+      <span className="text-xs text-muted-foreground">(Optional)</span>
+    </CardTitle>
+  </CardHeader>
 
-                            {/* Co-maker */}
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2">
-                                        <User className="h-4 w-4" />
-                                        Co-maker (Optional)
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="relative mb-4">
-                                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
-                                        <Input
-                                            type="text"
-                                            placeholder="Search co-maker..."
-                                            value={coMakerSearch}
-                                            onChange={e => setCoMakerSearch(e.target.value)}
-                                        />
-                                    </div>
-                                    <Select value={data.co_maker_user_id} onValueChange={v => setData('co_maker_user_id', v)}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder={filteredCoMakers.length ? `Select (${filteredCoMakers.length})` : 'No co-makers'} />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {filteredCoMakers.map(maker => (
-                                                <SelectItem key={maker.id} value={maker.id.toString()}>
-                                                    {maker.name} ({maker.email})
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    <InputError message={errors.co_maker_user_id} />
-                                </CardContent>
-                            </Card>
+  <CardContent className="space-y-4">
+    {/* Search */}
+    <div className="relative">
+      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+      <Input
+        type="text"
+        placeholder="Search by name or email..."
+        value={coMakerSearch}
+        onChange={e => setCoMakerSearch(e.target.value)}
+        className="pl-9"
+      />
+    </div>
+
+    {/* Select */}
+    <Select
+      value={data.co_maker_user_id}
+      onValueChange={v => setData('co_maker_user_id', v)}
+    >
+      <SelectTrigger className="w-full">
+        <SelectValue
+          placeholder={
+            filteredCoMakers.length
+              ? `Select co-maker (${filteredCoMakers.length})`
+              : "No results found"
+          }
+        />
+      </SelectTrigger>
+
+      <SelectContent className="max-h-60">
+        {filteredCoMakers.length > 0 ? (
+          filteredCoMakers.map(maker => (
+            <SelectItem
+              key={maker.id}
+              value={maker.id.toString()}
+              className="flex flex-col items-start"
+            >
+              <span className="font-medium">{maker.name}</span>
+              <span className="text-xs text-muted-foreground">
+                {maker.email}
+              </span>
+            </SelectItem>
+          ))
+        ) : (
+          <div className="px-3 py-2 text-sm text-muted-foreground">
+            No co-makers match your search.
+          </div>
+        )}
+      </SelectContent>
+    </Select>
+
+    {/* Error */}
+    {errors.co_maker_user_id && (
+      <p className="text-sm text-destructive">
+        {errors.co_maker_user_id}
+      </p>
+    )}
+  </CardContent>
+</Card>
 
                             <div className="flex justify-end gap-4 pt-4">
                                 <Link
@@ -451,7 +465,7 @@ const debounceRef = useRef<number | null>(null);
                                 </Link>
                                 <Button
                                     type="submit"
-                                    disabled={processing || !selectedMember || !isEligible}
+                                    disabled={processing || !selectedMember || memberEligibilityLoading || !isEligible}
                                     size="lg"
                                     className="min-w-[200px] px-8"
                                 >

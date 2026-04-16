@@ -232,7 +232,7 @@ export default function Create({ roles }: Props) {
                                                         className="border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800"
                                                     >
                                                         Auto
-                                                    </Button>
+                                              </Button>
                                                 </div>
                                                 <InputError message={errors.password} />
                                             </div>

@@ -38,9 +38,9 @@ class LoanController extends Controller
         ]);
         }
 
-        // Check if user has a pending application awaiting co-maker confirmation
-        $hasAwaitingComaker = Loan::where('user_id', $user->id)
-            ->where('status', 'awaiting_comaker')
+// Check if user has ANY pending loan application
+        $hasPendingLoan = Loan::where('user_id', $user->id)
+            ->whereIn('status', ['awaiting_comaker', 'pending_gm_review', 'pending_cc_review'])
             ->exists();
 
         // Check new eligibility rules using service helpers
@@ -126,7 +126,8 @@ class LoanController extends Controller
 
             'previousLoans' => $previousLoans,
             'activeLoansTotalMonthly' => $activeLoansTotalMonthly,
-            'hasAwaitingComaker' => $hasAwaitingComaker,
+            'hasPendingLoan' => $hasPendingLoan,
+            'hasAwaitingComaker' => false, // Legacy - deprecated
             'hasActiveLoan' => $hasActiveLoan,
             'unread_notifications_count' => $this->getMemberUnreadNotificationCount(request()),
         ]);
@@ -148,14 +149,14 @@ class LoanController extends Controller
          *  ELIGIBILITY CHECKS
          * =============================== */
 
-        // Check if user has pending application awaiting co-maker confirmation
-        $hasAwaitingComaker = Loan::where('user_id', $user->id)
-            ->where('status', 'awaiting_comaker')
+        // Check if user has pending loan application
+        $hasPendingLoan = Loan::where('user_id', $user->id)
+            ->whereIn('status', ['awaiting_comaker', 'pending_gm_review', 'pending_cc_review'])
             ->exists();
 
-        if ($hasAwaitingComaker) {
+        if ($hasPendingLoan) {
             return back()->withErrors([
-                'principal_amount' => 'You have a pending application awaiting co-maker confirmation. Please wait for the co-maker to respond or cancel that application before applying for a new loan.'
+                'principal_amount' => 'You have a pending loan application. Please wait for it to be processed before applying for a new loan.'
             ]);
         }
 
@@ -461,7 +462,8 @@ class LoanController extends Controller
             'eligibleCoMakers' => $eligibleCoMakers,
             'previousLoans' => [],
             'error' => null,
-            'hasAwaitingComaker' => false,
+            'hasPendingLoan' => false,
+            'hasAwaitingComaker' => false, // Legacy
             'hasActiveLoan' => false,
             'editingLoan' => [
                 'id' => $loan->id,

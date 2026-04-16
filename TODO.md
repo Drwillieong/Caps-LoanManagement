@@ -1,32 +1,15 @@
-# Admin Loan Application Feature - Implementation Plan
+## Task: Prevent loan application if member has pending loan after GM creation
 
-## Status: 🚀 In Progress
+**Status: In Progress** ✅
 
-### 1. ✅ Create this TODO.md
+### Steps to Complete:
+1. [x] Create TODO.md with plan breakdown
+2. [✅] Edit `app/Http/Controllers/Member/LoanController.php` - Backend checks expanded to all pending statuses
+3. [✅] Edit `resources/js/pages/dashboards/Member/ApplyLoan.tsx` - Frontend updated to use hasPendingLoan
+4. [ ] Test GM loan creation → ApplyLoan block → Status change → Unblock
+5. [ ] Run `php artisan route:clear && npm run build`
+6. [ ] ✅ attempt_completion
 
-### 2. 📝 Update CreateApplication.tsx [NEXT]
-   - [ ] Model exactly after ApplyLoan.tsx structure/UI  
-   - [ ] Member search + populate salary/share/maxloan
-   - [ ] Eligibility card (badges, progress bar, computations)
-   - [ ] Loan form (type/amount/terms/comaker)
-   - [ ] **Fix:** Inertia POST '/dashboards/Gm/CreateApplication' 
-   - [ ] shadcn/ui Cards/Badges/Alerts polish
-   - [ ] Responsive + TypeScript types
+**Pending Statuses to Block**: ['awaiting_comaker', 'pending_gm_review', 'pending_cc_review']
 
-### 3. 🧪 Test Submission Flow
-   - [ ] No more Inertia JSON error
-   - [ ] Redirects to loan list w/ success
-   - [ ] Loan status: pending_gm_review
-
-### 4. 🔍 Verify Data Propagation
-   - [ ] Appears in GM LoanApplication table
-   - [ ] Visible in Member dashboard
-   - [ ] Notifications sent
-
-### 5. 🔧 Backend Polish (Optional)
-   - [ ] Monthly <=50% salary validation
-
-### 6. ✅ Complete
-   - Update TODO.md [ ] Mark done
-   - attempt_completion()
-
+**Next Step**: Backend edit (LoanController.php)

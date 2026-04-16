@@ -421,18 +421,37 @@ class GmController extends Controller
             'loan_type_id' => 'required|exists:loan_types,id',
             'principal_amount' => 'required|numeric|min:1000',
             'terms_months' => 'required|integer|min:1|max:24',
-            'co_maker_user_id' => 'nullable|exists:users,id',
+            'co_maker_user_id' => 'nullable|exists:users,id|different:member_id',
         ]);
 
         $member = \App\Models\User::findOrFail($validated['member_id']);
         $loanType = \App\Models\LoanType::findOrFail($validated['loan_type_id']);
         $profile = $member->memberProfile;
 
+        $hasPendingLoan = Loan::where('user_id', $member->id)
+            ->whereIn('status', ['awaiting_comaker', 'pending_gm_review', 'pending_cc_review'])
+            ->exists();
+
+        if ($hasPendingLoan) {
+            return back()->withErrors([
+                'member_id' => 'This member already has a pending loan application.',
+            ]);
+        }
+
         // Basic eligibility check
         $maxLoan = $profile->share_capital_balance * 2;
         if ($validated['principal_amount'] > $maxLoan) {
             return back()->withErrors(['principal_amount' => 'Amount exceeds 2x share capital (' . number_format($maxLoan, 2) . ')']);
         }
+
+        $eligibilityService = new LoanEligibilityService();
+        $eligibilityService->check(
+            $member,
+            (float) $validated['principal_amount'],
+            !empty($validated['co_maker_user_id']) ? (int) $validated['co_maker_user_id'] : null,
+            (int) $validated['loan_type_id'],
+            (int) $validated['terms_months']
+        );
 
         // Compute loan values
         $interest = ($validated['principal_amount'] * ($loanType->interest_rate_per_annum / 100)) * ($validated['terms_months'] / 12);
@@ -487,7 +506,7 @@ class GmController extends Controller
             'loan_type_id' => 'required|exists:loan_types,id',
             'principal_amount' => 'required|numeric|min:1000',
             'terms_months' => 'required|integer|min:1|max:24',
-            'co_maker_user_id' => 'nullable|exists:users,id',
+            'co_maker_user_id' => 'nullable|exists:users,id|different:member_id',
         ]);
 
         // Reuse storeApplication logic (call internally or duplicate simplified)

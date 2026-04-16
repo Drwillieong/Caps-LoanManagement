@@ -38,7 +38,8 @@ export default function ApplyLoan({
     eligibleCoMakers,
     previousLoans,
     error,
-    hasAwaitingComaker,
+    hasPendingLoan,
+    hasAwaitingComaker, // Legacy
     hasActiveLoan,
     editingLoan,
 }: ApplyLoanProps) {
@@ -96,8 +97,8 @@ export default function ApplyLoan({
         );
     }
 
-    // Show message if user has a pending application awaiting co-maker confirmation (only when not editing)
-    if (hasAwaitingComaker && !isEditing) {
+    // Show message if user has ANY pending loan (only when not editing)
+    if (hasPendingLoan && !isEditing) {
         return (
            <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
     <Head title="Apply Loan" />
@@ -109,11 +110,11 @@ export default function ApplyLoan({
 
         <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-6">
             <h3 className="mb-2 font-semibold text-yellow-800">
-                Application in Progress
+                Pending Loan Application
             </h3>
             <p className="mb-4 text-sm text-yellow-700">
-                You currently have a loan application pending co-maker approval. 
-                Kindly wait for your co-maker to confirm before submitting a new request.
+                You currently have a pending loan application. 
+                Kindly wait for it to be processed before submitting a new request.
             </p>
 
             <Link

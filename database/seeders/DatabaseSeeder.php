@@ -90,9 +90,9 @@ class DatabaseSeeder extends Seeder
         // Test Member 2
         // -----------------------------
         $user = User::create([
-            'first_name' => 'Kevin',
-            'middle_name' => 'Corpuz',
-            'last_name' => 'Bolado',
+            'first_name' => 'Kayleen',
+            'middle_name' => 'Jairus',
+            'last_name' => 'Gallora',
             'email' => 'kevincorpuz321@gmail.com',
             'password' => Hash::make('admin123'),
             'role' => 'member',
@@ -103,12 +103,12 @@ class DatabaseSeeder extends Seeder
             'user_id' => $user->id,
 
             'employee_id' => 'EMP-002', // fixed duplicate
-            'first_name' => 'Kevin',
-            'middle_name' => 'Corpuz',
-            'last_name' => 'Bolado',
+            'first_name' => 'Kayleen',
+            'middle_name' => 'Jairus',
+            'last_name' => 'Gallora',
 
             'date_of_birth' => '2002-12-01',
-            'sex' => 'male',
+            'sex' => 'female',
             'civil_status' => 'single',
             'spouse_name' => null,
 
@@ -130,5 +130,6 @@ class DatabaseSeeder extends Seeder
 
         // Call other seeders
         $this->call(LoanTypeSeeder::class);
+      //  $this->call(LoanSeeder::class); //
     }
 }

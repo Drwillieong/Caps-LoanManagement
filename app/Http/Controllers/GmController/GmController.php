@@ -9,6 +9,7 @@ use App\Models\LoanAmortization;
 use App\Models\LoanPayment;
 use App\Models\MemberProfile;
 use App\Models\User;
+use App\Service\ApplyLoan\LoanEligibilityService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -372,6 +373,205 @@ class GmController extends Controller
 
         return Inertia::render('dashboards/Gm/ValidateLoan', [
             'pendingLoans' => [$loanDetails],
+        ]);
+    }
+
+    /**
+     * Create Application Page - Render form with loan types and co-makers
+     */
+    public function createApplication()
+    {
+        // SIMPLIFIED for testing - basic Inertia render first
+        \Log::info('GM CreateApplication accessed by user: ' . auth()->id());
+        
+        try {
+            $loanTypes = \App\Models\LoanType::select('id', 'name', 'interest_rate_per_annum')->get();
+            \Log::info('LoanTypes count: ' . $loanTypes->count());
+        } catch (\Exception $e) {
+            \Log::error('LoanType query failed: ' . $e->getMessage());
+            $loanTypes = collect();
+        }
+        
+        return Inertia::render('dashboards/Gm/CreateApplication', [
+            'test' => 'GM CreateApplication LOADED SUCCESSFULLY!',
+            'loanTypes' => $loanTypes,
+            'eligibleCoMakers' => User::where('role', 'member')
+                ->whereDoesntHave('coMakerLoans.loan', function($q) {
+                    $q->whereIn('status', ['approved', 'released']);
+                })
+                ->select('id', 'first_name', 'middle_name', 'last_name', 'email')
+                ->get()
+                ->map(function ($user) {
+                    return [
+                        'id' => $user->id,
+                        'name' => trim($user->first_name . ($user->middle_name ? ' ' . $user->middle_name . ' ' : ' ') . $user->last_name),
+                        'email' => $user->email,
+                    ];
+                })->toArray(),
+        ]);
+    }
+
+    /**
+     * Store Loan Application (Web POST)
+     */
+    public function storeApplication(Request $request)
+    {
+        $validated = $request->validate([
+            'member_id' => 'required|exists:users,id',
+            'loan_type_id' => 'required|exists:loan_types,id',
+            'principal_amount' => 'required|numeric|min:1000',
+            'terms_months' => 'required|integer|min:1|max:24',
+            'co_maker_user_id' => 'nullable|exists:users,id|different:member_id',
+        ]);
+
+        $member = \App\Models\User::findOrFail($validated['member_id']);
+        $loanType = \App\Models\LoanType::findOrFail($validated['loan_type_id']);
+        $profile = $member->memberProfile;
+
+        $hasPendingLoan = Loan::where('user_id', $member->id)
+            ->whereIn('status', ['awaiting_comaker', 'pending_gm_review', 'pending_cc_review'])
+            ->exists();
+
+        if ($hasPendingLoan) {
+            return back()->withErrors([
+                'member_id' => 'This member already has a pending loan application.',
+            ]);
+        }
+
+        // Basic eligibility check
+        $maxLoan = $profile->share_capital_balance * 2;
+        if ($validated['principal_amount'] > $maxLoan) {
+            return back()->withErrors(['principal_amount' => 'Amount exceeds 2x share capital (' . number_format($maxLoan, 2) . ')']);
+        }
+
+        $eligibilityService = new LoanEligibilityService();
+        $eligibilityService->check(
+            $member,
+            (float) $validated['principal_amount'],
+            !empty($validated['co_maker_user_id']) ? (int) $validated['co_maker_user_id'] : null,
+            (int) $validated['loan_type_id'],
+            (int) $validated['terms_months']
+        );
+
+        // Compute loan values
+        $interest = ($validated['principal_amount'] * ($loanType->interest_rate_per_annum / 100)) * ($validated['terms_months'] / 12);
+        $totalAmount = $validated['principal_amount'] + $interest;
+        $monthlyAmort = $totalAmount / $validated['terms_months'];
+
+        // Create loan
+        $loan = \App\Models\Loan::create([
+            'user_id' => $member->id,
+            'loan_type_id' => $loanType->id,
+            'principal_amount' => $validated['principal_amount'],
+            'terms_months' => $validated['terms_months'],
+            'interest_amount' => $interest,
+            'total_amount_due' => $totalAmount,
+            'monthly_amortization' => $monthlyAmort,
+            'status' => 'pending_gm_review',
+            'created_by_admin' => true,
+            'created_by' => $request->user()->id,
+        ]);
+
+        // Co-maker
+        if ($validated['co_maker_user_id']) {
+            \App\Models\LoanCoMaker::create([
+                'loan_id' => $loan->id,
+                'user_id' => $validated['co_maker_user_id'],
+                'status' => 'pending',
+            ]);
+        }
+
+        // Notify
+        $notificationService = app(\App\Services\NotificationService::class);
+        $notificationService->createNotification(
+            $member,
+            'Admin Loan Application Created',
+            'A loan application has been created for you by admin.',
+            'loan_status',
+            $loan->id,
+            \App\Models\Loan::class
+        );
+
+        return redirect()->route('gm.loan-application')
+            ->with('success', 'Loan application created successfully. Status: pending GM review.');
+    }
+
+    /**
+     * Store Loan Application (API POST)
+     */
+    public function storeApplicationApi(Request $request)
+    {
+        $validated = $request->validate([
+            'member_id' => 'required|exists:users,id',
+            'loan_type_id' => 'required|exists:loan_types,id',
+            'principal_amount' => 'required|numeric|min:1000',
+            'terms_months' => 'required|integer|min:1|max:24',
+            'co_maker_user_id' => 'nullable|exists:users,id|different:member_id',
+        ]);
+
+        // Reuse storeApplication logic (call internally or duplicate simplified)
+        $member = \App\Models\User::findOrFail($validated['member_id']);
+        $loanType = \App\Models\LoanType::findOrFail($validated['loan_type_id']);
+        $profile = $member->memberProfile;
+
+        $maxLoan = $profile->share_capital_balance * 2;
+        if ($validated['principal_amount'] > $maxLoan) {
+            return response()->json(['error' => 'Amount exceeds share capital limit'], 422);
+        }
+
+        // Full eligibility check using LoanEligibilityService
+        $eligibilityService = new LoanEligibilityService();
+        try {
+            $eligibilityService->check(
+                $member,
+                $validated['principal_amount'],
+                $validated['co_maker_user_id'] ?? null,
+                $validated['loan_type_id'],
+                $validated['terms_months']
+            );
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 422);
+        }
+
+        $interest = ($validated['principal_amount'] * ($loanType->interest_rate_per_annum / 100)) * ($validated['terms_months'] / 12);
+        $totalAmount = $validated['principal_amount'] + $interest;
+        $monthlyAmort = $totalAmount / $validated['terms_months'];
+
+        $loan = \App\Models\Loan::create([
+            'user_id' => $member->id,
+            'loan_type_id' => $loanType->id,
+            'principal_amount' => $validated['principal_amount'],
+            'terms_months' => $validated['terms_months'],
+            'interest_amount' => $interest,
+            'total_amount_due' => $totalAmount,
+            'monthly_amortization' => $monthlyAmort,
+            'status' => 'pending_gm_review',
+            'created_by_admin' => true,
+            'created_by' => $request->user()->id,
+        ]);
+
+        if ($validated['co_maker_user_id']) {
+            \App\Models\LoanCoMaker::create([
+                'loan_id' => $loan->id,
+                'user_id' => $validated['co_maker_user_id'],
+                'status' => 'pending',
+            ]);
+        }
+
+        $notificationService = app(\App\Services\NotificationService::class);
+        $notificationService->createNotification(
+            $member,
+            'Admin Loan Application Created',
+            'Loan application created by admin.',
+            'loan_status',
+            $loan->id,
+            \App\Models\Loan::class
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Loan application created. Status: pending GM review.',
+            'loan' => $loan->load('loanType', 'user.memberProfile'),
         ]);
     }
 }

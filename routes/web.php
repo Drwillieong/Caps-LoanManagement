@@ -120,6 +120,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware('role:gm')
         ->name('gm.validate-loan');
 
+    // API Routes (since no api.php)
+    Route::get('/api/members/search', [MemberController::class, 'search'])
+        ->middleware('auth')
+        ->name('api.members.search');
+    
+    Route::get('/api/members/{memberId}/eligible', [MemberController::class, 'checkEligibility'])
+        ->middleware('auth')
+        ->name('api.members.eligible');
+
+    Route::post('/api/admin/loan-applications', [GmController::class, 'storeApplicationApi'])
+        ->middleware(['auth', 'role:gm'])
+        ->name('api.admin.loans.store');
+
     Route::get('dashboards/Gm/LoanApplication', [GmController::class, 'loanApplication'])
         ->middleware('role:gm')
         ->name('gm.loan-application');
@@ -159,6 +172,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboards/Gm/ActivityLog', \App\Http\Controllers\GmController\ActivityLogController::class)
         ->middleware('role:gm')
         ->name('gm.activity-log');
+
+    // GM - Create Application (NEW)
+    Route::get('dashboards/Gm/CreateApplication', [GmController::class, 'createApplication'])
+        ->middleware('role:gm')
+        ->name('gm.create-application');
+
+    Route::post('dashboards/Gm/CreateApplication', [GmController::class, 'storeApplication'])
+        ->middleware('role:gm')
+        ->name('gm.create-application.store');
 
     // Credit Coordinator
     Route::get('dashboards/CreditCom/ValidateLoan', [CreditComController::class, 'index'])

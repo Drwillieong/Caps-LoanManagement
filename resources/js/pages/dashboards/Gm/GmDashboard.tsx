@@ -84,6 +84,9 @@ export default function GmDashboard({
         });
     }
 
+    // Clamp collection rate for progress bar (0-100%)
+    const clampedCollectionRate = Math.min(100, Math.max(0, loan_health.collection_rate || 0));
+
     // Calculate percentage change (mock calculation - you can adjust based on actual previous month data)
     const portfolioChange = stats.total_amount_due > 0 
         ? Math.round(((stats.total_paid_amount) / stats.total_amount_due) * 100) - 100
@@ -195,10 +198,12 @@ export default function GmDashboard({
                                 <div className="flex-1">
                                     <p className="text-xs font-medium text-muted-foreground italic">Collections Rate</p>
                                     <div className="h-2 w-full bg-emerald-100 rounded-full mt-1">
-                                        <div className="h-full bg-emerald-600 rounded-full" style={{ width: `${loan_health.collection_rate}%` }} />
+                                        <div className="h-full bg-emerald-600 rounded-full transition-all duration-300" style={{ width: `${clampedCollectionRate}%` }} />
                                     </div>
                                 </div>
-                                <span className="text-sm font-bold">{loan_health.collection_rate}%</span>
+                                <span className="text-sm font-bold">
+                                    {loan_health.collection_rate >= 100 ? '100+' : Math.round(loan_health.collection_rate)}%
+                                </span>
                              </div>
 
                              {/* Loan Statistics */}

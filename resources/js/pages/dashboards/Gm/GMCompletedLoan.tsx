@@ -280,4 +280,3 @@ export default function GMCompletedLoan({ completed_loans: initialLoans = [], st
         </AppLayout>
     );
 }
-

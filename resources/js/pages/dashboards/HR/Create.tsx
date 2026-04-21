@@ -169,11 +169,11 @@ export default function Create({ roles }: Props) {
                                                     className="h-10 w-full rounded-lg border border-emerald-100 bg-background px-3 text-sm focus:ring-2 focus:ring-emerald-500/40"
                                                 >
                                                     <option value="">Select a role</option>
-                                                    {roles.map((role) => (
-                                                        <option key={role} value={role}>
-                                                            {role.toUpperCase()}
-                                                        </option>
-                                                    ))}
+{roles.filter(role => role === 'member').map((role) => (
+    <option key={role} value={role}>
+        {role.toUpperCase()}
+    </option>
+))}
                                                 </select>
                                                 <InputError message={errors.role} />
                                             </div>

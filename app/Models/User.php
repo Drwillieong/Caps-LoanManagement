@@ -133,6 +133,17 @@ class User extends Authenticatable
     }
 
     /**
+     * Get loans where user is co-maker (for eligibility check).
+     * Used in: whereDoesntHave('loansAsCoMaker') query
+     */
+    public function loansAsCoMaker(): HasMany
+    {
+        return $this->hasMany(Loan::class, 'id')
+            ->join('loan_co_makers', 'loans.id', '=', 'loan_co_makers.loan_id')
+            ->whereColumn('loan_co_makers.user_id', $this->getTable() . '.id');
+    }
+
+    /**
      * Get the user's avatar URL.
      */
     public function getAvatarAttribute(): ?string

@@ -33,16 +33,7 @@ class DatabaseSeeder extends Seeder
             'is_active' => true,
         ]);
 
-        // Credit Committee Admin
-        User::create([
-            'first_name' => 'Admin',
-            'middle_name' => '',
-            'last_name' => '',
-            'email' => 'creditadmin@gmail.com',
-            'password' => Hash::make('admin123'),
-            'role' => 'creditcom',
-            'is_active' => true,
-        ]);
+
 
         // -----------------------------
         // Test Member 1

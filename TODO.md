@@ -1,15 +1,34 @@
-## Task: Prevent loan application if member has pending loan after GM creation
+# Loan Amortization Fix - Implementation Steps
 
-**Status: In Progress** ✅
+## Status: [IN PROGRESS] 
 
-### Steps to Complete:
-1. [x] Create TODO.md with plan breakdown
-2. [✅] Edit `app/Http/Controllers/Member/LoanController.php` - Backend checks expanded to all pending statuses
-3. [✅] Edit `resources/js/pages/dashboards/Member/ApplyLoan.tsx` - Frontend updated to use hasPendingLoan
-4. [ ] Test GM loan creation → ApplyLoan block → Status change → Unblock
-5. [ ] Run `php artisan route:clear && npm run build`
-6. [ ] ✅ attempt_completion
+**Objective**: Fix missing amortization schedule on members page after GM approval.
 
-**Pending Statuses to Block**: ['awaiting_comaker', 'pending_gm_review', 'pending_cc_review']
+### Step 1: ✅ COMPLETED - GmController::approve() edited
+- ✅ Added `$this->generateAmortizationSchedule($loan);`
+- ✅ Set `release_date = now()`
+- ✅ Updated success message
+- **File**: `app/Http/Controllers/GmController/GmController.php`
 
-**Next Step**: Backend edit (LoanController.php)
+### Step 2: [PENDING] Test Fix
+```
+1. Create loan application (GM page)
+2. Approve loan 
+3. Visit members active loans page (dashboards/Member/MemberActiveLoan)
+4. Verify amortization table appears
+```
+
+### Step 3: [PENDING] Verify Database
+```
+SELECT * FROM loan_amortizations WHERE loan_id = [LOAN_ID];
+-- Expect ~48 records (24 months x 2 installments)
+```
+
+### Step 4: [PENDING] Complete
+- Mark all steps done
+- Remove TODO.md
+- Run attempt_completion
+
+**Next Action**: Test the fix (Steps 2-3)
+
+

@@ -128,19 +128,6 @@ const gmNavItems: NavItem[] = [
     },
 ];
 
-const creditcomNavItems: NavItem[] = [
-    {
-        title: 'Loan Application',
-        href: '/dashboards/CreditCom/LoanApplication',
-        icon: FileText,
-    },
-    {
-        title: 'Approved Loan',
-        href: '/dashboards/CreditCom/ApprovedHistory',
-        icon: BookOpen,
-    },
-];
-
 const footerNavItems: NavItem[] = [
     {
         title: 'Activity Log',
@@ -165,9 +152,6 @@ export function AppSidebar() {
             break;
         case 'gm':
             roleNavItems = gmNavItems;
-            break;
-        case 'creditcom':
-            roleNavItems = creditcomNavItems;
             break;
         default:
             roleNavItems = [];

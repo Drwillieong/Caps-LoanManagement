@@ -131,19 +131,21 @@ class GmController extends Controller
             Loan::class
         );
 
-        // Update loan status to pending_cc_review (Credit Coordinator Review)
-        // Credit Coordinator will validate and then approve to generate amortization schedule
+// Update loan status to approved (CreditCom step removed) - FIXED: Generate amortization
         $loan->update([
-            'status' => 'pending_cc_review',
-            'remarks' => $validated['remarks'] ?? 'Approved by GM, pending Credit Coordinator validation',
+            'status' => 'released', // Directly mark as released since GM approval is final in this flow
+            'remarks' => $validated['remarks'] ?? 'loan released after GM approval',
         ]);
 
-        // Do NOT generate amortization schedule yet - Credit Coordinator will do that
-        // after final approval
+        // FIXED: Generate amortization schedule so members page can display it
+        $this->generateAmortizationSchedule($loan);
+
+        // Set release date
+        $loan->update(['release_date' => now()]);
 
         return redirect()
             ->route('gm.validate-loan')
-            ->with('success', 'Loan application approved and forwarded to Credit Coordinator.');
+            ->with('success', 'Loan approved, amortization schedule generated, and released to member.');
     }
 
     /**
@@ -429,7 +431,7 @@ class GmController extends Controller
         $profile = $member->memberProfile;
 
         $hasPendingLoan = Loan::where('user_id', $member->id)
-            ->whereIn('status', ['awaiting_comaker', 'pending_gm_review', 'pending_cc_review'])
+            ->whereIn('status', ['awaiting_comaker', 'pending_gm_review'])
             ->exists();
 
         if ($hasPendingLoan) {

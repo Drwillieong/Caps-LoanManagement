@@ -228,7 +228,7 @@ export default function Create({ roles }: Props) {
                                                     <Button
                                                         type="button"
                                                         variant="outline"
-                                                        onClick={() => setPassword(generatePassword())}
+                                                       onClick={() => setPassword(generatePassword())}
                                                         className="border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800"
                                                     >
                                                         Auto

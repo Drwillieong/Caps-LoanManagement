@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from '@/components/ui/badge';
 import { useMemo, useState, useEffect } from 'react';
+import UserAgreementModal from '@/components/modals/UserAgreementModal';
 import type { ApplyLoanProps, EligibleCoMaker, PreviousLoan, SharedData, BreadcrumbItem } from '@/types';
 
 interface PreviousLoanWithPercent extends PreviousLoan {
@@ -176,6 +177,7 @@ export default function ApplyLoan({
     // Pre-selected co-maker from ChooseComaker page
     const [preSelectedCoMaker, setPreSelectedCoMaker] = useState<EligibleCoMaker | null>(null);
     const [isPreSelecting, setIsPreSelecting] = useState(false);
+    const [isAgreementModalOpen, setIsAgreementModalOpen] = useState(false);
 
     // Filter co-makers based on search
     const filteredCoMakers = useMemo(() => {
@@ -299,13 +301,23 @@ const computed = useMemo(() => {
         ? Math.min((parseFloat(data.principal_amount.replace(/,/g, '')) / maxLoanAllowed) * 100, 100)
         : 0;
 
-    function submit(e: React.FormEvent) {
-        e.preventDefault();
+    function handleLoanSubmission() {
         if (isEditing && editingLoan) {
             put(`/dashboards/Member/Loan/${editingLoan.id}` as string);
         } else {
             post('/dashboards/Member/ApplyLoan' as string);
         }
+    }
+
+    function submit(e: React.FormEvent) {
+        e.preventDefault();
+
+        if (isEditing) {
+            handleLoanSubmission();
+            return;
+        }
+
+        setIsAgreementModalOpen(true);
     }
 
     return (
@@ -732,6 +744,15 @@ const computed = useMemo(() => {
                         </Button>
                     </div>
                 </form>
+
+                {!isEditing && (
+                    <UserAgreementModal
+                        open={isAgreementModalOpen}
+                        onOpenChange={setIsAgreementModalOpen}
+                        onConfirm={handleLoanSubmission}
+                        processing={processing}
+                    />
+                )}
             </div>
         </AppLayout>
     );

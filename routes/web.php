@@ -20,6 +20,14 @@ Route::get('/', function () {
     ]);
 })->name('home');
 
+Route::get('/faq', function () {
+    return Inertia::render('Faq/Faq');
+})->name('faq');
+
+Route::get('/faq/{slug}', function (string $slug) {
+    return Inertia::render('Faq/FaqDetail', ['slug' => $slug]);
+})->name('faq.detail');
+
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', [DashBoardController::class, 'index'])
         ->name('dashboard')

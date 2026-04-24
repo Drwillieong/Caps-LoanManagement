@@ -18,12 +18,13 @@ import { Badge } from '@/components/ui/badge';
 import { useMemo, useState, useEffect } from 'react';
 import UserAgreementModal from '@/components/modals/UserAgreementModal';
 import type { ApplyLoanProps, EligibleCoMaker, PreviousLoan, SharedData, BreadcrumbItem } from '@/types';
+import { toast } from 'react-hot-toast';
+import { canSendEmail } from '@/hooks/use-internet-check';
 
 interface PreviousLoanWithPercent extends PreviousLoan {
   percent_paid?: number;
 }
 import { Search, User, Calendar, AlertCircle, CheckCircle2, Clock, Eye, EyeOff, ArrowRight, CheckCircle } from 'lucide-react';
-// import { toast } from 'sonner'; // Remove if sonner not available
 
 const breadcrumbs: BreadcrumbItem[] = [
    
@@ -301,7 +302,13 @@ const computed = useMemo(() => {
         ? Math.min((parseFloat(data.principal_amount.replace(/,/g, '')) / maxLoanAllowed) * 100, 100)
         : 0;
 
-    function handleLoanSubmission() {
+    async function handleLoanSubmission() {
+        const isConnected = await canSendEmail();
+
+        if (!isConnected) {
+            toast.error('No internet connection. The email notification cannot be sent, but your loan application will still be submitted.');
+        }
+
         if (isEditing && editingLoan) {
             put(`/dashboards/Member/Loan/${editingLoan.id}` as string);
         } else {
@@ -313,7 +320,7 @@ const computed = useMemo(() => {
         e.preventDefault();
 
         if (isEditing) {
-            handleLoanSubmission();
+            void handleLoanSubmission();
             return;
         }
 

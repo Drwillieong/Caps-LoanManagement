@@ -16,13 +16,15 @@ import {
 } from "@/components/ui/select";
 import { Badge } from '@/components/ui/badge';
 import { useMemo, useState, useEffect } from 'react';
+import UserAgreementModal from '@/components/modals/UserAgreementModal';
 import type { ApplyLoanProps, EligibleCoMaker, PreviousLoan, SharedData, BreadcrumbItem } from '@/types';
+import { toast } from 'react-hot-toast';
+import { canSendEmail } from '@/hooks/use-internet-check';
 
 interface PreviousLoanWithPercent extends PreviousLoan {
   percent_paid?: number;
 }
 import { Search, User, Calendar, AlertCircle, CheckCircle2, Clock, Eye, EyeOff, ArrowRight, CheckCircle } from 'lucide-react';
-// import { toast } from 'sonner'; // Remove if sonner not available
 
 const breadcrumbs: BreadcrumbItem[] = [
    
@@ -176,6 +178,7 @@ export default function ApplyLoan({
     // Pre-selected co-maker from ChooseComaker page
     const [preSelectedCoMaker, setPreSelectedCoMaker] = useState<EligibleCoMaker | null>(null);
     const [isPreSelecting, setIsPreSelecting] = useState(false);
+    const [isAgreementModalOpen, setIsAgreementModalOpen] = useState(false);
 
     // Filter co-makers based on search
     const filteredCoMakers = useMemo(() => {
@@ -299,13 +302,29 @@ const computed = useMemo(() => {
         ? Math.min((parseFloat(data.principal_amount.replace(/,/g, '')) / maxLoanAllowed) * 100, 100)
         : 0;
 
-    function submit(e: React.FormEvent) {
-        e.preventDefault();
+    async function handleLoanSubmission() {
+        const isConnected = await canSendEmail();
+
+        if (!isConnected) {
+            toast.error('No internet connection. The email notification cannot be sent, but your loan application will still be submitted.');
+        }
+
         if (isEditing && editingLoan) {
             put(`/dashboards/Member/Loan/${editingLoan.id}` as string);
         } else {
             post('/dashboards/Member/ApplyLoan' as string);
         }
+    }
+
+    function submit(e: React.FormEvent) {
+        e.preventDefault();
+
+        if (isEditing) {
+            void handleLoanSubmission();
+            return;
+        }
+
+        setIsAgreementModalOpen(true);
     }
 
     return (
@@ -732,6 +751,15 @@ const computed = useMemo(() => {
                         </Button>
                     </div>
                 </form>
+
+                {!isEditing && (
+                    <UserAgreementModal
+                        open={isAgreementModalOpen}
+                        onOpenChange={setIsAgreementModalOpen}
+                        onConfirm={handleLoanSubmission}
+                        processing={processing}
+                    />
+                )}
             </div>
         </AppLayout>
     );

@@ -18,7 +18,7 @@ class LoanEligibilityService
         }
 
         $hasPendingLoan = Loan::where('user_id', $borrower->id)
-            ->whereIn('status', ['awaiting_comaker', 'pending_gm_review', 'pending_cc_review'])
+            ->whereIn('status', ['awaiting_comaker', 'pending_gm_review'])
             ->exists();
 
         if ($hasPendingLoan) {

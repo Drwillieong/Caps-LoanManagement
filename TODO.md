@@ -1,15 +1,7 @@
-## Task: Prevent loan application if member has pending loan after GM creation
+# FAQ Updates TODO
 
-**Status: In Progress** ✅
+- [x] 1. Add `/faq` and `/faq/:slug` routes in `routes/web.php`
+- [x] 2. Update `resources/js/pages/Faq/Faq.tsx` with slugs, icons, clickable titles, full-page layout
+- [x] 3. Create `resources/js/pages/Faq/FaqDetail.tsx` for single FAQ item display
+- [x] 4. Update `resources/js/pages/auth/login.tsx` to navigate to `/faq` instead of opening Sheet
 
-### Steps to Complete:
-1. [x] Create TODO.md with plan breakdown
-2. [✅] Edit `app/Http/Controllers/Member/LoanController.php` - Backend checks expanded to all pending statuses
-3. [✅] Edit `resources/js/pages/dashboards/Member/ApplyLoan.tsx` - Frontend updated to use hasPendingLoan
-4. [ ] Test GM loan creation → ApplyLoan block → Status change → Unblock
-5. [ ] Run `php artisan route:clear && npm run build`
-6. [ ] ✅ attempt_completion
-
-**Pending Statuses to Block**: ['awaiting_comaker', 'pending_gm_review', 'pending_cc_review']
-
-**Next Step**: Backend edit (LoanController.php)

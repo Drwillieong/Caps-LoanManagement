@@ -1,7 +1,6 @@
 <?php
 
-use App\Http\Controllers\CreditComController\CreditComController;
-use App\Http\Controllers\CreditComController\CreditComDashboardController;
+
 use App\Http\Controllers\DashBoardController;
 use App\Http\Controllers\GmController\GmController;
 use App\Http\Controllers\GmController\GmDashboardController;
@@ -20,6 +19,14 @@ Route::get('/', function () {
         'canRegister' => Features::enabled(Features::registration()),
     ]);
 })->name('home');
+
+Route::get('/faq', function () {
+    return Inertia::render('Faq/Faq');
+})->name('faq');
+
+Route::get('/faq/{slug}', function (string $slug) {
+    return Inertia::render('Faq/FaqDetail', ['slug' => $slug]);
+})->name('faq.detail');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', [DashBoardController::class, 'index'])
@@ -74,11 +81,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // HR - Edit Member Profile
     Route::get('dashboards/HR/EditMember/{userId}', [MemberProfileController::class, 'editMember'])
-        ->middleware('role:hr,gm,creditcom')
+        ->middleware('role:hr,gm')
         ->name('hr.edit-member');
     
     Route::put('dashboards/HR/EditMember/{userId}', [MemberProfileController::class, 'updateMember'])
-        ->middleware('role:hr,gm,creditcom')
+        ->middleware('role:hr,gm')
         ->name('hr.update-member');
 
     Route::get('dashboards/Member/MemberActiveLoan', [MemberController::class, 'activeLoans'])
@@ -182,44 +189,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware('role:gm')
         ->name('gm.create-application.store');
 
-    // Credit Coordinator
-    Route::get('dashboards/CreditCom/ValidateLoan', [CreditComController::class, 'index'])
-        ->middleware('role:creditcom')
-        ->name('creditcom.validate-loan');
-
-    Route::get('dashboards/CreditCom/LoanApplication', [CreditComController::class, 'loanApplication'])
-        ->middleware('role:creditcom')
-        ->name('creditcom.loan-application');
-
-    Route::get('dashboards/CreditCom/Loan/{loan}/view', [CreditComController::class, 'viewLoan'])
-        ->middleware('role:creditcom')
-        ->name('creditcom.loan.view');
-
-    Route::post('dashboards/CreditCom/Loan/{loan}/approve', [CreditComController::class, 'approve'])
-        ->middleware('role:creditcom')
-        ->name('creditcom.loan.approve');
-
-    Route::post('dashboards/CreditCom/Loan/{loan}/reject', [CreditComController::class, 'reject'])
-        ->middleware('role:creditcom')
-        ->name('creditcom.loan.reject');
-
-    Route::get('dashboards/CreditCom/Loan/PendingCount', [CreditComController::class, 'pendingCount'])
-        ->middleware('role:creditcom')
-        ->name('creditcom.pending-count');
-
-    Route::get('dashboards/CreditCom/ApprovedHistory', [CreditComDashboardController::class, 'approvedHistory'])
-        ->middleware('role:creditcom')
-        ->name('creditcom.approved-history');
-
     // GM - View Loan Decision History
     Route::get('dashboards/Gm/Loan/{loan}/viewDecision', [GmDashboardController::class, 'viewDecision'])
         ->middleware('role:gm')
         ->name('gm.loan.viewDecision');
-
-    // CreditCom - View Loan Decision History
-    Route::get('dashboards/CreditCom/Loan/{loan}/viewDecision', [CreditComDashboardController::class, 'viewDecision'])
-        ->middleware('role:creditcom')
-        ->name('creditcom.loan.viewDecision');
 });
 
 require __DIR__.'/settings.php';

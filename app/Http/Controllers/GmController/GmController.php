@@ -42,18 +42,23 @@ class GmController extends Controller
                     ->limit(10)
                     ->get()
                     ->map(function ($pastLoan) {
-                        // Calculate balance for past loans
+                        // Calculate balance and percent paid for past loans
                         $totalPaid = LoanPayment::where('loan_id', $pastLoan->id)
                             ->sum('amount');
-                        
-                        $balance = $pastLoan->total_amount_due - $totalPaid;
-                        
+
+                        $balance = max(0, $pastLoan->total_amount_due - $totalPaid);
+                        $percentPaid = $pastLoan->total_amount_due > 0
+                            ? round(($totalPaid / $pastLoan->total_amount_due) * 100, 1)
+                            : 0;
+
                         return [
                             'id' => $pastLoan->id,
                             'loan_type_name' => $pastLoan->loanType->name ?? 'N/A',
                             'principal_amount' => $pastLoan->principal_amount,
                             'total_amount_due' => $pastLoan->total_amount_due,
-                            'balance' => max(0, $balance),
+                            'balance' => $balance,
+                            'monthly_amortization' => $pastLoan->monthly_amortization,
+                            'percent_paid' => $percentPaid,
                             'status' => $pastLoan->status,
                             'release_date' => $pastLoan->release_date?->format('Y-m-d'),
                             'terms_months' => $pastLoan->terms_months,
@@ -68,6 +73,7 @@ class GmController extends Controller
                 return [
                     'id' => $loan->id,
                     'loan_type_name' => $loan->loanType->name ?? 'N/A',
+                    'interest_rate_per_annum' => $loan->loanType->interest_rate_per_annum ?? 0,
                     'principal_amount' => $loan->principal_amount,
                     'terms_months' => $loan->terms_months,
                     'interest_amount' => $loan->interest_amount,
@@ -131,19 +137,21 @@ class GmController extends Controller
             Loan::class
         );
 
-        // Update loan status to pending_cc_review (Credit Coordinator Review)
-        // Credit Coordinator will validate and then approve to generate amortization schedule
+// Update loan status to approved (CreditCom step removed) - FIXED: Generate amortization
         $loan->update([
-            'status' => 'pending_cc_review',
-            'remarks' => $validated['remarks'] ?? 'Approved by GM, pending Credit Coordinator validation',
+            'status' => 'released', // Directly mark as released since GM approval is final in this flow
+            'remarks' => $validated['remarks'] ?? 'loan released after GM approval',
         ]);
 
-        // Do NOT generate amortization schedule yet - Credit Coordinator will do that
-        // after final approval
+        // FIXED: Generate amortization schedule so members page can display it
+        $this->generateAmortizationSchedule($loan);
+
+        // Set release date
+        $loan->update(['release_date' => now()]);
 
         return redirect()
             ->route('gm.validate-loan')
-            ->with('success', 'Loan application approved and forwarded to Credit Coordinator.');
+            ->with('success', 'Loan approved, amortization schedule generated, and released to member.');
     }
 
     /**
@@ -316,18 +324,23 @@ class GmController extends Controller
             ->limit(10)
             ->get()
             ->map(function ($pastLoan) {
-                // Calculate balance for past loans
+                // Calculate balance and percent paid for past loans
                 $totalPaid = LoanPayment::where('loan_id', $pastLoan->id)
                     ->sum('amount');
 
-                $balance = $pastLoan->total_amount_due - $totalPaid;
+                $balance = max(0, $pastLoan->total_amount_due - $totalPaid);
+                $percentPaid = $pastLoan->total_amount_due > 0
+                    ? round(($totalPaid / $pastLoan->total_amount_due) * 100, 1)
+                    : 0;
 
                 return [
                     'id' => $pastLoan->id,
                     'loan_type_name' => $pastLoan->loanType->name ?? 'N/A',
                     'principal_amount' => $pastLoan->principal_amount,
                     'total_amount_due' => $pastLoan->total_amount_due,
-                    'balance' => max(0, $balance),
+                    'balance' => $balance,
+                    'monthly_amortization' => $pastLoan->monthly_amortization,
+                    'percent_paid' => $percentPaid,
                     'status' => $pastLoan->status,
                     'release_date' => $pastLoan->release_date?->format('Y-m-d'),
                     'terms_months' => $pastLoan->terms_months,
@@ -342,6 +355,7 @@ class GmController extends Controller
         $loanDetails = [
             'id' => $loan->id,
             'loan_type_name' => $loan->loanType->name ?? 'N/A',
+            'interest_rate_per_annum' => $loan->loanType->interest_rate_per_annum ?? 0,
             'principal_amount' => $loan->principal_amount,
             'terms_months' => $loan->terms_months,
             'interest_amount' => $loan->interest_amount,
@@ -421,18 +435,37 @@ class GmController extends Controller
             'loan_type_id' => 'required|exists:loan_types,id',
             'principal_amount' => 'required|numeric|min:1000',
             'terms_months' => 'required|integer|min:1|max:24',
-            'co_maker_user_id' => 'nullable|exists:users,id',
+            'co_maker_user_id' => 'nullable|exists:users,id|different:member_id',
         ]);
 
         $member = \App\Models\User::findOrFail($validated['member_id']);
         $loanType = \App\Models\LoanType::findOrFail($validated['loan_type_id']);
         $profile = $member->memberProfile;
 
+        $hasPendingLoan = Loan::where('user_id', $member->id)
+            ->whereIn('status', ['awaiting_comaker', 'pending_gm_review'])
+            ->exists();
+
+        if ($hasPendingLoan) {
+            return back()->withErrors([
+                'member_id' => 'This member already has a pending loan application.',
+            ]);
+        }
+
         // Basic eligibility check
         $maxLoan = $profile->share_capital_balance * 2;
         if ($validated['principal_amount'] > $maxLoan) {
             return back()->withErrors(['principal_amount' => 'Amount exceeds 2x share capital (' . number_format($maxLoan, 2) . ')']);
         }
+
+        $eligibilityService = new LoanEligibilityService();
+        $eligibilityService->check(
+            $member,
+            (float) $validated['principal_amount'],
+            !empty($validated['co_maker_user_id']) ? (int) $validated['co_maker_user_id'] : null,
+            (int) $validated['loan_type_id'],
+            (int) $validated['terms_months']
+        );
 
         // Compute loan values
         $interest = ($validated['principal_amount'] * ($loanType->interest_rate_per_annum / 100)) * ($validated['terms_months'] / 12);
@@ -487,7 +520,7 @@ class GmController extends Controller
             'loan_type_id' => 'required|exists:loan_types,id',
             'principal_amount' => 'required|numeric|min:1000',
             'terms_months' => 'required|integer|min:1|max:24',
-            'co_maker_user_id' => 'nullable|exists:users,id',
+            'co_maker_user_id' => 'nullable|exists:users,id|different:member_id',
         ]);
 
         // Reuse storeApplication logic (call internally or duplicate simplified)

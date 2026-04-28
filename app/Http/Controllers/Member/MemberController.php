@@ -173,20 +173,26 @@ class MemberController extends Controller
         
         $loanService = new \App\Services\LoanService();
         $profile = $member->memberProfile;
+        $hasPendingLoan = Loan::where('user_id', $memberId)
+            ->whereIn('status', ['awaiting_comaker', 'pending_gm_review', 'pending_cc_review'])
+            ->exists();
+        $hasActiveLoans = Loan::where('user_id', $memberId)
+            ->whereIn('status', ['approved', 'released'])
+            ->exists();
         
-        $eligible = $profile && $loanService->canApplyForNewLoan($member);
+        $eligible = $profile && !$hasPendingLoan && $loanService->canApplyForNewLoan($member);
         
         return response()->json([
             'eligible' => $eligible,
-            'hasActiveLoans' => Loan::where('user_id', $memberId)
-                ->whereIn('status', ['approved', 'released'])
-                ->exists(),
+            'hasActiveLoans' => $hasActiveLoans,
+            'hasPendingLoan' => $hasPendingLoan,
             'activeLoansCount' => Loan::where('user_id', $memberId)
                 ->whereIn('status', ['approved', 'released'])
                 ->count(),
-            'reason' => !$eligible ? 'Member has active loans that must be at least 75% paid' : null,
+            'reason' => $hasPendingLoan
+                ? 'Member already has a pending loan application.'
+                : (!$eligible ? 'Member has active loans that must be at least 75% paid.' : null),
         ]);
     }
 }
-
 

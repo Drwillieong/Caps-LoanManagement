@@ -83,7 +83,7 @@ class GmDashboardController extends Controller
 
     public function approvedLoans()
     {
-        $pendingCCReviewLoans = Loan::byStatus(['pending_cc_review', 'approved'])
+        $approvedLoans = Loan::byStatus(['approved'])
             ->withFullRelations()
             ->orderBy('created_at', 'desc')
             ->get()
@@ -132,7 +132,7 @@ class GmDashboardController extends Controller
             ]);
 
         return Inertia::render('dashboards/Gm/ApprovedLoan', [
-            'approvedLoans' => $pendingCCReviewLoans,
+            'approvedLoans' => $approvedLoans,
             'disapprovedLoans' => $rejectedByGMLoans,
         ]);
     }

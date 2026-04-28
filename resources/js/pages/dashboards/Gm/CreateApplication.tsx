@@ -89,6 +89,8 @@ export default function CreateApplication({ loanTypes, eligibleCoMakers }: Admin
         setSelectedMember,
         memberEligible,
         memberHasActiveLoans,
+        memberHasPendingLoan,
+        memberEligibilityReason,
         memberEligibilityLoading,
         handleMemberSelect,
     } = useMemberSearch();
@@ -121,15 +123,19 @@ export default function CreateApplication({ loanTypes, eligibleCoMakers }: Admin
     };
 
     const filteredCoMakers = useMemo(() => {
-        if (!coMakerSearch.trim()) return eligibleCoMakers;
+        const availableCoMakers = eligibleCoMakers.filter(
+            (coMaker) => coMaker.id !== selectedMember?.id
+        );
+
+        if (!coMakerSearch.trim()) return availableCoMakers;
         const search = coMakerSearch.toLowerCase();
-        return eligibleCoMakers.filter(
+        return availableCoMakers.filter(
             (coMaker) =>
                 coMaker.name.toLowerCase().includes(search) ||
                 coMaker.email.toLowerCase().includes(search) ||
                 coMaker.id.toString().includes(search)
         );
-    }, [eligibleCoMakers, coMakerSearch]);
+    }, [eligibleCoMakers, coMakerSearch, selectedMember?.id]);
 
     const formatCurrency = (amount: number | string | null | undefined): string => {
         if (amount == null || amount === '') return '₱0.00';
@@ -146,7 +152,12 @@ export default function CreateApplication({ loanTypes, eligibleCoMakers }: Admin
       return num.toLocaleString('en-US');
     };
 
-    const isEligible = !validations.exceedsShareCapital && !validations.newMonthlyExceedsLimit && memberEligible !== false;
+    const isEligible =
+        !validations.exceedsShareCapital &&
+        !validations.newMonthlyExceedsLimit &&
+        !memberHasActiveLoans &&
+        !memberHasPendingLoan &&
+        memberEligible !== false;
 
     const onMemberSelect = useCallback((member: MemberSearchResult) => {
         setData('member_id', member.id.toString());
@@ -243,6 +254,12 @@ post('/dashboards/Gm/CreateApplication' as string);
                                         Has Active Loans
                                     </Badge>
                                 )}
+                                {memberHasPendingLoan && (
+                                    <Badge variant="destructive" className="flex items-center gap-1">
+                                        <AlertCircle className="h-3 w-3" />
+                                        Has Pending Loan
+                                    </Badge>
+                                )}
                             </CardHeader>
                             <CardContent>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -295,6 +312,18 @@ post('/dashboards/Gm/CreateApplication' as string);
 {formatCurrency(computedValues?.monthly ? parseFloat(computedValues.monthly) : 0)} exceeds {formatCurrency(validations.maxMonthlyPayment)}
                                     </div>
                                 )}
+                                {memberHasPendingLoan && (
+                                    <div className="flex items-center gap-2 p-3 bg-red-100 border border-red-200 rounded-lg">
+                                        <AlertCircle className="h-4 w-4 text-red-500" />
+                                        <span>This member already has a pending loan application.</span>
+                                    </div>
+                                )}
+                                {memberHasActiveLoans && memberEligibilityReason && (
+                                    <div className="flex items-center gap-2 p-3 bg-red-100 border border-red-200 rounded-lg">
+                                        <AlertCircle className="h-4 w-4 text-red-500" />
+                                        <span>{memberEligibilityReason}</span>
+                                    </div>
+                                )}
                                 
 {isEligible && computedValues && (
                                     <div className="grid grid-cols-3 gap-4 p-4 bg-emerald-100 border border-emerald-200 rounded-lg">
@@ -333,11 +362,16 @@ post('/dashboards/Gm/CreateApplication' as string);
 
                         {/* Loan Details Form */}
                         <form onSubmit={submit} className="space-y-6">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Loan Details</CardTitle>
-                                </CardHeader>
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Loan Details</CardTitle>
+                            </CardHeader>
                                 <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                                    {errors.member_id && (
+                                        <div className="md:col-span-2 lg:col-span-3">
+                                            <InputError message={errors.member_id} />
+                                        </div>
+                                    )}
                                     <div className="space-y-2">
                                         <Label>Loan Type</Label>
                                         <Select value={data.loan_type_id} onValueChange={v => setData('loan_type_id', v)}>
@@ -434,9 +468,6 @@ post('/dashboards/Gm/CreateApplication' as string);
               className="flex flex-col items-start"
             >
               <span className="font-medium">{maker.name}</span>
-              <span className="text-xs text-muted-foreground">
-                {maker.email}
-              </span>
             </SelectItem>
           ))
         ) : (

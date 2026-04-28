@@ -106,10 +106,7 @@ class Loan extends Model
         return $query->where('status', 'pending_gm_review');
     }
 
-    public function scopePendingCcReview($query)
-    {
-        return $query->where('status', 'pending_cc_review');
-    }
+
 
     public function scopeByStatus($query, array $statuses)
     {

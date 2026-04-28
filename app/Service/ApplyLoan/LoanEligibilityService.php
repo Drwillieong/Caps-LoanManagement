@@ -17,6 +17,14 @@ class LoanEligibilityService
             abort(422, 'Your profile is not yet completed.');
         }
 
+        $hasPendingLoan = Loan::where('user_id', $borrower->id)
+            ->whereIn('status', ['awaiting_comaker', 'pending_gm_review'])
+            ->exists();
+
+        if ($hasPendingLoan) {
+            abort(422, 'Cannot apply: Member already has a pending loan application.');
+        }
+
         // Share capital rule (x2)
         $maxLoan = $profile->share_capital_balance * 2;
 

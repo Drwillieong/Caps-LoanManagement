@@ -25,7 +25,6 @@ class DashboardService
             'member' => $this->getMemberData(),
             'hr' => $this->getHrData(),
             'gm' => $this->getGmData(),
-            'creditcom' => $this->getCreditComData(),
             default => [],
         };
     }
@@ -49,7 +48,7 @@ class DashboardService
         $activeLoanCount = Loan::where('user_id', $user->id)->active()->count();
         $completedLoanCount = Loan::where('user_id', $user->id)->paidOff()->count();
         $hasPendingLoan = Loan::where('user_id', $user->id)
-            ->byStatus(['pending', 'pending_gm_review', 'pending_cc_review', 'awaiting_comaker'])
+            ->byStatus(['pending', 'pending_gm_review', 'awaiting_comaker'])
             ->exists();
 
         $loanProgress = $activeLoans->isNotEmpty() 
@@ -166,48 +165,7 @@ class DashboardService
         ];
     }
 
-    /**
-     * CreditCom-specific dashboard data
-     */
-    protected function getCreditComData(): array
-    {
-        // Similar structure to GM but for pending_cc_review
-        $totalLoanPortfolio = Loan::active()->sum('total_amount_due');
-        $activeMembers = User::where('role', 'member')->where('is_active', true)->count();
-        $pendingValidations = Loan::pendingCcReview()->count();
 
-        $recentPendingLoans = Loan::pendingCcReview()
-            ->with(['user', 'loanType'])
-            ->orderBy('created_at', 'desc')
-            ->limit(5)
-            ->get()
-            ->map(fn($l) => [
-                'id' => $l->id,
-                'member_name' => trim($l->user->first_name . ' ' . $l->user->middle_name . ' ' . $l->user->last_name),
-                'loan_type' => $l->loanType->name ?? 'N/A',
-                'principal_amount' => $l->principal_amount,
-                'total_amount_due' => $l->total_amount_due,
-                'created_at' => $l->created_at->format('Y-m-d'),
-            ]);
-
-        $totalPaidAmount = LoanPayment::sum('amount');
-        $totalAmountDue = Loan::active()->sum('total_amount_due');
-        $actualCollectionRate = $totalAmountDue > 0 ? round(($totalPaidAmount / $totalAmountDue) * 100) : 0;
-
-        return [
-            'stats' => [
-                'total_loan_portfolio' => $totalLoanPortfolio,
-                'active_members' => $activeMembers,
-                'pending_approvals' => $pendingValidations,
-                'total_paid_amount' => $totalPaidAmount,
-                'total_amount_due' => $totalAmountDue,
-            ],
-            'recent_pending_loans' => $recentPendingLoans,
-            'loan_health' => [
-                'collection_rate' => $actualCollectionRate,
-            ],
-        ];
-    }
 
     protected function getLoanEligibility($user): array
     {

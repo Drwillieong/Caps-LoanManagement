@@ -18,6 +18,8 @@ interface UseMemberSearchReturn {
   setSelectedMember: (member: MemberSearchResult | null) => void;
   memberEligible: boolean | null;
   memberHasActiveLoans: boolean;
+  memberHasPendingLoan: boolean;
+  memberEligibilityReason: string | null;
   memberEligibilityLoading: boolean;
   handleMemberSelect: (member: MemberSearchResult) => Promise<void>;
 }
@@ -29,6 +31,8 @@ export function useMemberSearch(): UseMemberSearchReturn {
   const [selectedMember, setSelectedMemberState] = useState<MemberSearchResult | null>(null);
   const [memberEligible, setMemberEligible] = useState<boolean | null>(null);
   const [memberHasActiveLoans, setMemberHasActiveLoans] = useState(false);
+  const [memberHasPendingLoan, setMemberHasPendingLoan] = useState(false);
+  const [memberEligibilityReason, setMemberEligibilityReason] = useState<string | null>(null);
   const [memberEligibilityLoading, setMemberEligibilityLoading] = useState(false);
   const debounceRef = useRef<number | null>(null);
 
@@ -70,12 +74,18 @@ export function useMemberSearch(): UseMemberSearchReturn {
         const data = await response.json();
         setMemberEligible(data.eligible);
         setMemberHasActiveLoans(data.hasActiveLoans || false);
+        setMemberHasPendingLoan(data.hasPendingLoan || false);
+        setMemberEligibilityReason(data.reason || null);
       } else {
         setMemberEligible(null);
+        setMemberHasPendingLoan(false);
+        setMemberEligibilityReason(null);
       }
     } catch (error) {
       console.error('Eligibility check error:', error);
       setMemberEligible(null);
+      setMemberHasPendingLoan(false);
+      setMemberEligibilityReason(null);
     } finally {
       setMemberEligibilityLoading(false);
     }
@@ -93,6 +103,8 @@ export function useMemberSearch(): UseMemberSearchReturn {
     if (!member) {
       setMemberEligible(null);
       setMemberHasActiveLoans(false);
+      setMemberHasPendingLoan(false);
+      setMemberEligibilityReason(null);
     }
   };
 
@@ -105,6 +117,8 @@ export function useMemberSearch(): UseMemberSearchReturn {
     setSelectedMember,
     memberEligible,
     memberHasActiveLoans,
+    memberHasPendingLoan,
+    memberEligibilityReason,
     memberEligibilityLoading,
     handleMemberSelect,
   };

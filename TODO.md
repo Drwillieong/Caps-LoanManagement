@@ -1,7 +1,9 @@
-# FAQ Updates TODO
+# ValidateLoan.tsx Enhancement TODO
 
-- [x] 1. Add `/faq` and `/faq/:slug` routes in `routes/web.php`
-- [x] 2. Update `resources/js/pages/Faq/Faq.tsx` with slugs, icons, clickable titles, full-page layout
-- [x] 3. Create `resources/js/pages/Faq/FaqDetail.tsx` for single FAQ item display
-- [x] 4. Update `resources/js/pages/auth/login.tsx` to navigate to `/faq` instead of opening Sheet
+## Steps
+1. [x] Analyze existing files (ValidateLoan.tsx, ApplyLoan.tsx, GmController, types)
+2. [x] Create plan for eligibility analysis card and UI improvements
+3. [x] Edit ValidateLoan.tsx — add Eligibility Analysis card with progress bars
+4. [x] Edit ValidateLoan.tsx — add additional improvements (risk badge, DTI, tenure, days pending, collapsible past loans, quick-reject remarks)
+5. [ ] Verify build with `npm run build`
 

@@ -195,6 +195,8 @@ export interface GmPastLoan {
     principal_amount: number;
     total_amount_due: number;
     balance: number;
+    monthly_amortization: number;
+    percent_paid: number;
     status: string;
     release_date: string | null;
     terms_months: number;
@@ -203,6 +205,7 @@ export interface GmPastLoan {
 export interface GmPendingLoan {
     id: number;
     loan_type_name: string;
+    interest_rate_per_annum: number;
     principal_amount: number;
     terms_months: number;
     interest_amount: number;

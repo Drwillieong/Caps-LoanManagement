@@ -42,18 +42,23 @@ class GmController extends Controller
                     ->limit(10)
                     ->get()
                     ->map(function ($pastLoan) {
-                        // Calculate balance for past loans
+                        // Calculate balance and percent paid for past loans
                         $totalPaid = LoanPayment::where('loan_id', $pastLoan->id)
                             ->sum('amount');
-                        
-                        $balance = $pastLoan->total_amount_due - $totalPaid;
-                        
+
+                        $balance = max(0, $pastLoan->total_amount_due - $totalPaid);
+                        $percentPaid = $pastLoan->total_amount_due > 0
+                            ? round(($totalPaid / $pastLoan->total_amount_due) * 100, 1)
+                            : 0;
+
                         return [
                             'id' => $pastLoan->id,
                             'loan_type_name' => $pastLoan->loanType->name ?? 'N/A',
                             'principal_amount' => $pastLoan->principal_amount,
                             'total_amount_due' => $pastLoan->total_amount_due,
-                            'balance' => max(0, $balance),
+                            'balance' => $balance,
+                            'monthly_amortization' => $pastLoan->monthly_amortization,
+                            'percent_paid' => $percentPaid,
                             'status' => $pastLoan->status,
                             'release_date' => $pastLoan->release_date?->format('Y-m-d'),
                             'terms_months' => $pastLoan->terms_months,
@@ -68,6 +73,7 @@ class GmController extends Controller
                 return [
                     'id' => $loan->id,
                     'loan_type_name' => $loan->loanType->name ?? 'N/A',
+                    'interest_rate_per_annum' => $loan->loanType->interest_rate_per_annum ?? 0,
                     'principal_amount' => $loan->principal_amount,
                     'terms_months' => $loan->terms_months,
                     'interest_amount' => $loan->interest_amount,
@@ -318,18 +324,23 @@ class GmController extends Controller
             ->limit(10)
             ->get()
             ->map(function ($pastLoan) {
-                // Calculate balance for past loans
+                // Calculate balance and percent paid for past loans
                 $totalPaid = LoanPayment::where('loan_id', $pastLoan->id)
                     ->sum('amount');
 
-                $balance = $pastLoan->total_amount_due - $totalPaid;
+                $balance = max(0, $pastLoan->total_amount_due - $totalPaid);
+                $percentPaid = $pastLoan->total_amount_due > 0
+                    ? round(($totalPaid / $pastLoan->total_amount_due) * 100, 1)
+                    : 0;
 
                 return [
                     'id' => $pastLoan->id,
                     'loan_type_name' => $pastLoan->loanType->name ?? 'N/A',
                     'principal_amount' => $pastLoan->principal_amount,
                     'total_amount_due' => $pastLoan->total_amount_due,
-                    'balance' => max(0, $balance),
+                    'balance' => $balance,
+                    'monthly_amortization' => $pastLoan->monthly_amortization,
+                    'percent_paid' => $percentPaid,
                     'status' => $pastLoan->status,
                     'release_date' => $pastLoan->release_date?->format('Y-m-d'),
                     'terms_months' => $pastLoan->terms_months,
@@ -344,6 +355,7 @@ class GmController extends Controller
         $loanDetails = [
             'id' => $loan->id,
             'loan_type_name' => $loan->loanType->name ?? 'N/A',
+            'interest_rate_per_annum' => $loan->loanType->interest_rate_per_annum ?? 0,
             'principal_amount' => $loan->principal_amount,
             'terms_months' => $loan->terms_months,
             'interest_amount' => $loan->interest_amount,

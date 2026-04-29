@@ -16,13 +16,14 @@ import {
 } from "@/components/ui/select";
 import { Badge } from '@/components/ui/badge';
 import { useMemo, useState, useEffect } from 'react';
+import UserAgreementModal from '@/components/modals/UserAgreementModal';
 import type { ApplyLoanProps, EligibleCoMaker, PreviousLoan, SharedData, BreadcrumbItem } from '@/types';
+import { toast } from 'react-hot-toast';
+import { canSendEmail } from '@/hooks/use-internet-check';
 
-interface PreviousLoanWithPercent extends PreviousLoan {
-  percent_paid?: number;
-}
+// PreviousLoanWithPercent type now in index.d.ts
+
 import { Search, User, Calendar, AlertCircle, CheckCircle2, Clock, Eye, EyeOff, ArrowRight, CheckCircle } from 'lucide-react';
-// import { toast } from 'sonner'; // Remove if sonner not available
 
 const breadcrumbs: BreadcrumbItem[] = [
    
@@ -46,7 +47,39 @@ export default function ApplyLoan({
     
     const isEditing = !!editingLoan;
 
-    // Show error message if profile is not verified
+    const { data, setData, post, processing, errors, put } = useForm({
+        loan_type_id: editingLoan?.loan_type_id?.toString() || '',
+        principal_amount: editingLoan?.principal_amount?.toString() || '',
+        terms_months: editingLoan?.terms_months?.toString() || '',
+        co_maker_user_id: editingLoan?.co_maker_user_id?.toString() || '',
+    });
+
+    // All states - moved before early returns
+    const [showApplicantInfo, setShowApplicantInfo] = useState(false);
+    const [coMakerSearch, setCoMakerSearch] = useState('');
+    const [preSelectedCoMaker, setPreSelectedCoMaker] = useState<EligibleCoMaker | null>(null);
+    const [isPreSelecting, setIsPreSelecting] = useState(false);
+    const [isAgreementModalOpen, setIsAgreementModalOpen] = useState(false);
+
+    // Handle co_maker_id from ChooseComaker page - now safe
+    useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const coMakerId = urlParams.get('co_maker_id');
+        if (coMakerId) {
+            const matchingCoMaker = eligibleCoMakers.find(cm => cm.id.toString() === coMakerId);
+            if (matchingCoMaker) {
+                setData('co_maker_user_id', coMakerId);
+                setPreSelectedCoMaker(matchingCoMaker);
+                setIsPreSelecting(true);
+                console.log(`✅ Co-maker "${matchingCoMaker.name}" has been pre-selected!`);
+                // Clear URL param after handling
+                const newUrl = window.location.pathname;
+                window.history.replaceState({}, document.title, newUrl);
+            }
+        }
+    }, [eligibleCoMakers, setData]);
+
+    // Early returns - now after all state initialization
     if (error) {
         return (
             <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
@@ -67,7 +100,6 @@ export default function ApplyLoan({
         );
     }
 
-    // Show message if user has an active loan (only when not editing)
     if (hasActiveLoan && !isEditing) {
         return (
             <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
@@ -97,7 +129,6 @@ export default function ApplyLoan({
         );
     }
 
-    // Show message if user has ANY pending loan (only when not editing)
     if (hasPendingLoan && !isEditing) {
         return (
            <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
@@ -130,7 +161,6 @@ export default function ApplyLoan({
         );
     }
 
-    // Don't render if memberProfile is not available yet
     if (!memberProfile) {
         return (
             <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
@@ -141,13 +171,6 @@ export default function ApplyLoan({
             </AppLayout>
         );
     }
-
-    const { data, setData, post, processing, errors, put } = useForm({
-        loan_type_id: editingLoan?.loan_type_id?.toString() || '',
-        principal_amount: editingLoan?.principal_amount?.toString() || '',
-        terms_months: editingLoan?.terms_months?.toString() || '',
-        co_maker_user_id: editingLoan?.co_maker_user_id?.toString() || '',
-    });
 
     // Handle co_maker_id from ChooseComaker page
     useEffect(() => {
@@ -167,15 +190,7 @@ export default function ApplyLoan({
         }
     }, [eligibleCoMakers]);
 
-    // toggle for showing applicant info (can be used for future expansion)
-    const [showApplicantInfo, setShowApplicantInfo] = useState(false);
 
-    // Co-maker search state
-    const [coMakerSearch, setCoMakerSearch] = useState('');
-
-    // Pre-selected co-maker from ChooseComaker page
-    const [preSelectedCoMaker, setPreSelectedCoMaker] = useState<EligibleCoMaker | null>(null);
-    const [isPreSelecting, setIsPreSelecting] = useState(false);
 
     // Filter co-makers based on search
     const filteredCoMakers = useMemo(() => {
@@ -266,24 +281,24 @@ const computed = useMemo(() => {
             total: total.toFixed(2),
             monthly: monthly.toFixed(2),
         };
-    }, [data.principal_amount, data.terms_months, selectedLoanType]);
+    }, [data.principal_amount, data.terms_months, data.loan_type_id, loanTypes]);
 
     const activeMonthlyTotal = useMemo(() => 
-    (previousLoans as PreviousLoanWithPercent[] || [])
+    (previousLoans || [])
         ?.filter((loan) => ['approved', 'released'].includes(loan.status as string))
         ?.reduce((sum, loan) => sum + Number(loan.monthly_amortization || 0), 0) || 0
 , [previousLoans]);
 
     const allActive75Percent = useMemo(() => 
-    (previousLoans as PreviousLoanWithPercent[] || [])
+    (previousLoans || [])
         ?.filter((loan) => ['approved', 'released'].includes(loan.status as string))
-        ?.every((loan) => ((loan as any).percent_paid || 0) >= 75) || true
+        ?.every((loan) => (loan.percent_paid || 0) >= 75) || true
 , [previousLoans]);
 
     /* ===============================
      *  ELIGIBILITY CHECK (FRONTEND)
      * =============================== */
-    const maxLoanAllowed = memberProfile.share_capital_balance * 2;
+    const maxLoanAllowed = (memberProfile.share_capital_balance || 0) * 2;
     const exceedsShareCapital =
         data.principal_amount &&
         Number(data.principal_amount) > maxLoanAllowed;
@@ -299,13 +314,29 @@ const computed = useMemo(() => {
         ? Math.min((parseFloat(data.principal_amount.replace(/,/g, '')) / maxLoanAllowed) * 100, 100)
         : 0;
 
-    function submit(e: React.FormEvent) {
-        e.preventDefault();
+    async function handleLoanSubmission() {
+        const isConnected = await canSendEmail();
+
+        if (!isConnected) {
+            toast.error('No internet connection. The email notification cannot be sent, but your loan application will still be submitted.');
+        }
+
         if (isEditing && editingLoan) {
             put(`/dashboards/Member/Loan/${editingLoan.id}` as string);
         } else {
             post('/dashboards/Member/ApplyLoan' as string);
         }
+    }
+
+    function submit(e: React.FormEvent) {
+        e.preventDefault();
+
+        if (isEditing) {
+            void handleLoanSubmission();
+            return;
+        }
+
+        setIsAgreementModalOpen(true);
     }
 
     return (
@@ -528,7 +559,7 @@ const computed = useMemo(() => {
                                 <div className="rounded-lg bg-emerald-50 border border-emerald-100 p-3">
                                     <p className="text-xs text-emerald-600">Share Capital</p>
                                     <p className="font-semibold text-lg text-emerald-700">
-                                        {maskCurrency(memberProfile.share_capital_balance, showApplicantInfo)}
+                                        {maskCurrency(memberProfile.share_capital_balance || 0, showApplicantInfo)}
                                     </p>
                                 </div>
 
@@ -732,6 +763,15 @@ const computed = useMemo(() => {
                         </Button>
                     </div>
                 </form>
+
+                {!isEditing && (
+                    <UserAgreementModal
+                        open={isAgreementModalOpen}
+                        onOpenChange={setIsAgreementModalOpen}
+                        onConfirm={handleLoanSubmission}
+                        processing={processing}
+                    />
+                )}
             </div>
         </AppLayout>
     );

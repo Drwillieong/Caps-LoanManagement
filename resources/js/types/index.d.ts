@@ -86,22 +86,24 @@ export interface EligibleCoMaker {
 
 export interface PreviousLoan {
     id: number;
-    loan_type_name: string;
+    loan_type_name?: string;
     principal_amount: number;
     total_amount_due: number;
-    balance: number;
+    balance: number | string;
     next_due_date: string | null;
-    monthly_amortization: number;
+    monthly_amortization: number | string;
     status: string;
     release_date: string | null;
+    percent_paid?: number;
 }
 
 export interface ApplyLoanProps {
     loanTypes: LoanType[];
-    memberProfile: MemberProfile;
+    memberProfile?: MemberProfile | null;
     eligibleCoMakers: EligibleCoMaker[];
     previousLoans: PreviousLoan[];
     error?: string;
+    hasPendingLoan?: boolean;
     hasAwaitingComaker?: boolean;
     hasActiveLoan?: boolean;
     editingLoan?: {
@@ -110,7 +112,7 @@ export interface ApplyLoanProps {
         principal_amount: number;
         terms_months: number;
         co_maker_user_id: number | '';
-    };
+    } | null;
 }
 
 export interface PendingApplicationLoan {

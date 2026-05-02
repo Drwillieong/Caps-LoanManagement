@@ -77,7 +77,7 @@ const memberNavItems: NavItem[] = [
         items: [
             {
                 title: 'Active Loan',
-                href: '/dashboards/Member/MemberActiveLoan',
+                href: '/dashboards/Member/ShowActiveLoans',
             },
             {
                 title: 'Completed Loan',

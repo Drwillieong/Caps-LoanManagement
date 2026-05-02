@@ -17,9 +17,22 @@ class MemberController extends Controller
     ) {}
 
     /**
-     * Display member's active loans
+     * Display member's active loans list
+     */
+    public function showActiveLoans(Request $request)
+    {
+        return Inertia::render('dashboards/Member/ShowActiveLoans', $this->getActiveLoanPageData($request));
+    }
+
+    /**
+     * Display member's active loan details
      */
     public function activeLoans(Request $request)
+    {
+        return Inertia::render('dashboards/Member/MemberActiveLoan', $this->getActiveLoanPageData($request));
+    }
+
+    private function getActiveLoanPageData(Request $request): array
     {
         $user = $request->user();
         
@@ -89,13 +102,13 @@ class MemberController extends Controller
         $totalAmountPaid = $activeLoans->sum('total_paid');
         $hasActiveLoan = $activeLoans->isNotEmpty();
 
-        return Inertia::render('dashboards/Member/MemberActiveLoan', [
+        return [
             'activeLoans' => $activeLoans,
             'hasActiveLoan' => $hasActiveLoan,
             'totalLoanBalance' => $totalLoanBalance,
             'totalAmountPaid' => $totalAmountPaid,
             'unread_notifications_count' => $this->getMemberUnreadNotificationCount($request),
-        ]);
+        ];
     }
 
     /**
@@ -195,4 +208,3 @@ class MemberController extends Controller
         ]);
     }
 }
-

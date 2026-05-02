@@ -89,6 +89,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware('role:hr,gm,creditcom')
         ->name('hr.update-member');
 
+    Route::get('dashboards/Member/ShowActiveLoans', [MemberController::class, 'showActiveLoans'])
+        ->middleware(['role:member', 'ensure.profile.completed'])
+        ->name('member.show-active-loans');
+
     Route::get('dashboards/Member/MemberActiveLoan', [MemberController::class, 'activeLoans'])
         ->middleware(['role:member', 'ensure.profile.completed'])
         ->name('member.active-loan');

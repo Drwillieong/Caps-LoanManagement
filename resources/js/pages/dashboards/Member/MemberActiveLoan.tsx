@@ -1,4 +1,4 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import React, { useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { LiveClock } from '@/components/live-clock';
@@ -45,9 +45,17 @@ export default function MemberActiveLoan({
     totalLoanBalance,
     totalAmountPaid,
 }: MemberActiveLoanProps) {
+    const { url } = usePage();
+    const requestedLoanId = Number(
+        new URLSearchParams(url.split('?')[1] ?? '').get('loan')
+    );
+    const defaultExpandedLoan = activeLoans.some((loan) => loan.id === requestedLoanId)
+        ? requestedLoanId
+        : activeLoans[0]?.id ?? null;
+
     // Expand/collapse state for amortization and payment tables
     const [expandedLoan, setExpandedLoan] = useState<number | null>(
-        activeLoans.length > 0 ? activeLoans[0].id : null
+        defaultExpandedLoan
     );
 
     function formatDate(dateStr: string | null): string {
@@ -569,4 +577,3 @@ export default function MemberActiveLoan({
         </AppLayout>
     );
 }
-

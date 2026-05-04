@@ -277,7 +277,7 @@ class LoanController extends Controller
             ]);
         }
 
-        // Update loan
+// Update loan
         $loan->update([
             'loan_type_id' => $loanType->id,
             'principal_amount' => $validated['principal_amount'],
@@ -288,6 +288,7 @@ class LoanController extends Controller
             'status' => $loanType->requires_comaker
                 ? 'awaiting_comaker'
                 : 'pending_gm_review',
+            'has_edited' => true,
         ]);
 
         // Update co-maker
@@ -379,7 +380,7 @@ class LoanController extends Controller
         ]);
         }
 
-        return Inertia::render('dashboards/Member/PendingApplication', [
+return Inertia::render('dashboards/Member/PendingApplication', [
             'loan' => [
                 'id' => $loan->id,
                 'loan_type_name' => $loan->loanType->name ?? 'N/A',
@@ -393,6 +394,7 @@ class LoanController extends Controller
                 'rejected_by' => $loan->rejected_by,
                 'rejected_at' => $loan->rejected_at?->format('Y-m-d H:i:s'),
                 'created_at' => $loan->created_at->format('Y-m-d H:i:s'),
+                'has_edited' => $loan->has_edited,
                 'co_makers' => $loan->coMakers->map(function ($coMaker) {
                     return [
                         'id' => $coMaker->user->id,

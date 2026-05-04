@@ -16,7 +16,7 @@ class Loan extends Model
      *
      * @var array<int, string>
      */
-    protected $fillable = [
+protected $fillable = [
         'user_id',
         'loan_type_id',
         'principal_amount',
@@ -32,6 +32,7 @@ class Loan extends Model
         'rejected_by',
         'rejected_at',
         'notifications_read_at',
+        'has_edited',
     ];
 
     /**

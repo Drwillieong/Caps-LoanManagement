@@ -1,27 +1,48 @@
-import { Head, Link, usePage } from '@inertiajs/react';
-import { 
-    TrendingUp, 
-    Wallet, 
-    CreditCard, 
-    HandCoins, 
-    Clock, 
-    CheckCircle2,
+import { Head, Link } from '@inertiajs/react';
+import {
     AlertCircle,
+    ArrowRight,
     Bell,
     Calendar,
-    FileText,
+    CheckCircle2,
+    ChevronLeft,
+    ChevronRight,
+    ChevronsLeft,
+    ChevronsRight,
+    Clock,
+    CreditCard,
     Eye,
     EyeOff,
-    Users,
-    ArrowRight
+    FileText,
+    HandCoins,
+    Wallet,
 } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
-import AppLayout from '@/layouts/app-layout';
 import { LiveClock } from '@/components/live-clock';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
+import AppLayout from '@/layouts/app-layout';
+import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -72,7 +93,19 @@ interface DashboardProps {
     loan_notifications?: LoanNotification[];
 }
 
-export default function MemberDashboard({ 
+const rejectedStatuses = [
+    'rejected_by_co_maker',
+    'rejected_by_gm',
+    'rejected_by_credit_com',
+];
+const pendingStatuses = [
+    'pending_gm_review',
+    'pending_cc_review',
+    'comaker_request',
+];
+type Tone = 'emerald' | 'blue' | 'green' | 'amber' | 'red' | 'slate';
+
+export default function MemberDashboard({
     comakerRequestCount = 0,
     share_capital_balance = 0,
     loan_balance = 0,
@@ -86,57 +119,63 @@ export default function MemberDashboard({
 }: DashboardProps) {
     const [coMakerCount, setCoMakerCount] = useState(comakerRequestCount);
     const [showValues, setShowValues] = useState(true);
-    
-    // Pagination state
     const [currentPage, setCurrentPage] = useState(1);
-    const notificationsPerPage = 10;
-    const totalPages = Math.ceil(loan_notifications.length / notificationsPerPage);
-    
-    // Reset to page 1 when notifications change
+
+    const notificationsPerPage = 20;
+    const totalPages = Math.ceil(
+        loan_notifications.length / notificationsPerPage,
+    );
+    const startIndex = (currentPage - 1) * notificationsPerPage;
+    const endIndex = startIndex + notificationsPerPage;
+    const paginatedNotifications = loan_notifications.slice(
+        startIndex,
+        endIndex,
+    );
+
     useEffect(() => {
         setCurrentPage(1);
     }, [loan_notifications.length]);
 
-    // Fetch co-maker request count on mount
     useEffect(() => {
         fetch('/dashboards/Member/CoMaker/Count')
-            .then(res => res.json())
-            .then(data => {
+            .then((res) => res.json())
+            .then((data) => {
                 if (data.count !== undefined) {
                     setCoMakerCount(data.count);
                 }
             })
-            .catch(err => console.error('Error fetching co-maker count:', err));
+            .catch((err) =>
+                console.error('Error fetching co-maker count:', err),
+            );
     }, []);
 
-    // Toggle visibility of confidential values
     function toggleVisibility() {
-        setShowValues(!showValues);
+        setShowValues((value) => !value);
     }
 
-    // Mask currency when hidden
     function maskCurrency(value: number | string): string {
-        if (!showValues) return '₱•••••';
+        if (!showValues) return 'PHP *****';
+
         return formatCurrency(value);
     }
 
-    // Format currency with commas and 2 decimal places
     function formatCurrency(amount: number | string): string {
-        if (amount === null || amount === undefined || amount === '') return '₱0.00';
+        if (amount === null || amount === undefined || amount === '')
+            return 'PHP 0.00';
 
         const number = typeof amount === 'string' ? Number(amount) : amount;
 
-        if (isNaN(number)) return '₱0.00';
+        if (isNaN(number)) return 'PHP 0.00';
 
-        return `₱${number.toLocaleString('en-US', {
+        return `PHP ${number.toLocaleString('en-US', {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
         })}`;
     }
 
-// Format date for display - full datetime matching example
     function formatDate(dateStr: string | null): string {
         if (!dateStr) return 'N/A';
+
         const date = new Date(dateStr);
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -144,506 +183,866 @@ export default function MemberDashboard({
         const hours = String(date.getHours()).padStart(2, '0');
         const minutes = String(date.getMinutes()).padStart(2, '0');
         const seconds = String(date.getSeconds()).padStart(2, '0');
+
         return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
     }
 
-    // Calculate progress percentage
-    const progressPercentage = loan_progress 
-        ? Math.round((loan_progress.paid_months / loan_progress.total_months) * 100)
-        : 0;
+    function getEligibilityBadge() {
+        if (!profileCompleted) {
+            return (
+                <Badge
+                    variant="secondary"
+                    className="gap-1 text-muted-foreground"
+                >
+                    <AlertCircle className="size-3" />
+                    Profile Incomplete
+                </Badge>
+            );
+        }
+
+        if (loan_eligibility?.has_active_loan) {
+            return (
+                <Badge
+                    variant="secondary"
+                    className="gap-1 text-muted-foreground"
+                >
+                    <Clock className="size-3" />
+                    Has Active Loan
+                </Badge>
+            );
+        }
+
+        return (
+            <Badge
+                variant="outline"
+                className="gap-1 border-emerald-200 bg-emerald-50 text-emerald-700"
+            >
+                <CheckCircle2 className="size-3" />
+                Eligible to Apply
+            </Badge>
+        );
+    }
+
+    function getNotificationBadge(status: string) {
+        if (rejectedStatuses.includes(status)) {
+            return <Badge variant="destructive">Rejected</Badge>;
+        }
+
+        if (status === 'released') {
+            return (
+                <Badge
+                    variant="outline"
+                    className="border-sky-200 bg-sky-50 text-sky-700"
+                >
+                    Released
+                </Badge>
+            );
+        }
+
+        if (pendingStatuses.includes(status)) {
+            return <Badge variant="secondary">Pending</Badge>;
+        }
+
+        return <Badge variant="outline">{status.replaceAll('_', ' ')}</Badge>;
+    }
+
+    const progressPercentage =
+        loan_progress && loan_progress.total_months > 0
+            ? Math.round(
+                  (loan_progress.paid_months / loan_progress.total_months) *
+                      100,
+              )
+            : 0;
+    const canApply =
+        Boolean(loan_eligibility) &&
+        profileCompleted &&
+        !loan_eligibility?.has_active_loan &&
+        (loan_eligibility?.max_loan_allowed ?? 0) > 0;
 
     return (
         <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
             <Head title="Member Dashboard" />
-            
-            <div className="flex flex-1 flex-col gap-6 p-6">
-                {/* Welcome Header */}
 
-                {/* === CO-MAKER NOTIFICATION BANNER === */}
-                {coMakerCount > 0 && (
-                    <Card className="border-l-4 border-l-orange-500 bg-orange-50">
-                        <CardContent className="flex items-center justify-between py-4">
-                            <div className="flex items-center gap-3">
-                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-100">
-                                    <Bell className="h-5 w-5 text-orange-600" />
-                                </div>
-                                <div>
-                                    <p className="font-semibold text-orange-800">
-                                        You have {coMakerCount} pending co-maker request{coMakerCount > 1 ? 's' : ''}!
-                                    </p>
-                                    <p className="text-sm text-orange-700">
-                                        A member has selected you as their co-maker. Please review and respond.
-                                    </p>
-                                </div>
-                            </div>
-                            <Link
-                                href="/dashboards/Member/CoMaker"
-                                className="inline-flex items-center gap-2 rounded-xl bg-orange-600 px-4 py-2 text-white hover:bg-orange-700 transition"
-                            >
-                                View Requests
-                            </Link>
-                        </CardContent>
-                    </Card>
-                )}
+            <div className="flex flex-1 flex-col bg-muted/20 px-4 py-6 sm:px-6">
+                <main className="mx-auto flex w-full max-w-5xl flex-col gap-4">
+                    <section className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                        <div className="space-y-1">
+                            <p className="text-sm font-medium text-emerald-700">
+                                Overview
+                            </p>
+                           
+                        </div>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={toggleVisibility}
+                        >
+                            {showValues ? (
+                                <EyeOff className="size-4" />
+                            ) : (
+                                <Eye className="size-4" />
+                            )}
+                            {showValues ? 'Hide amounts' : 'Show amounts'}
+                        </Button>
+                    </section>
 
-                {/* === PENDING APPLICATION BANNER - PROMINENTLY DISPLAYED === */}
-                {has_pending_loan && (
-                    <Card className="border-l-4 border-l-yellow-500 bg-yellow-50">
-                        <CardContent className="flex items-center justify-between py-4">
-                            <div className="flex items-center gap-3">
-                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-yellow-100">
-                                    <Clock className="h-5 w-5 text-yellow-600" />
-                                </div>
-                                <div>
-                                    <p className="font-semibold text-yellow-800">
-                                        You have a pending loan application!
-                                    </p>
-                                    <p className="text-sm text-yellow-700">
-                                        Your loan application is under review. Click to view status.
-                                    </p>
-                                </div>
-                            </div>
-                            <Link
-                                href="/dashboards/Member/PendingApplication"
-                                className="inline-flex items-center gap-2 rounded-xl bg-yellow-600 px-4 py-2 text-white hover:bg-yellow-700 transition"
-                            >
-                                View Application
-                                <ArrowRight className="h-4 w-4" />
-                            </Link>
-                        </CardContent>
-                    </Card>
-                )}
+                    <section className="space-y-3">
+                        {coMakerCount > 0 && (
+                            <Alert className="rounded-2xl border-orange-200 bg-orange-50 text-orange-950 shadow-sm">
+                                <Bell className="size-4" />
+                                <AlertTitle>
+                                    Pending co-maker request
+                                    {coMakerCount > 1 ? 's' : ''}
+                                </AlertTitle>
+                                <AlertDescription className="flex flex-col gap-3 text-orange-800 sm:flex-row sm:items-center sm:justify-between">
+                                    <span>
+                                        You have {coMakerCount} request
+                                        {coMakerCount > 1 ? 's' : ''} waiting
+                                        for your review.
+                                    </span>
+                                    <Button
+                                        asChild
+                                        size="sm"
+                                        variant="outline"
+                                        className="w-full bg-white sm:w-auto"
+                                    >
+                                        <Link href="/dashboards/Member/CoMaker">
+                                            View Requests
+                                        </Link>
+                                    </Button>
+                                </AlertDescription>
+                            </Alert>
+                        )}
 
-                {/* === PROFILE INCOMPLETE WARNING BANNER === */}
-                {!profileCompleted && (
-                    <Card className="border-l-4 border-l-amber-500 bg-amber-50">
-                        <CardContent className="flex items-center justify-between py-4">
-                            <div className="flex items-center gap-3">
-                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100">
-                                    <AlertCircle className="h-5 w-5 text-amber-600" />
-                                </div>
-                                <div>
-                                    <p className="font-semibold text-amber-800">
-                                        Complete Your Profile First!
-                                    </p>
-                                    <p className="text-sm text-amber-700">
-                                        You need to complete your profile with all required information before you can apply for a loan.
-                                    </p>
-                                </div>
-                            </div>
-                            <Link
-                                href="/dashboards/Member/UserProfile"
-                                className="inline-flex items-center gap-2 rounded-xl bg-amber-600 px-4 py-2 text-white hover:bg-amber-700 transition"
-                            >
-                                Complete Profile
-                            </Link>
-                        </CardContent>
-                    </Card>
-                )}
+                        {has_pending_loan && (
+                            <Alert className="rounded-2xl border-amber-200 bg-amber-50 text-amber-950 shadow-sm">
+                                <Clock className="size-4" />
+                                <AlertTitle>
+                                    Loan application under review
+                                </AlertTitle>
+                                <AlertDescription className="flex flex-col gap-3 text-amber-800 sm:flex-row sm:items-center sm:justify-between">
+                                    <span>
+                                        Your pending application is available
+                                        for status review.
+                                    </span>
+                                    <Button
+                                        asChild
+                                        size="sm"
+                                        variant="outline"
+                                        className="w-full bg-white sm:w-auto"
+                                    >
+                                        <Link href="/dashboards/Member/PendingApplication">
+                                            View Application
+                                            <ArrowRight className="size-4" />
+                                        </Link>
+                                    </Button>
+                                </AlertDescription>
+                            </Alert>
+                        )}
 
-                {/* === LOAN ELIGIBILITY SECTION - KPI Stats Grid Style === */}
-                {loan_eligibility && (
-                    <Card className="border-emerald-100">
-                        <CardHeader className="flex flex-row items-center justify-between pb-3">
-                            <div className="flex items-center gap-2">
-                                <CardTitle className="text-emerald-900 dark:text-emerald-100 text-lg">
-                                    Loan Eligibility
-                                </CardTitle>
-                                <button
-                                    type="button"
-                                    onClick={() => setShowValues(!showValues)}
-                                    className="text-muted-foreground hover:text-foreground"
-                                >
-                                    {showValues ? <EyeOff size={18} /> : <Eye size={18} />}
-                                </button>
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                            {/* KPI Stats Grid - Same style as GmDashboard */}
-                            <div className="grid gap-4 md:grid-cols-3">
-                                {/* Max Loan Allowed */}
-                                <Card className="border-emerald-100 bg-white/50 dark:bg-emerald-950/10 shadow-sm">
-                                    <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                                        <CardTitle className="text-sm font-medium text-emerald-800 dark:text-emerald-300">Max Loan Allowed</CardTitle>
-                                        <Wallet className="h-4 w-4 text-emerald-600" />
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className="text-2xl font-bold text-emerald-700">
-                                            {maskCurrency(loan_eligibility.max_loan_allowed)}
-                                        </div>
-                                        <p className="text-xs text-emerald-600 font-medium mt-1">
-                                            Based on 2x share capital
+                        {!profileCompleted && (
+                            <Alert className="rounded-2xl border-muted bg-background shadow-sm">
+                                <AlertCircle className="size-4" />
+                                <AlertTitle>Complete your profile</AlertTitle>
+                                <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                    <span>
+                                        Finish your required profile details
+                                        before applying for a loan.
+                                    </span>
+                                    <Button
+                                        asChild
+                                        size="sm"
+                                        variant="outline"
+                                        className="w-full sm:w-auto"
+                                    >
+                                        <Link href="/dashboards/Member/UserProfile">
+                                            Complete Profile
+                                        </Link>
+                                    </Button>
+                                </AlertDescription>
+                            </Alert>
+                        )}
+                    </section>
+
+                    {loan_eligibility ? (
+                        <Card className="rounded-2xl border-emerald-100 bg-white/80 shadow-sm dark:bg-emerald-950/10">
+                            <CardHeader className="gap-3 pb-4 sm:flex-row sm:items-center sm:justify-between">
+                                <div className="space-y-1">
+                                    <CardTitle className="text-lg font-semibold text-emerald-950 dark:text-emerald-100">
+                                        Loan Eligibility
+                                    </CardTitle>
+                                    <CardDescription>
+                                        Your current limits based on your
+                                        profile and account standing.
+                                    </CardDescription>
+                                </div>
+                                {getEligibilityBadge()}
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                                    <MetricItem
+                                        icon={Wallet}
+                                        label="Max Loan Allowed"
+                                        value={maskCurrency(
+                                            loan_eligibility.max_loan_allowed,
+                                        )}
+                                        description="Based on share capital"
+                                        tone="emerald"
+                                    />
+                                    <MetricItem
+                                        icon={CreditCard}
+                                        label="Basic Salary"
+                                        value={maskCurrency(
+                                            loan_eligibility.basic_salary,
+                                        )}
+                                        description="Monthly income"
+                                        tone="blue"
+                                    />
+                                    <MetricItem
+                                        icon={HandCoins}
+                                        label="Max Monthly Payment"
+                                        value={maskCurrency(
+                                            loan_eligibility.max_monthly_payment,
+                                        )}
+                                        description="Payment capacity"
+                                        tone="green"
+                                    />
+                                </div>
+
+                                <Separator />
+
+                                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                    <div className="space-y-1">
+                                        <p className="text-sm text-muted-foreground">
+                                            Current Eligibility Status
                                         </p>
-                                    </CardContent>
-                                </Card>
-
-                                {/* Basic Salary */}
-                                <Card className="border-emerald-100 bg-white/50 dark:bg-emerald-950/10 shadow-sm">
-                                    <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                                        <CardTitle className="text-sm font-medium text-emerald-800 dark:text-emerald-300">Basic Salary</CardTitle>
-                                        <CreditCard className="h-4 w-4 text-emerald-600" />
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className="text-2xl font-bold text-emerald-700">
-                                            {maskCurrency(loan_eligibility.basic_salary)}
-                                        </div>
-                                        <p className="text-xs text-emerald-600 font-medium mt-1">
-                                            Monthly income
+                                        <p className="text-base font-medium text-emerald-900 dark:text-emerald-100">
+                                            {canApply
+                                                ? 'You can start a loan application.'
+                                                : !profileCompleted
+                                                  ? 'Your profile must be completed first.'
+                                                  : 'Loan application is currently unavailable.'}
                                         </p>
-                                    </CardContent>
-                                </Card>
-
-                                {/* Max Monthly Payment */}
-                                <Card className="border-emerald-100 bg-white/50 dark:bg-emerald-950/10 shadow-sm">
-                                    <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                                        <CardTitle className="text-sm font-medium text-emerald-800 dark:text-emerald-300">Max Monthly Payment</CardTitle>
-                                        <HandCoins className="h-4 w-4 text-emerald-600" />
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className="text-2xl font-bold text-emerald-700">
-                                            {maskCurrency(loan_eligibility.max_monthly_payment)}
-                                        </div>
-                                        <p className="text-xs text-emerald-600 font-medium mt-1">
-                                            50% of basic salary
-                                        </p>
-                                    </CardContent>
-                                </Card>
-                            </div>
-
-                            {/* Eligibility Status - Same style as GmDashboard */}
-                            <div className="mt-4 p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-sm font-bold text-emerald-900 dark:text-emerald-100">Current Eligibility Status</span>
                                     </div>
-                                    {!profileCompleted ? (
-                                        <span className="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium bg-amber-100 text-amber-700">
-                                            <AlertCircle className="size-3 mr-1" />
-                                            Profile Incomplete
-                                        </span>
-                                    ) : loan_eligibility.has_active_loan ? (
-                                        <span className="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium bg-amber-100 text-amber-700">
-                                            <AlertCircle className="size-3 mr-1" />
-                                            Has Active Loan
-                                        </span>
+                                    {canApply ? (
+                                        <Button
+                                            asChild
+                                            className="w-full bg-emerald-600 hover:bg-emerald-700 sm:w-auto"
+                                        >
+                                            <Link href="/dashboards/Member/ApplyLoan">
+                                                <FileText className="size-4" />
+                                                Apply for Loan
+                                            </Link>
+                                        </Button>
                                     ) : (
-                                        <span className="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium bg-green-100 text-green-700">
-                                            <CheckCircle2 className="size-3 mr-1" />
-                                            Eligible to Apply
-                                        </span>
+                                        <Button
+                                            disabled
+                                            className="w-full sm:w-auto"
+                                        >
+                                            <FileText className="size-4" />
+                                            Apply for Loan
+                                        </Button>
                                     )}
                                 </div>
+                            </CardContent>
+                        </Card>
+                    ) : (
+                        <EmptyCard
+                            icon={Wallet}
+                            title="Loan eligibility unavailable"
+                            description="Eligibility details will appear here once your account information is ready."
+                        />
+                    )}
 
-                                {/* Quick Action Link - Only show if eligible and profile is complete */}
-                                {profileCompleted && !loan_eligibility.has_active_loan && loan_eligibility.max_loan_allowed > 0 && (
-                                    <Link
-                                        href="/dashboards/Member/ApplyLoan"
-                                        className="mt-4 inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-white hover:bg-emerald-700 transition"
-                                    >
-                                        <FileText className="h-4 w-4" />
-                                        Apply for Loan
-                                        <ArrowRight className="h-4 w-4" />
-                                    </Link>
-                                )}
-
-                                {/* Show message when profile is incomplete */}
-                                {!profileCompleted && (
-                                    <div className="mt-4 text-sm text-amber-700">
-                                        Please complete your profile to unlock loan application.
-                                    </div>
-                                )}
-                            </div>
-                        </CardContent>
-                    </Card>
-                )}
-
-                {/* Main Content Area - Grid Layout like GmDashboard */}
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-                    {/* === LOAN PROGRESS TRACKER === */}
-                    {loan_progress && (
-                        <Card className="lg:col-span-4 border-emerald-100">
-                            <CardHeader className="flex flex-row items-center justify-between">
-                                <div>
-                                    <CardTitle className="text-emerald-900 dark:text-emerald-100">Loan Progress Tracker</CardTitle>
-                                    <CardDescription>Track your active loan payment status.</CardDescription>
-                                </div>
-                                <HandCoins className="h-5 w-5 text-emerald-600" />
-                            </CardHeader>
-                            <CardContent>
-                                <div className="space-y-4">
-                                    {/* Loan Type */}
-                                    <div className="flex items-center justify-between p-3 rounded-lg bg-emerald-50 border border-emerald-100">
-                                        <div className="flex flex-col">
-                                            <span className="text-xs text-emerald-600 font-medium">Loan Type</span>
-                                            <span className="font-semibold text-emerald-900">{loan_progress.loan_type}</span>
+                    <section className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        {loan_progress ? (
+                            <Card className="rounded-2xl border-emerald-100 bg-white/80 shadow-sm dark:bg-emerald-950/10">
+                                <CardHeader className="pb-4">
+                                    <div className="flex items-start justify-between gap-4">
+                                        <div className="space-y-1">
+                                            <CardTitle className="text-lg font-semibold text-emerald-950 dark:text-emerald-100">
+                                                Loan Progress
+                                            </CardTitle>
+                                            <CardDescription>
+                                                Payment status for your active
+                                                loan.
+                                            </CardDescription>
                                         </div>
-                                        <div className="flex flex-col items-end">
-                                            <span className="text-xs text-emerald-600 font-medium">Total Amount</span>
-                                            <span className="font-mono font-bold text-emerald-700">{formatCurrency(loan_progress.total_amount)}</span>
-                                        </div>
+                                        <Badge
+                                            variant={
+                                                loan_progress.payment_status ===
+                                                'paid'
+                                                    ? 'outline'
+                                                    : 'secondary'
+                                            }
+                                        >
+                                            {loan_progress.payment_status.replaceAll(
+                                                '_',
+                                                ' ',
+                                            )}
+                                        </Badge>
+                                    </div>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                        <InfoBlock
+                                            label="Loan Type"
+                                            value={loan_progress.loan_type}
+                                            tone="emerald"
+                                        />
+                                        <InfoBlock
+                                            label="Total Amount"
+                                            value={formatCurrency(
+                                                loan_progress.total_amount,
+                                            )}
+                                            align="right"
+                                            tone="blue"
+                                        />
                                     </div>
 
-                                    {/* Progress Bar */}
                                     <div className="space-y-2">
-                                        <div className="flex justify-between text-sm">
-                                            <span className="text-muted-foreground">Paid</span>
-                                            <span className="font-medium">
-                                                {loan_progress.paid_months} / {loan_progress.total_months} months
+                                        <div className="flex items-center justify-between gap-4 text-sm">
+                                            <span className="text-muted-foreground">
+                                                Paid months
+                                            </span>
+                                            <span className="font-medium text-emerald-700">
+                                                {loan_progress.paid_months} /{' '}
+                                                {loan_progress.total_months}
                                             </span>
                                         </div>
-                                        <div className="h-3 w-full overflow-hidden rounded-full bg-emerald-100">
-                                            <div 
-                                                className="h-full bg-emerald-600 transition-all duration-300"
-                                                style={{ width: `${progressPercentage}%` }}
-                                            />
-                                        </div>
-                                        <p className="text-right text-xs text-muted-foreground">
+                                        <progress
+                                            className="h-2 w-full overflow-hidden rounded-full accent-emerald-600"
+                                            max={100}
+                                            value={progressPercentage}
+                                        />
+                                        <p className="text-right text-sm font-medium text-emerald-700">
                                             {progressPercentage}% complete
                                         </p>
                                     </div>
 
-                                    {/* Remaining Balance & Next Due */}
-                                    <div className="grid grid-cols-2 gap-4 pt-2">
-                                        <div className="rounded-lg bg-red-50 p-3 border border-red-100">
-                                            <p className="text-xs text-red-600 font-medium">Remaining Balance</p>
-                                            <p className="font-semibold text-red-700">
-                                                {maskCurrency(loan_progress.remaining_balance)}
-                                            </p>
-                                        </div>
-                                        <div className="rounded-lg bg-amber-50 p-3 border border-amber-100">
-                                            <div className="flex items-center gap-1">
-                                                <Calendar className="h-3 w-3 text-amber-600" />
-                                                <p className="text-xs text-amber-600 font-medium">Next Due Date</p>
-                                            </div>
-                                            <p className="font-semibold text-amber-700">
-                                                {formatDate(loan_progress.next_due_date)}
-                                            </p>
-                                            <p className="text-xs text-amber-600">
-                                                {maskCurrency(loan_progress.next_due_amount)}
-                                            </p>
-                                        </div>
+                                    <Separator />
+
+                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                        <InfoBlock
+                                            label="Remaining Balance"
+                                            value={maskCurrency(
+                                                loan_progress.remaining_balance,
+                                            )}
+                                            tone="red"
+                                        />
+                                        <InfoBlock
+                                            label="Next Due"
+                                            value={formatDate(
+                                                loan_progress.next_due_date,
+                                            )}
+                                            description={maskCurrency(
+                                                loan_progress.next_due_amount,
+                                            )}
+                                            tone="amber"
+                                        />
                                     </div>
+                                </CardContent>
+                            </Card>
+                        ) : (
+                            <EmptyCard
+                                icon={HandCoins}
+                                title="No active loan"
+                                description="Active loan progress will appear here when you have an ongoing loan."
+                            />
+                        )}
+
+                        <Card className="rounded-2xl border-emerald-100 bg-white/80 shadow-sm dark:bg-emerald-950/10">
+                            <CardHeader className="pb-4">
+                                <CardTitle className="text-lg font-semibold text-emerald-950 dark:text-emerald-100">
+                                    Account Summary
+                                </CardTitle>
+                                <CardDescription>
+                                    A quick view of your balances and loan
+                                    activity.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                    <InfoBlock
+                                        label="Loan Balance"
+                                        value={maskCurrency(loan_balance)}
+                                        icon={Wallet}
+                                        tone="red"
+                                    />
+                                    <InfoBlock
+                                        label="Share Capital"
+                                        value={maskCurrency(
+                                            share_capital_balance,
+                                        )}
+                                        icon={CreditCard}
+                                        tone="emerald"
+                                    />
+                                    <InfoBlock
+                                        label="Active Loans"
+                                        value={active_loan_count.toString()}
+                                        tone="blue"
+                                    />
+                                    <InfoBlock
+                                        label="Completed Loans"
+                                        value={completed_loan_count.toString()}
+                                        tone="green"
+                                    />
                                 </div>
+
+                                <Separator />
+
+                                <div className="space-y-2">
+                                    <p className="text-sm font-medium text-emerald-900 dark:text-emerald-100">
+                                        Quick Actions
+                                    </p>
+                                    <ActionLink
+                                        href="/dashboards/Member/PendingApplication"
+                                        icon={
+                                            has_pending_loan
+                                                ? Clock
+                                                : CheckCircle2
+                                        }
+                                        label="View Pending Application"
+                                        description={
+                                            has_pending_loan
+                                                ? 'Under review'
+                                                : 'Check application status'
+                                        }
+                                    />
+                                    {loan_progress &&
+                                        loan_progress.payment_status !==
+                                            'paid' && (
+                                            <ActionLink
+                                                href="/dashboards/Member/MemberActiveLoan"
+                                                icon={FileText}
+                                                label="View Active Loan Details"
+                                                description="Review payment schedule and balance"
+                                            />
+                                        )}
+                                </div>
+
+                                {loan_progress &&
+                                    loan_progress.payment_status !== 'paid' && (
+                                        <Alert className="rounded-2xl border-amber-200 bg-amber-50 text-amber-950">
+                                            <Calendar className="size-4" />
+                                            <AlertTitle>
+                                                Next payment reminder
+                                            </AlertTitle>
+                                            <AlertDescription>
+                                                Due{' '}
+                                                {formatDate(
+                                                    loan_progress.next_due_date,
+                                                )}{' '}
+                                                for{' '}
+                                                {maskCurrency(
+                                                    loan_progress.next_due_amount,
+                                                )}
+                                                .
+                                            </AlertDescription>
+                                        </Alert>
+                                    )}
                             </CardContent>
                         </Card>
-                    )}
+                    </section>
 
-                    {/* === SUMMARY / QUICK ACTIONS === */}
-                    <Card className={`${loan_progress ? 'lg:col-span-3' : 'lg:col-span-7'} border-emerald-100`}>
-                        <CardHeader>
-                            <CardTitle className="text-emerald-900 dark:text-emerald-100">Account Summary</CardTitle>
+                    <Card className="rounded-2xl border-emerald-100 bg-white/80 shadow-sm dark:bg-emerald-950/10">
+                        <CardHeader className="gap-3 pb-4 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="space-y-1">
+                                <CardTitle className="text-lg font-semibold text-emerald-950 dark:text-emerald-100">
+                                    Loan Notifications
+                                </CardTitle>
+                                <CardDescription>
+                                    Recent updates on your loan applications.
+                                </CardDescription>
+                            </div>
+                            <Badge variant="secondary">
+                                {loan_notifications.length} total
+                            </Badge>
                         </CardHeader>
-                        <CardContent className="flex flex-col gap-4">
-                            {/* Loan Statistics */}
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="p-3 rounded-lg bg-blue-50 border border-blue-100">
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <Wallet className="size-4 text-blue-600" />
-                                        <p className="text-xs text-blue-600 font-medium">Loan Balance</p>
-                                    </div>
-                                    <p className="text-xl font-bold text-blue-700">{maskCurrency(loan_balance)}</p>
-                                </div>
-                                <div className="p-3 rounded-lg bg-purple-50 border border-purple-100">
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <Users className="size-4 text-purple-600" />
-                                        <p className="text-xs text-purple-600 font-medium">Share Capital</p>
-                                    </div>
-                                    <p className="text-xl font-bold text-purple-700">{maskCurrency(share_capital_balance)}</p>
-                                </div>
-                            </div>
-
-                            {/* Loan Counts */}
-                            <div className="grid grid-cols-2 gap-4 mt-2">
-                                <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-100">
-                                    <p className="text-xs text-emerald-600 font-medium">Active Loans</p>
-                                    <p className="text-xl font-bold text-emerald-700">{active_loan_count}</p>
-                                </div>
-                                <div className="p-3 rounded-lg bg-gray-50 border border-gray-100">
-                                    <p className="text-xs text-gray-600 font-medium">Completed</p>
-                                    <p className="text-xl font-bold text-gray-700">{completed_loan_count}</p>
-                                </div>
-                            </div>
-
-                            {/* Quick Actions */}
-                            <div className="mt-4 space-y-2">
-                                <p className="text-sm font-bold text-emerald-900 dark:text-emerald-100 mb-3">Quick Actions</p>
-                                
-                                {/* View Pending Application - with status icon */}
-                                <Link
-                                    href="/dashboards/Member/PendingApplication"
-                                    className={`flex items-center justify-between p-3 rounded-lg transition-colors border ${
-                                        has_pending_loan 
-                                            ? 'bg-yellow-50 border-yellow-200 hover:bg-yellow-100' 
-                                            : 'hover:bg-emerald-50 border-transparent hover:border-emerald-100'
-                                    }`}
-                                >
-                                    <div className="flex items-center gap-3">
-                                        {has_pending_loan ? (
-                                            <Clock className="h-4 w-4 text-yellow-600" />
-                                        ) : (
-                                            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                                        )}
-                                        <div className="flex flex-col">
-                                            <span className="text-sm font-medium">View Pending Application</span>
-                                            {has_pending_loan && (
-                                                <span className="text-xs text-yellow-700">Under Review</span>
+                        <CardContent className="space-y-4">
+                            {loan_notifications.length > 0 ? (
+                                <>
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead className="text-emerald-700">
+                                                    Date & Time
+                                                </TableHead>
+                                                <TableHead className="text-emerald-700">
+                                                    Admin
+                                                </TableHead>
+                                                <TableHead className="text-emerald-700">
+                                                    Loan Type
+                                                </TableHead>
+                                                <TableHead className="text-emerald-700">
+                                                    Status
+                                                </TableHead>
+                                                <TableHead className="text-emerald-700">
+                                                    Message
+                                                </TableHead>
+                                                <TableHead className="text-emerald-700">
+                                                    Reason
+                                                </TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {paginatedNotifications.map(
+                                                (notification) => (
+                                                    <TableRow
+                                                        key={notification.id}
+                                                    >
+                                                        <TableCell className="font-mono text-xs text-muted-foreground">
+                                                            {formatDate(
+                                                                notification.date,
+                                                            )}
+                                                        </TableCell>
+                                                        <TableCell className="font-medium">
+                                                            {notification.from}
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            {
+                                                                notification.loan_type
+                                                            }
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            {getNotificationBadge(
+                                                                notification.status,
+                                                            )}
+                                                        </TableCell>
+                                                        <TableCell className="max-w-md min-w-56 font-medium whitespace-normal">
+                                                            {
+                                                                notification.description
+                                                            }
+                                                        </TableCell>
+                                                        <TableCell className="max-w-xs min-w-48 whitespace-normal text-muted-foreground">
+                                                            {notification.comment ||
+                                                                'No additional comments'}
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ),
                                             )}
-                                        </div>
-                                    </div>
-                                    <ArrowRight className={`h-4 w-4 ${has_pending_loan ? 'text-yellow-400' : 'text-emerald-400'}`} />
-                                </Link>
-                                
-                                {loan_progress && loan_progress.payment_status !== 'paid' && (
-                                    <Link
-                                        href="/dashboards/Member/MemberActiveLoan"
-                                        className="flex items-center justify-between p-3 rounded-lg hover:bg-emerald-50 transition-colors border border-transparent hover:border-emerald-100"
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            <FileText className="h-4 w-4 text-emerald-600" />
-                                            <span className="text-sm font-medium">View Active Loan Details</span>
-                                       </div>
-                                        <ArrowRight className="h-4 w-4 text-emerald-400" />
-                                    </Link>
-                                )}
-                            </div>
+                                        </TableBody>
+                                    </Table>
 
-                            {/* Next Payment Reminder */}
-                            {loan_progress && loan_progress.payment_status !== 'paid' && (
-                                <div className={`mt-4 p-4 rounded-xl border ${
-                                    loan_progress.payment_status === 'due_soon'
-                                        ? 'border-orange-200 bg-orange-50'
-                                        : 'border-green-200 bg-green-50'
-                                }`}>
-                                    <div className="flex items-center gap-3">
-                                        <div className={`flex h-10 w-10 items-center justify-center rounded-full ${
-                                            loan_progress.payment_status === 'due_soon'
-                                                ? 'bg-orange-100'
-                                                : 'bg-green-100'
-                                        }`}>
-                                            <Calendar className={`h-5 w-5 ${
-                                                loan_progress.payment_status === 'due_soon'
-                                                    ? 'text-orange-600'
-                                                    : 'text-green-600'
-                                            }`} />
-                                        </div>
-                                        <div>
-                                            <p className="font-semibold text-gray-800">
-                                                Next Payment Reminder
-                                            </p>
-                                            <p className="text-sm text-gray-600">
-                                                Due: {formatDate(loan_progress.next_due_date)} • {maskCurrency(loan_progress.next_due_amount)}
-                                            </p>
-                                        </div>
-                                    </div>
+                                    <DataTablePagination
+                                        currentPage={currentPage}
+                                        pageSize={notificationsPerPage}
+                                        totalPages={totalPages}
+                                        totalRows={loan_notifications.length}
+                                        onFirstPage={() => setCurrentPage(1)}
+                                        onPreviousPage={() =>
+                                            setCurrentPage((prev) =>
+                                                Math.max(prev - 1, 1),
+                                            )
+                                        }
+                                        onNextPage={() =>
+                                            setCurrentPage((prev) =>
+                                                Math.min(prev + 1, totalPages),
+                                            )
+                                        }
+                                        onLastPage={() =>
+                                            setCurrentPage(totalPages)
+                                        }
+                                    />
+                                </>
+                            ) : (
+                                <div className="flex flex-col items-center justify-center rounded-2xl bg-muted/30 px-4 py-10 text-center">
+                                    <Bell className="mb-3 size-10 text-muted-foreground/60" />
+                                    <p className="text-base font-medium">
+                                        No loan notifications yet
+                                    </p>
+                                    <p className="mt-1 max-w-md text-sm text-muted-foreground">
+                                        Updates about approvals, releases, or
+                                        returned applications will appear here.
+                                    </p>
                                 </div>
                             )}
                         </CardContent>
                     </Card>
-                </div>
-
-                {/* === LOAN NOTIFICATIONS SECTION === */}
-                <Card className="border-emerald-100">
-                    <CardHeader className="flex flex-row items-center justify-between">
-                        <div>
-                            <CardTitle className="text-emerald-900 dark:text-emerald-100">Loan Notifications</CardTitle>
-                            <CardDescription>Recent updates on your loan applications.</CardDescription>
-                        </div>
-                        <Bell className="h-5 w-5 text-emerald-600" />
-                    </CardHeader>
-                    <CardContent>
-{loan_notifications && loan_notifications.length > 0 ? (
-                            <>
-                                <div className="overflow-x-auto">
-                                    <table className="w-full">
-                                        <thead>
-                                            <tr className="border-b border-emerald-100">
-                                                <th className="text-left py-3 px-4 text-xs font-semibold text-emerald-700 uppercase tracking-wider">Date & Time</th>
-                                                <th className="text-left py-3 px-4 text-xs font-semibold text-emerald-700 uppercase tracking-wider">Admin</th>
-                                                <th className="text-left py-3 px-4 text-xs font-semibold text-emerald-700 uppercase tracking-wider">Loan Type</th>
-                                                <th className="text-left py-3 px-4 text-xs font-semibold text-emerald-700 uppercase tracking-wider">Message</th>
-                                                <th className="text-left py-3 px-4 text-xs font-semibold text-emerald-700 uppercase tracking-wider">Reason</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {(() => {
-                                                const startIndex = (currentPage - 1) * notificationsPerPage;
-                                                const endIndex = startIndex + notificationsPerPage;
-                                                const paginatedNotifications = loan_notifications.slice(startIndex, endIndex);
-                                                return paginatedNotifications.map((notification) => (
-                                                    <tr 
-                                                        key={notification.id} 
-                                                        className={`border-b border-emerald-50 hover:bg-emerald-50/50 transition-colors ${
-                                                            notification.status === 'rejected_by_co_maker' || notification.status === 'rejected_by_gm' || notification.status === 'rejected_by_credit_com'
-                                                                ? 'bg-red-50/30'
-                                                                : notification.status === 'released'
-                                                                    ? 'bg-blue-50/30'
-                                                                    : notification.status === 'pending_gm_review' || notification.status === 'pending_cc_review' || notification.status === 'comaker_request'
-                                                                        ? 'bg-yellow-50/30'
-                                                                        : ''
-                                                        }`}
-                                                    >
-                                                        <td className="py-3 px-4 text-sm text-gray-700 font-mono text-xs">
-                                                            {formatDate(notification.date)}
-                                                        </td>
-                                                        <td className="py-3 px-4 text-sm text-gray-700 font-medium">
-                                                            {notification.from}
-                                                        </td>
-                                                        <td className="py-3 px-4 text-sm text-gray-700">
-                                                            {notification.loan_type}
-                                                        </td>
-                                                        <td className="py-3 px-4 text-sm font-medium text-gray-800 max-w-md" title={notification.description}>
-                                                            {notification.description}
-                                                        </td>
-                                                        <td className="py-3 px-4 text-sm text-gray-600 max-w-xs truncate" title={notification.comment}>
-                                                            {notification.comment || 'No additional comments'}
-                                                        </td>
-                                                    </tr>
-                                                ));
-                                            })()}
-                                        </tbody>
-                                    </table>
-                                </div>
-                                
-                                {/* Pagination Controls */}
-                                {totalPages > 1 && (
-                                    <div className="flex items-center justify-between mt-4 px-4 py-3 bg-emerald-50 border-t border-emerald-200 rounded-b-lg">
-                                        <div className="text-sm text-emerald-700">
-                                            Showing {Math.min((currentPage - 1) * notificationsPerPage + 1, loan_notifications.length)} to {Math.min(currentPage * notificationsPerPage, loan_notifications.length)} of {loan_notifications.length} notifications
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <button
-                                                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                                                disabled={currentPage === 1}
-                                                className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg bg-white border border-emerald-300 text-emerald-700 hover:bg-emerald-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white transition-colors"
-                                            >
-                                                Previous
-                                            </button>
-                                            <span className="px-3 py-2 text-sm font-medium text-emerald-800 bg-emerald-100 rounded-lg min-w-[80px] text-center">
-                                                Page {currentPage} of {totalPages}
-                                            </span>
-                                            <button
-                                                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                                                disabled={currentPage === totalPages}
-                                                className="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg bg-white border border-emerald-300 text-emerald-700 hover:bg-emerald-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white transition-colors"
-                                            >
-                                                Next
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
-                            </>
-                        ) : (
-                            <div className="flex flex-col items-center justify-center py-8 text-center">
-                                <Bell className="h-12 w-12 text-gray-300 mb-3" />
-                                <p className="text-gray-500">No loan notifications yet</p>
-                                <p className="text-sm text-gray-400 mt-1">
-                                    You will see notifications here when your loan applications are approved or rejected.
-                                </p>
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
+                </main>
             </div>
         </AppLayout>
     );
+}
+
+function MetricItem({
+    icon: Icon,
+    label,
+    value,
+    description,
+    tone = 'emerald',
+}: {
+    icon: React.ElementType;
+    label: string;
+    value: string;
+    description: string;
+    tone?: Tone;
+}) {
+    const colors = getToneClasses(tone);
+
+    return (
+        <div className={cn('rounded-2xl border p-4', colors.surface)}>
+            <div className="mb-3 flex items-center justify-between gap-3">
+                <p className={cn('text-sm font-medium', colors.label)}>
+                    {label}
+                </p>
+                <Icon className={cn('size-4', colors.icon)} />
+            </div>
+            <p className={cn('text-base font-semibold', colors.value)}>
+                {value}
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+        </div>
+    );
+}
+
+function InfoBlock({
+    label,
+    value,
+    description,
+    align = 'left',
+    icon: Icon,
+    tone = 'slate',
+}: {
+    label: string;
+    value: string;
+    description?: string;
+    align?: 'left' | 'right';
+    icon?: React.ElementType;
+    tone?: Tone;
+}) {
+    const colors = getToneClasses(tone);
+
+    return (
+        <div
+            className={cn(
+                'rounded-2xl border p-4',
+                colors.surface,
+                align === 'right' && 'sm:text-right',
+            )}
+        >
+            <div
+                className={cn(
+                    'mb-2 flex items-center gap-2',
+                    align === 'right' && 'sm:justify-end',
+                )}
+            >
+                {Icon && <Icon className={cn('size-4', colors.icon)} />}
+                <p className={cn('text-sm font-medium', colors.label)}>
+                    {label}
+                </p>
+            </div>
+            <p
+                className={cn(
+                    'text-base font-semibold break-words',
+                    colors.value,
+                )}
+            >
+                {value}
+            </p>
+            {description && (
+                <p className="mt-1 text-sm text-muted-foreground">
+                    {description}
+                </p>
+            )}
+        </div>
+    );
+}
+
+function ActionLink({
+    href,
+    icon: Icon,
+    label,
+    description,
+}: {
+    href: string;
+    icon: React.ElementType;
+    label: string;
+    description: string;
+}) {
+    return (
+        <Link
+            href={href}
+            className="flex items-center justify-between gap-4 rounded-2xl p-3 transition-colors hover:bg-emerald-50/70"
+        >
+            <span className="flex min-w-0 items-center gap-3">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-emerald-100">
+                    <Icon className="size-4 text-emerald-700" />
+                </span>
+                <span className="min-w-0">
+                    <span className="block text-sm font-medium text-emerald-950">
+                        {label}
+                    </span>
+                    <span className="block truncate text-sm text-muted-foreground">
+                        {description}
+                    </span>
+                </span>
+            </span>
+            <ArrowRight className="size-4 shrink-0 text-emerald-600" />
+        </Link>
+    );
+}
+
+function DataTablePagination({
+    currentPage,
+    pageSize,
+    totalPages,
+    totalRows,
+    onFirstPage,
+    onPreviousPage,
+    onNextPage,
+    onLastPage,
+}: {
+    currentPage: number;
+    pageSize: number;
+    totalPages: number;
+    totalRows: number;
+    onFirstPage: () => void;
+    onPreviousPage: () => void;
+    onNextPage: () => void;
+    onLastPage: () => void;
+}) {
+    const isFirstPage = currentPage === 1;
+    const isLastPage = currentPage === totalPages;
+
+    return (
+        <div className="flex flex-col gap-4 rounded-2xl border border-slate-100 bg-slate-50/70 p-4 md:flex-row md:items-center md:justify-between">
+            <p className="text-sm text-muted-foreground">
+                0 of {totalRows} row(s) selected.
+            </p>
+
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <div className="flex items-center gap-2">
+                    <span className="flex h-8 min-w-12 items-center justify-center rounded-md border border-input bg-background px-3 text-sm font-medium text-foreground shadow-xs">
+                        {pageSize}
+                    </span>
+                    <span className="text-sm font-medium text-foreground">
+                        Page {currentPage} of {totalPages}
+                    </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="icon-sm"
+                        onClick={onFirstPage}
+                        disabled={isFirstPage}
+                        aria-label="Go to first page"
+                        title="Go to first page"
+                    >
+                        <ChevronsLeft className="size-4" />
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="icon-sm"
+                        onClick={onPreviousPage}
+                        disabled={isFirstPage}
+                        aria-label="Go to previous page"
+                        title="Go to previous page"
+                    >
+                        <ChevronLeft className="size-4" />
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="icon-sm"
+                        onClick={onNextPage}
+                        disabled={isLastPage}
+                        aria-label="Go to next page"
+                        title="Go to next page"
+                    >
+                        <ChevronRight className="size-4" />
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="icon-sm"
+                        onClick={onLastPage}
+                        disabled={isLastPage}
+                        aria-label="Go to last page"
+                        title="Go to last page"
+                    >
+                        <ChevronsRight className="size-4" />
+                    </Button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function EmptyCard({
+    icon: Icon,
+    title,
+    description,
+}: {
+    icon: React.ElementType;
+    title: string;
+    description: string;
+}) {
+    return (
+        <Card className="rounded-2xl border-emerald-100 bg-white/80 shadow-sm dark:bg-emerald-950/10">
+            <CardContent className="flex min-h-48 flex-col items-center justify-center px-6 py-10 text-center">
+                <Icon className="mb-3 size-10 text-emerald-500" />
+                <p className="text-base font-semibold text-emerald-950 dark:text-emerald-100">
+                    {title}
+                </p>
+                <p className="mt-1 max-w-md text-sm text-muted-foreground">
+                    {description}
+                </p>
+            </CardContent>
+        </Card>
+    );
+}
+
+function getToneClasses(tone: Tone) {
+    const tones: Record<
+        Tone,
+        {
+            surface: string;
+            label: string;
+            value: string;
+            icon: string;
+        }
+    > = {
+        emerald: {
+            surface: 'border-emerald-100 bg-emerald-50/70',
+            label: 'text-emerald-700',
+            value: 'text-emerald-700',
+            icon: 'text-emerald-600',
+        },
+        blue: {
+            surface: 'border-blue-100 bg-blue-50/70',
+            label: 'text-blue-700',
+            value: 'text-blue-700',
+            icon: 'text-blue-600',
+        },
+        green: {
+            surface: 'border-green-100 bg-green-50/70',
+            label: 'text-green-700',
+            value: 'text-green-700',
+            icon: 'text-green-600',
+        },
+        amber: {
+            surface: 'border-amber-100 bg-amber-50/70',
+            label: 'text-amber-700',
+            value: 'text-amber-700',
+            icon: 'text-amber-600',
+        },
+        red: {
+            surface: 'border-red-100 bg-red-50/70',
+            label: 'text-red-700',
+            value: 'text-red-700',
+            icon: 'text-red-600',
+        },
+        slate: {
+            surface: 'border-slate-100 bg-slate-50/70',
+            label: 'text-slate-600',
+            value: 'text-slate-800',
+            icon: 'text-slate-500',
+        },
+    };
+
+    return tones[tone];
 }

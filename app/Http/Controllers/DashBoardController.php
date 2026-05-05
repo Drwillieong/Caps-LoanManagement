@@ -19,12 +19,11 @@ class DashBoardController extends Controller
         $user = $request->user();
         $role = $user->role;
         
-        $roleComponents = [
-            'member' => 'dashboards/Member/MemberDashboard',
-            'gm' => 'dashboards/Gm/GmDashboard',
-            'hr' => 'dashboards/HR/HrDashboard',
-            'creditcom' => 'dashboards/CreditCom/CreditComDashboard',
-        ];
+    $roleComponents = [
+        'member' => 'dashboards/Member/MemberDashboard',
+        'gm' => 'dashboards/Gm/GmDashboard',
+        'hr' => 'dashboards/HR/HrDashboard',
+    ];
 
         if (!array_key_exists($role, $roleComponents)) {
             abort(403, 'Unauthorized role.');

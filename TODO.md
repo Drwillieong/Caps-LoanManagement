@@ -1,28 +1,7 @@
-# ALL TASKS COMPLETED ✅
+# FAQ Updates TODO
 
-## Summary of Changes:
-
-1. **Notification.tsx Pagination & Design** (exact match to MemberDashboard):
-   | Feature | ✅ |
-   |---------|--|
-   | Pagination UI & logic | ✅ |
-   | Table columns & styling | ✅ |
-   | Status badges | ✅ |
-   | Header total badge | ✅ |
-
-2. **Toast Position**: Changed to **top-right** globally
-   - File: `resources/js/components/toaster.tsx`
-   - `<HotToaster position="top-right" />`
-
-**Files Modified:**
-- `resources/js/pages/dashboards/Member/Notification.tsx`
-- `resources/js/components/toaster.tsx`
-- `TODO.md`
-
-**Test Instructions:**
-1. Dev server running: http://localhost:5174/
-2. Trigger toasts anywhere (e.g. accept/reject loans, submit forms)
-3. Verify toasts appear **top-right**
-4. Check Notification page pagination & design
-
+- [x] 1. Add `/faq` and `/faq/:slug` routes in `routes/web.php`
+- [x] 2. Update `resources/js/pages/Faq/Faq.tsx` with slugs, icons, clickable titles, full-page layout
+- [x] 3. Create `resources/js/pages/Faq/FaqDetail.tsx` for single FAQ item display
+- [x] 4. Update `resources/js/pages/auth/login.tsx` to navigate to `/faq` instead of opening Sheet
 

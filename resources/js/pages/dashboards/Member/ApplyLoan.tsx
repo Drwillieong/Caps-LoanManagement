@@ -21,8 +21,6 @@ import type { ApplyLoanProps, EligibleCoMaker, PreviousLoan, SharedData, Breadcr
 import { toast } from 'react-hot-toast';
 import { canSendEmail } from '@/hooks/use-internet-check';
 
-// PreviousLoanWithPercent type now in index.d.ts
-
 import { Search, User, Calendar, AlertCircle, CheckCircle2, Clock, Eye, EyeOff, ArrowRight, CheckCircle } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -191,6 +189,13 @@ export default function ApplyLoan({
     }, [eligibleCoMakers]);
 
 
+    // Co-maker search state
+    const [coMakerSearch, setCoMakerSearch] = useState('');
+
+    // Pre-selected co-maker from ChooseComaker page
+    const [preSelectedCoMaker, setPreSelectedCoMaker] = useState<EligibleCoMaker | null>(null);
+    const [isPreSelecting, setIsPreSelecting] = useState(false);
+    const [isAgreementModalOpen, setIsAgreementModalOpen] = useState(false);
 
     // Filter co-makers based on search
     const filteredCoMakers = useMemo(() => {

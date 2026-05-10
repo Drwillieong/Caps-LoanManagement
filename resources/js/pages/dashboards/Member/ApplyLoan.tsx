@@ -1,4 +1,4 @@
-import { Head, useForm, Link, usePage } from '@inertiajs/react';
+import { Head, useForm, Link } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { LiveClock } from '@/components/live-clock';
 import HeadingSmall from '@/components/heading-small';
@@ -23,7 +23,7 @@ import { canSendEmail } from '@/hooks/use-internet-check';
 
 // PreviousLoanWithPercent type now in index.d.ts
 
-import { Search, User, Calendar, AlertCircle, CheckCircle2, Clock, Eye, EyeOff, ArrowRight, CheckCircle } from 'lucide-react';
+import { Search, User, Calendar, AlertCircle, CheckCircle2, Clock, ArrowRight, CheckCircle, EyeOff, Eye } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
    
@@ -54,14 +54,14 @@ export default function ApplyLoan({
         co_maker_user_id: editingLoan?.co_maker_user_id?.toString() || '',
     });
 
-    // All states - moved before early returns
+    // UI state
     const [showApplicantInfo, setShowApplicantInfo] = useState(false);
     const [coMakerSearch, setCoMakerSearch] = useState('');
     const [preSelectedCoMaker, setPreSelectedCoMaker] = useState<EligibleCoMaker | null>(null);
     const [isPreSelecting, setIsPreSelecting] = useState(false);
     const [isAgreementModalOpen, setIsAgreementModalOpen] = useState(false);
 
-    // Handle co_maker_id from ChooseComaker page - now safe
+    // Handle co_maker_id from ChooseComaker page
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search);
         const coMakerId = urlParams.get('co_maker_id');
@@ -225,7 +225,7 @@ export default function ApplyLoan({
         return isNaN(num) ? 0 : num;
     };
 
-    // Mask currency based on visibility
+    // Mask currency (kept for compatibility with existing display logic)
     const maskCurrency = (amount: number | string | null, visible: boolean): string => {
         if (!visible) return '₱•••••';
         return formatCurrency(amount);
@@ -370,12 +370,19 @@ const computed = useMemo(() => {
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-4">
+                            <div className="rounded-lg border bg-muted/20 p-4">
+                                <p className="text-sm font-medium">Eligibility Check</p>
+                                <p className="mt-1 text-sm text-muted-foreground">Real-time verification of your loan application</p>
+                            </div>
+
                             {/* Main eligibility status */}
-                            <div className={`flex items-center gap-3 rounded-lg p-4 ${
-                                exceedsShareCapital || newMonthlyExceedsLimit || combinedMonthlyExceedsLimit || !eligibleForActiveLoans
-                                    ? 'bg-red-50 border border-red-200' 
-                                    : 'bg-emerald-50 border border-emerald-200'
-                            }`}>
+                            <div
+                                className={`flex items-center gap-3 rounded-lg border p-4 ${
+                                    exceedsShareCapital || newMonthlyExceedsLimit || combinedMonthlyExceedsLimit || !eligibleForActiveLoans
+                                        ? 'bg-destructive/5 border-destructive/15'
+                                        : 'bg-emerald-500/5 border-emerald-500/15'
+                                }`}
+                            >
                                 {exceedsShareCapital || newMonthlyExceedsLimit || combinedMonthlyExceedsLimit || !eligibleForActiveLoans ? (
                                     <>
                                         <AlertCircle className="h-6 w-6 text-red-500" />

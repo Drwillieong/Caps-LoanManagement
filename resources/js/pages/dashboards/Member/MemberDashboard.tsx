@@ -264,7 +264,7 @@ export default function MemberDashboard({
             <Head title="Member Dashboard" />
 
             <div className="flex flex-1 flex-col bg-muted/20 px-4 py-6 sm:px-6">
-                <main className="mx-auto flex w-full max-w-5xl flex-col gap-4">
+                <main className="mx-auto flex w-full max-w-7xl flex-col gap-4">
                     <section className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                         <div className="space-y-1">
                             <p className="text-sm font-medium text-emerald-700">

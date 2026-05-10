@@ -69,6 +69,15 @@ interface DetailedLoan {
         method: string;
         reference: string;
     }>;
+    transactions?: Array<{
+        id: number;
+        date: string;
+        type: string;
+        amount: number;
+        remarks: string | null;
+        balance_after: number;
+        processed_by: string;
+    }>;
 }
 
 interface Props {
@@ -109,6 +118,7 @@ export default function ViewActiveLoan({ loan }: Props) {
         payments: [
             { id: 1, date: '2024-01-20', amount: 4500, method: 'Salary Deduct', reference: 'PMT001' },
         ],
+        transactions: [],
     };
 
     const displayLoan = loan || mockLoan;
@@ -306,6 +316,12 @@ export default function ViewActiveLoan({ loan }: Props) {
                             Payments
                         </button>
                         <button
+                            className={`px-4 py-2 text-sm font-medium border-b-2 ${activeTab === 'ledger' ? 'border-emerald-500 text-emerald-600' : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted'}`}
+                            onClick={() => setActiveTab('ledger')}
+                        >
+                            Ledger
+                        </button>
+                        <button
                             className={`px-4 py-2 text-sm font-medium border-b-2 ${activeTab === 'actions' ? 'border-emerald-500 text-emerald-600' : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted'}`}
                             onClick={() => setActiveTab('actions')}
                         >
@@ -424,7 +440,7 @@ export default function ViewActiveLoan({ loan }: Props) {
                                                     <TableRow key={payment.id}>
                                                         <TableCell>{formatDate(payment.date)}</TableCell>
                                                         <TableCell className="font-mono font-semibold">{formatCurrency(payment.amount)}</TableCell>
-                                                        <TableCell>Salary Deduct</TableCell>
+                                                        <TableCell>{payment.method}</TableCell>
                                                         <TableCell>{payment.reference}</TableCell>
                                                     </TableRow>
                                                 ))
@@ -432,6 +448,61 @@ export default function ViewActiveLoan({ loan }: Props) {
                                                 <TableRow>
                                                     <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
                                                         No payments recorded yet.
+                                                    </TableCell>
+                                                </TableRow>
+                                            )}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {activeTab === 'ledger' && (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Loan Ledger</CardTitle>
+                                <CardDescription>Audit trail for releases, deductions, missed deductions, and manual payments.</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="rounded-md border">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Date</TableHead>
+                                                <TableHead>Type</TableHead>
+                                                <TableHead>Remarks</TableHead>
+                                                <TableHead>Processed By</TableHead>
+                                                <TableHead className="text-right">Amount</TableHead>
+                                                <TableHead className="text-right">Balance</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {(displayLoan.transactions ?? []).length > 0 ? (
+                                                (displayLoan.transactions ?? []).map((transaction) => (
+                                                    <TableRow key={transaction.id}>
+                                                        <TableCell>{formatDate(transaction.date)}</TableCell>
+                                                        <TableCell>
+                                                            <Badge variant="outline">
+                                                                {transaction.type.replaceAll('_', ' ')}
+                                                            </Badge>
+                                                        </TableCell>
+                                                        <TableCell className="max-w-sm whitespace-normal text-muted-foreground">
+                                                            {transaction.remarks || 'N/A'}
+                                                        </TableCell>
+                                                        <TableCell>{transaction.processed_by}</TableCell>
+                                                        <TableCell className="text-right font-mono">
+                                                            {formatCurrency(transaction.amount)}
+                                                        </TableCell>
+                                                        <TableCell className="text-right font-mono font-semibold">
+                                                            {formatCurrency(transaction.balance_after)}
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))
+                                            ) : (
+                                                <TableRow>
+                                                    <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                                                        No ledger transactions recorded yet.
                                                     </TableCell>
                                                 </TableRow>
                                             )}

@@ -3,12 +3,11 @@
 namespace App\Http\Controllers\HrController;
 
 use App\Http\Controllers\Controller;
+use App\Models\Loan;
+use App\Models\LoanPayment;
 use App\Services\DashboardService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-use App\Models\Loan;
-use App\Models\User;
-use App\Models\LoanPayment;
 
 class HrDashboardController extends Controller
 {
@@ -25,8 +24,8 @@ class HrDashboardController extends Controller
             ->map(function ($loan) {
                 return [
                     'id' => $loan->id,
-                    'member_id' => 'MEM-' . str_pad($loan->user_id, 4, '0', STR_PAD_LEFT),
-                    'member_name' => trim($loan->user->first_name . ' ' . ($loan->user->middle_name ?? '') . ' ' . $loan->user->last_name),
+                    'member_id' => 'MEM-'.str_pad($loan->user_id, 4, '0', STR_PAD_LEFT),
+                    'member_name' => trim($loan->user->first_name.' '.($loan->user->middle_name ?? '').' '.$loan->user->last_name),
                     'loan_type' => $loan->loanType->name ?? 'Unknown',
                     'principal' => $loan->principal_amount,
                     'terms' => $loan->terms_months,
@@ -44,7 +43,7 @@ class HrDashboardController extends Controller
 
         return Inertia::render('dashboards/HR/HRActiveLoan', [
             'active_loans' => $loans,
-            'stats' => $stats
+            'stats' => $stats,
         ]);
     }
 
@@ -73,11 +72,12 @@ class HrDashboardController extends Controller
     public function viewActiveLoan(Loan $loan)
     {
         $loan->loadMissing([
-            'user.memberProfile', 
-            'loanType', 
+            'user.memberProfile',
+            'loanType',
             'coMakers.user.memberProfile',
-            'amortizations' => fn($q) => $q->orderBy('due_date'),
-            'payments' => fn($q) => $q->orderBy('created_at', 'desc')
+            'amortizations' => fn ($q) => $q->orderBy('due_date'),
+            'payments' => fn ($q) => $q->orderBy('created_at', 'desc'),
+            'transactions.processor' => fn ($q) => $q->select('id', 'first_name', 'last_name'),
         ]);
 
         // Calculate totals
@@ -108,10 +108,24 @@ class HrDashboardController extends Controller
             ];
         });
 
+        $transactions = $loan->transactions->sortByDesc('transaction_date')->map(function ($transaction) {
+            return [
+                'id' => $transaction->id,
+                'date' => $transaction->transaction_date->format('Y-m-d'),
+                'type' => $transaction->transaction_type,
+                'amount' => $transaction->amount,
+                'remarks' => $transaction->remarks,
+                'balance_after' => $transaction->balance_after,
+                'processed_by' => $transaction->processor
+                    ? trim($transaction->processor->first_name.' '.$transaction->processor->last_name)
+                    : 'System',
+            ];
+        })->values();
+
         $detailedLoan = [
             'id' => $loan->id,
-            'member_id' => 'MEM-' . str_pad($loan->user_id, 4, '0', STR_PAD_LEFT),
-            'member_name' => trim($loan->user->first_name . ' ' . ($loan->user->middle_name ?? '') . ' ' . $loan->user->last_name),
+            'member_id' => 'MEM-'.str_pad($loan->user_id, 4, '0', STR_PAD_LEFT),
+            'member_name' => trim($loan->user->first_name.' '.($loan->user->middle_name ?? '').' '.$loan->user->last_name),
             'beneficiary_name' => $loan->user->memberProfile?->beneficiary_name ?? null,
             'loan_type' => $loan->loanType->name ?? 'Unknown',
             'principal' => $loan->principal_amount,
@@ -124,16 +138,16 @@ class HrDashboardController extends Controller
             'status' => $loan->status,
             'next_due_date' => $loan->amortizations->where('status', 'pending')->first()?->due_date?->format('Y-m-d') ?? null,
             'co_maker' => $loan->coMakers->first()?->user ? [
-                'name' => trim($loan->coMakers->first()->user->first_name . ' ' . ($loan->coMakers->first()->user->middle_name ?? '') . ' ' . $loan->coMakers->first()->user->last_name),
+                'name' => trim($loan->coMakers->first()->user->first_name.' '.($loan->coMakers->first()->user->middle_name ?? '').' '.$loan->coMakers->first()->user->last_name),
                 'relationship' => $loan->coMakers->first()->user->memberProfile?->relationship ?? 'N/A',
             ] : null,
             'amortization_schedule' => $amortizationSchedule,
             'payments' => $payments,
+            'transactions' => $transactions,
         ];
 
         return Inertia::render('dashboards/Shared/ViewActiveLoan', [
-            'loan' => $detailedLoan
+            'loan' => $detailedLoan,
         ]);
     }
 }
-

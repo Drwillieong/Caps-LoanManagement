@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Services\Payroll\SystemSettingService;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -33,14 +34,17 @@ class HandleInertiaRequests extends Middleware
      *
      * @return array<string, mixed>
      */
-public function share(Request $request): array
+    public function share(Request $request): array
     {
         return [
             ...parent::share($request),
-'name' => config('app.name'),
+            'name' => config('app.name'),
             'auth' => [
                 'user' => $request->user() ? $request->user()->load('memberProfile') : null,
                 'hasCompletedProfile' => $request->user() ? $request->user()->hasCompletedProfile() : null,
+            ],
+            'system' => [
+                'payrollProcessing' => app(SystemSettingService::class)->payrollProcessingState(),
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
 

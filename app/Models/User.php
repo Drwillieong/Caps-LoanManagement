@@ -148,8 +148,13 @@ class User extends Authenticatable
      */
     public function getAvatarAttribute(): ?string
     {
-        return $this->memberProfile?->profile_picture 
-            ? Storage::url('profiles/' . $this->memberProfile->profile_picture)
+        return $this->memberProfile?->profile_picture
+            ? Storage::url('profiles/'.$this->memberProfile->profile_picture)
             : null;
+    }
+
+    public function getNameAttribute(): string
+    {
+        return trim($this->first_name.' '.($this->middle_name ? $this->middle_name.' ' : '').$this->last_name);
     }
 }

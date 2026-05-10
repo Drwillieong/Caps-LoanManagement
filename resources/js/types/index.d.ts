@@ -59,6 +59,7 @@ export interface MemberProfile {
     id?: number;
     user_id: number;
     employee_id: string;
+    payroll_id?: string | null;
     first_name: string;
     middle_name?: string;
     last_name: string;
@@ -276,6 +277,17 @@ export interface MemberActiveLoanPayment {
     payment_date: string | null;
     reference_number: string | null;
     paid_by: string;
+    payment_method?: string | null;
+}
+
+export interface MemberActiveLoanTransaction {
+    id: number;
+    date: string | null;
+    type: string;
+    amount: number;
+    remarks: string | null;
+    balance_after: number;
+    processed_by: string;
 }
 
 export interface MemberActiveLoan {
@@ -300,6 +312,7 @@ export interface MemberActiveLoan {
     payment_status: string;
     amortizations: MemberActiveLoanAmortization[];
     payments: MemberActiveLoanPayment[];
+    transactions?: MemberActiveLoanTransaction[];
 }
 
 export interface MemberActiveLoanProps {
@@ -358,4 +371,3 @@ export interface MemberCompletedLoanProps {
     totalInterestPaid: number;
     avgLoanAmount: number;
 }
-

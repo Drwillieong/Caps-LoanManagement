@@ -2,14 +2,14 @@
 
 namespace App\Http\Controllers\HrController;
 
-use Illuminate\Http\Request;
-use Inertia\Inertia;
-use App\Models\User;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rules;
 use App\Http\Controllers\Controller;
-use Illuminate\Support\Facades\Mail;
 use App\Mail\SendMembersPass;
+use App\Models\User;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Validation\Rules;
+use Inertia\Inertia;
 
 class CreateMemberController extends Controller
 {
@@ -17,7 +17,7 @@ class CreateMemberController extends Controller
     {
         $search = $request->get('search');
         $filter = $request->get('filter', 'all');
-        $role   = $request->get('role', 'all');
+        $role = $request->get('role', 'all');
         $export = $request->get('export', false);
 
         $query = User::query()->with('memberProfile');
@@ -26,9 +26,13 @@ class CreateMemberController extends Controller
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('id', $search)
-                  ->orWhere('first_name', 'like', "%{$search}%")
-                  ->orWhere('last_name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
+                    ->orWhere('first_name', 'like', "%{$search}%")
+                    ->orWhere('last_name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhereHas('memberProfile', function ($query) use ($search) {
+                        $query->where('employee_id', 'like', "%{$search}%")
+                            ->orWhere('payroll_id', 'like', "%{$search}%");
+                    });
             });
         }
 
@@ -47,7 +51,7 @@ class CreateMemberController extends Controller
         // If export requested, return JSON response
         if ($export) {
             $allUsers = $query->orderBy('created_at', 'desc')->get();
-            
+
             return response()->json([
                 'users' => $allUsers->map(function ($user) {
                     return [
@@ -61,6 +65,7 @@ class CreateMemberController extends Controller
                         'created_at' => $user->created_at,
                         'member_profile' => $user->memberProfile ? [
                             'employee_id' => $user->memberProfile->employee_id,
+                            'payroll_id' => $user->memberProfile->payroll_id,
                             'date_of_birth' => $user->memberProfile->date_of_birth,
                             'sex' => $user->memberProfile->sex,
                             'civil_status' => $user->memberProfile->civil_status,
@@ -90,7 +95,7 @@ class CreateMemberController extends Controller
             'filters' => [
                 'search' => $search,
                 'filter' => $filter,
-                'role'   => $role,
+                'role' => $role,
             ],
             'roles' => [
                 'member',
@@ -122,10 +127,11 @@ class CreateMemberController extends Controller
             'email' => 'required|string|lowercase|email|max:255|unique:users',
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'role' => 'required|in:member,gm,creditcom,hr',
-            
+
             // Employee ID
             'employee_id' => 'required|string|max:255|unique:member_profiles,employee_id',
-            
+            'payroll_id' => 'nullable|string|max:255|unique:member_profiles,payroll_id',
+
             // Employment fields
             'position' => 'required|string|max:255',
             'date_hired' => 'required|date',
@@ -148,6 +154,7 @@ class CreateMemberController extends Controller
         // Create the member profile with employment information
         $user->memberProfile()->create([
             'employee_id' => $request->employee_id,
+            'payroll_id' => $request->payroll_id,
             'first_name' => $request->first_name,
             'middle_name' => $request->middle_name,
             'last_name' => $request->last_name,
@@ -169,7 +176,7 @@ class CreateMemberController extends Controller
             Mail::to($request->email)->send(new SendMembersPass($request->email, $request->password));
         } catch (\Exception $e) {
             // Log error but don't fail the request - data was already saved
-            \Log::error('Failed to send welcome email: ' . $e->getMessage());
+            \Log::error('Failed to send welcome email: '.$e->getMessage());
         }
 
         return redirect()->route('users')->with('success', 'User created successfully.');

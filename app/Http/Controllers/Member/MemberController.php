@@ -35,28 +35,28 @@ class MemberController extends Controller
     private function getActiveLoanPageData(Request $request): array
     {
         $user = $request->user();
-        
+
         $activeLoans = Loan::where('user_id', $user->id)
             ->active()
-            ->with(['loanType', 'amortizations', 'payments'])
+            ->with(['loanType', 'amortizations', 'payments', 'transactions.processor'])
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($loan) {
                 $totalPaid = $loan->payments->sum('amount');
                 $remainingBalance = max(0, (float) $loan->total_amount_due - $totalPaid);
-                $progressPercentage = $loan->total_amount_due > 0 
+                $progressPercentage = $loan->total_amount_due > 0
                     ? round(($totalPaid / $loan->total_amount_due) * 100, 1)
                     : 0;
 
                 $paidAmortizations = $loan->amortizations->where('status', 'paid')->count();
                 $totalAmortizations = $loan->amortizations->count();
-                
+
                 $nextDueAmortization = $loan->amortizations
                     ->whereIn('status', ['pending', 'partial', 'overdue'])
                     ->sortBy('due_date')
                     ->first();
 
-                $paymentStatus = $nextDueAmortization 
+                $paymentStatus = $nextDueAmortization
                     ? (now()->diffInDays($nextDueAmortization->due_date, false) < 0 ? 'overdue' : 'due_soon')
                     : 'paid_off';
 
@@ -80,7 +80,7 @@ class MemberController extends Controller
                     'next_due_date' => $nextDueAmortization?->due_date?->format('Y-m-d'),
                     'next_due_amount' => $nextDueAmortization?->amount_due ?? 0,
                     'payment_status' => $paymentStatus,
-                    'amortizations' => $loan->amortizations->map(fn($a) => [
+                    'amortizations' => $loan->amortizations->map(fn ($a) => [
                         'id' => $a->id,
                         'installment_number' => $a->installment_number,
                         'due_date' => $a->due_date?->format('Y-m-d'),
@@ -88,13 +88,25 @@ class MemberController extends Controller
                         'amount_paid' => $a->amount_paid,
                         'status' => $a->status,
                     ])->sortBy('installment_number')->values(),
-                    'payments' => $loan->payments->map(fn($p) => [
+                    'payments' => $loan->payments->map(fn ($p) => [
                         'id' => $p->id,
                         'amount' => $p->amount,
                         'payment_date' => $p->payment_date?->format('Y-m-d'),
                         'reference_number' => $p->reference_number,
                         'paid_by' => $p->paid_by,
+                        'payment_method' => $p->payment_method,
                     ])->sortByDesc('payment_date')->values(),
+                    'transactions' => $loan->transactions->map(fn ($t) => [
+                        'id' => $t->id,
+                        'date' => $t->transaction_date?->format('Y-m-d'),
+                        'type' => $t->transaction_type,
+                        'amount' => $t->amount,
+                        'remarks' => $t->remarks,
+                        'balance_after' => $t->balance_after,
+                        'processed_by' => $t->processor
+                            ? trim($t->processor->first_name.' '.$t->processor->last_name)
+                            : 'System',
+                    ])->sortByDesc('date')->values(),
                 ];
             });
 
@@ -117,13 +129,13 @@ class MemberController extends Controller
     public function completedLoans(Request $request)
     {
         $user = $request->user();
-        
+
         $completedLoans = Loan::where('user_id', $user->id)
             ->paidOff()
             ->with(['loanType'])
             ->orderBy('release_date', 'desc')
             ->get()
-            ->map(fn($loan) => [
+            ->map(fn ($loan) => [
                 'id' => $loan->id,
                 'loan_type_name' => $loan->loanType->name ?? 'N/A',
                 'principal_amount' => $loan->principal_amount,
@@ -144,7 +156,7 @@ class MemberController extends Controller
     public function search(Request $request)
     {
         $query = $request->get('q', '');
-        
+
         if (strlen($query) < 2) {
             return response()->json(['data' => []]);
         }
@@ -152,20 +164,23 @@ class MemberController extends Controller
         $members = \App\Models\User::where('role', 'member')
             ->where(function ($q) use ($query) {
                 $q->where('email', 'like', "%{$query}%")
-                  ->orWhere('first_name', 'like', "%{$query}%")
-                  ->orWhere('last_name', 'like', "%{$query}%")
-                  ->orWhere('middle_name', 'like', "%{$query}%")
-                  ->orWhereHas('memberProfile', fn($q) => $q->where('employee_id', 'like', "%{$query}%"));
+                    ->orWhere('first_name', 'like', "%{$query}%")
+                    ->orWhere('last_name', 'like', "%{$query}%")
+                    ->orWhere('middle_name', 'like', "%{$query}%")
+                    ->orWhereHas('memberProfile', fn ($q) => $q
+                        ->where('employee_id', 'like', "%{$query}%")
+                        ->orWhere('payroll_id', 'like', "%{$query}%"));
             })
-            ->with(['memberProfile' => fn($q) => $q->select('user_id', 'basic_salary', 'share_capital_balance', 'employee_id')])
+            ->with(['memberProfile' => fn ($q) => $q->select('user_id', 'basic_salary', 'share_capital_balance', 'employee_id', 'payroll_id')])
             ->limit(10)
             ->get()
             ->map(function ($user) {
                 return [
                     'id' => $user->id,
-                    'name' => trim($user->first_name . ' ' . ($user->middle_name ?? '') . ' ' . $user->last_name),
+                    'name' => trim($user->first_name.' '.($user->middle_name ?? '').' '.$user->last_name),
                     'email' => $user->email,
                     'employee_id' => $user->memberProfile->employee_id ?? 'N/A',
+                    'payroll_id' => $user->memberProfile->payroll_id ?? null,
                     'basic_salary' => (float) $user->memberProfile->basic_salary,
                     'share_capital_balance' => (float) $user->memberProfile->share_capital_balance,
                 ];
@@ -183,8 +198,8 @@ class MemberController extends Controller
     public function checkEligibility($memberId)
     {
         $member = \App\Models\User::where('role', 'member')->findOrFail($memberId);
-        
-        $loanService = new \App\Services\LoanService();
+
+        $loanService = new \App\Services\LoanService;
         $profile = $member->memberProfile;
         $hasPendingLoan = Loan::where('user_id', $memberId)
             ->whereIn('status', ['awaiting_comaker', 'pending_gm_review', 'pending_cc_review'])
@@ -192,9 +207,9 @@ class MemberController extends Controller
         $hasActiveLoans = Loan::where('user_id', $memberId)
             ->whereIn('status', ['approved', 'released'])
             ->exists();
-        
-        $eligible = $profile && !$hasPendingLoan && $loanService->canApplyForNewLoan($member);
-        
+
+        $eligible = $profile && ! $hasPendingLoan && $loanService->canApplyForNewLoan($member);
+
         return response()->json([
             'eligible' => $eligible,
             'hasActiveLoans' => $hasActiveLoans,
@@ -204,7 +219,7 @@ class MemberController extends Controller
                 ->count(),
             'reason' => $hasPendingLoan
                 ? 'Member already has a pending loan application.'
-                : (!$eligible ? 'Member has active loans that must be at least 75% paid.' : null),
+                : (! $eligible ? 'Member has active loans that must be at least 75% paid.' : null),
         ]);
     }
 }

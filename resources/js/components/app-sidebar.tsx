@@ -144,7 +144,7 @@ const gmNavItems: NavItem[] = [
             },
              {
                 title: 'Upload Payroll',
-                href: '/dashboards/Gm/GMCompletedLoan',
+                href: '/dashboards/Gm/UploadSalaryDeduct',
                 icon: FileSpreadsheet,
             },
         ],

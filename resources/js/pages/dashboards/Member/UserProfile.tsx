@@ -44,6 +44,7 @@ interface MemberProfile {
     id?: number;
     user_id: number;
     employee_id: string;
+    payroll_id?: string | null;
     first_name: string;
     middle_name?: string;
     last_name: string;
@@ -95,6 +96,7 @@ const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
     // Initialize form data from existing profile or defaults
     const [formData, setFormData] = useState({
         employee_id: memberProfile?.employee_id || '',
+        payroll_id: memberProfile?.payroll_id || '',
         first_name: memberProfile?.first_name || '',
         middle_name: memberProfile?.middle_name || '',
         last_name: memberProfile?.last_name || '',
@@ -332,6 +334,21 @@ const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
                                         />
                                         <InputError message={errors.employee_id} />
                                     </div>
+
+                                    {isAdmin && (
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="payroll_id">Payroll ID</Label>
+                                            <Input
+                                                id="payroll_id"
+                                                name="payroll_id"
+                                                value={formData.payroll_id}
+                                                onChange={(e) => setFormData({ ...formData, payroll_id: e.target.value })}
+                                                placeholder="Optional payroll identifier"
+                                                disabled={!isEditing}
+                                            />
+                                            <InputError message={errors.payroll_id} />
+                                        </div>
+                                    )}
 
                                     <div className="grid gap-2">
                                         <Label htmlFor="first_name">

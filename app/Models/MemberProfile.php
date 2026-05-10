@@ -19,6 +19,7 @@ class MemberProfile extends Model
     protected $fillable = [
         'user_id',
         'employee_id',
+        'payroll_id',
         'first_name',
         'middle_name',
         'last_name',
@@ -67,6 +68,11 @@ class MemberProfile extends Model
     public function beneficiaries(): HasMany
     {
         return $this->hasMany(Beneficiary::class);
+    }
+
+    public function deductionRecords(): HasMany
+    {
+        return $this->hasMany(DeductionRecord::class);
     }
 
     /**

@@ -16,7 +16,7 @@ class Loan extends Model
      *
      * @var array<int, string>
      */
-protected $fillable = [
+    protected $fillable = [
         'user_id',
         'loan_type_id',
         'principal_amount',
@@ -128,9 +128,18 @@ protected $fillable = [
             'user.memberProfile',
             'loanType',
             'coMakers.user',
-            'amortizations' => fn($q) => $q->orderBy('due_date'),
-            'payments'
+            'amortizations' => fn ($q) => $q->orderBy('due_date'),
+            'payments',
         ]);
     }
-}
 
+    public function deductionRecords(): HasMany
+    {
+        return $this->hasMany(DeductionRecord::class);
+    }
+
+    public function transactions(): HasMany
+    {
+        return $this->hasMany(LoanTransaction::class);
+    }
+}

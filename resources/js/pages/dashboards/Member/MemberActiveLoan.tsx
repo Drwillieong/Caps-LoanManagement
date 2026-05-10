@@ -91,6 +91,9 @@ export default function MemberActiveLoan({
             pending_status: { variant: 'secondary', label: 'Pending', color: 'bg-yellow-500' },
             partial: { variant: 'secondary', label: 'Partial', color: 'bg-orange-500' },
             overdue: { variant: 'destructive', label: 'Overdue', color: 'bg-red-500' },
+            missed: { variant: 'destructive', label: 'Missed', color: 'bg-red-500' },
+            deferred: { variant: 'secondary', label: 'Deferred', color: 'bg-slate-500' },
+            manual_payment: { variant: 'outline', label: 'Manual Payment', color: 'bg-emerald-500' },
         };
 
         return (
@@ -535,7 +538,7 @@ export default function MemberActiveLoan({
                                                                     Amount
                                                                 </th>
                                                                 <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase">
-                                                                    Paid By
+                                                                    Method
                                                                 </th>
                                                             </tr>
                                                         </thead>
@@ -552,7 +555,7 @@ export default function MemberActiveLoan({
                                                                         {formatCurrency(payment.amount)}
                                                                     </td>
                                                                     <td className="px-3 py-3 text-sm">
-                                                                        {payment.paid_by}
+                                                                        {payment.payment_method?.replace(/_/g, ' ') || payment.paid_by}
                                                                     </td>
                                                                 </tr>
                                                             ))}
@@ -564,6 +567,56 @@ export default function MemberActiveLoan({
                                                     <div className="h-8 w-8 mx-auto mb-2 opacity-50">₱</div>
                                                 
                                                     <p>No payments recorded yet</p>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <Separator />
+
+                                        <div className="p-6">
+                                            <h4 className="font-semibold mb-4 flex items-center gap-2">
+                                                Loan Ledger
+                                            </h4>
+                                            {loan.transactions && loan.transactions.length > 0 ? (
+                                                <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
+                                                    <table className="w-full min-w-[760px]">
+                                                        <thead className="bg-muted/60 border-b">
+                                                            <tr>
+                                                                <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase">Date</th>
+                                                                <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase">Type</th>
+                                                                <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase">Remarks</th>
+                                                                <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase">Processed By</th>
+                                                                <th className="px-3 py-2 text-right text-xs font-semibold text-muted-foreground uppercase">Amount</th>
+                                                                <th className="px-3 py-2 text-right text-xs font-semibold text-muted-foreground uppercase">Balance</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody className="divide-y divide-border">
+                                                            {loan.transactions.map((transaction) => (
+                                                                <tr key={transaction.id} className="hover:bg-muted/30">
+                                                                    <td className="px-3 py-3 text-sm">{formatDate(transaction.date)}</td>
+                                                                    <td className="px-3 py-3 text-sm">
+                                                                        <Badge variant="outline">
+                                                                            {transaction.type.replace(/_/g, ' ')}
+                                                                        </Badge>
+                                                                    </td>
+                                                                    <td className="px-3 py-3 text-sm text-muted-foreground">
+                                                                        {transaction.remarks || 'N/A'}
+                                                                    </td>
+                                                                    <td className="px-3 py-3 text-sm">{transaction.processed_by}</td>
+                                                                    <td className="px-3 py-3 text-sm text-right font-medium tabular-nums">
+                                                                        {formatCurrency(transaction.amount)}
+                                                                    </td>
+                                                                    <td className="px-3 py-3 text-sm text-right font-semibold tabular-nums">
+                                                                        {formatCurrency(transaction.balance_after)}
+                                                                    </td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            ) : (
+                                                <div className="text-center py-8 text-muted-foreground">
+                                                    <p>No ledger transactions recorded yet</p>
                                                 </div>
                                             )}
                                         </div>

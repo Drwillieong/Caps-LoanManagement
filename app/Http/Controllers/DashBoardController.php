@@ -3,8 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Services\DashboardService;
-use Inertia\Inertia;
+use App\Services\Payroll\SystemSettingService;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class DashBoardController extends Controller
 {
@@ -18,7 +19,7 @@ class DashBoardController extends Controller
     {
         $user = $request->user();
         $role = $user->role;
-        
+
         $roleComponents = [
             'member' => 'dashboards/Member/MemberDashboard',
             'gm' => 'dashboards/Gm/GmDashboard',
@@ -26,8 +27,18 @@ class DashBoardController extends Controller
             'creditcom' => 'dashboards/CreditCom/CreditComDashboard',
         ];
 
-        if (!array_key_exists($role, $roleComponents)) {
+        if (! array_key_exists($role, $roleComponents)) {
             abort(403, 'Unauthorized role.');
+        }
+
+        if ($role === 'member') {
+            $processingState = app(SystemSettingService::class)->payrollProcessingState();
+
+            if ($processingState['active']) {
+                return Inertia::render('dashboards/Member/PayrollMaintenance', [
+                    'processing' => $processingState,
+                ]);
+            }
         }
 
         $data = $this->dashboardService->getDashboardData($role);
@@ -39,10 +50,10 @@ class DashBoardController extends Controller
     {
         $user = $request->user();
         $notificationService = app(\App\Services\NotificationService::class);
-        
+
         return Inertia::render('dashboards/Member/Notification', [
             'loan_notifications' => $notificationService->getNotificationsForUser($user)->items(),
-            'unread_notifications_count' => $notificationService->getUnreadCount($user)
+            'unread_notifications_count' => $notificationService->getUnreadCount($user),
         ]);
     }
 
@@ -52,6 +63,5 @@ class DashBoardController extends Controller
         $notificationService = app(\App\Services\NotificationService::class);
         $notificationService->markAllRead($user);
 
-       
     }
 }

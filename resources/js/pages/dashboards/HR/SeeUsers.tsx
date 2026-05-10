@@ -11,6 +11,7 @@ import { type BreadcrumbItem } from '@/types'
 
 interface MemberProfile {
     employee_id: string
+    payroll_id: string | null
     date_of_birth: string
     sex: string
     civil_status: string
@@ -180,6 +181,7 @@ export default function SeeUsers({ users, filters, roles }: Props) {
                 if (user.member_profile) {
                     const details = [
                         ['Employee ID:', user.member_profile.employee_id],
+                        ['Payroll ID:', user.member_profile.payroll_id || 'N/A'],
                         ['Date of Birth:', formatDate(user.member_profile.date_of_birth)],
                         ['Sex:', user.member_profile.sex],
                         ['Civil Status:', user.member_profile.civil_status],

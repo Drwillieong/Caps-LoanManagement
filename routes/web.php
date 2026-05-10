@@ -5,12 +5,13 @@ use App\Http\Controllers\CreditComController\CreditComDashboardController;
 use App\Http\Controllers\DashBoardController;
 use App\Http\Controllers\GmController\GmController;
 use App\Http\Controllers\GmController\GmDashboardController;
-use App\Http\Controllers\HrController\HrDashboardController;
 use App\Http\Controllers\HrController\CreateMemberController;
+use App\Http\Controllers\HrController\HrDashboardController;
 use App\Http\Controllers\HrController\MemberProfileViewController;
 use App\Http\Controllers\Member\LoanController;
 use App\Http\Controllers\Member\MemberController;
 use App\Http\Controllers\Member\MemberProfileController;
+use App\Http\Controllers\Payroll\PayrollDeductionController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
@@ -42,7 +43,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboards/HR/create', [CreateMemberController::class, 'create'])->middleware('role:hr')->name('users.create');
     Route::post('dashboards/HR/SeeUsers', [CreateMemberController::class, 'store'])->middleware('role:hr')->name('users.store');
 
-
     Route::get('dashboards/HR/HRActiveLoan', [HrDashboardController::class, 'activeLoans'])
         ->middleware('role:hr')
         ->name('hr.active-loan');
@@ -53,8 +53,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('dashboards/HR/active-loans/{loan}/view', [HrDashboardController::class, 'viewActiveLoan'])
         ->middleware('role:hr')
-        ->name('hr.active-loan.view'); 
-
+        ->name('hr.active-loan.view');
 
     // Member - Loan Routes
     Route::get('dashboards/Member/ApplyLoan', [LoanController::class, 'create'])
@@ -84,7 +83,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboards/HR/EditMember/{userId}', [MemberProfileController::class, 'editMember'])
         ->middleware('role:hr,gm,creditcom')
         ->name('hr.edit-member');
-    
+
     Route::put('dashboards/HR/EditMember/{userId}', [MemberProfileController::class, 'updateMember'])
         ->middleware('role:hr,gm,creditcom')
         ->name('hr.update-member');
@@ -125,8 +124,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware('role:member')
         ->name('dashboards.member.notifications.mark-read');
 
-
-
     // GM
     Route::get('dashboards/Gm/ValidateLoan', [GmController::class, 'index'])
         ->middleware('role:gm')
@@ -136,7 +133,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/api/members/search', [MemberController::class, 'search'])
         ->middleware('auth')
         ->name('api.members.search');
-    
+
     Route::get('/api/members/{memberId}/eligible', [MemberController::class, 'checkEligibility'])
         ->middleware('auth')
         ->name('api.members.eligible');
@@ -184,6 +181,32 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboards/Gm/ActivityLog', \App\Http\Controllers\GmController\ActivityLogController::class)
         ->middleware('role:gm')
         ->name('gm.activity-log');
+
+    Route::get('dashboards/Gm/UploadSalaryDeduct', [PayrollDeductionController::class, 'index'])
+        ->middleware('role:gm')
+        ->name('gm.payroll-deductions');
+
+    Route::post('dashboards/Gm/UploadSalaryDeduct', [PayrollDeductionController::class, 'store'])
+        ->middleware('role:gm')
+        ->name('gm.payroll-deductions.store');
+
+    Route::post('dashboards/Gm/UploadSalaryDeduct/start-maintenance', [PayrollDeductionController::class, 'startPayrollMaintenance'])
+        ->middleware('role:gm')
+        ->name('gm.payroll-deductions.start-maintenance');
+
+    Route::post('dashboards/Gm/UploadSalaryDeduct/stop-maintenance', [PayrollDeductionController::class, 'stopPayrollMaintenance'])
+        ->middleware('role:gm')
+        ->name('gm.payroll-deductions.stop-maintenance');
+
+    Route::post('dashboards/Gm/UploadSalaryDeduct/manual-payment', [PayrollDeductionController::class, 'manualPayment'])
+
+        ->middleware('role:gm')
+        ->name('gm.payroll-deductions.manual-payment');
+
+
+    Route::get('dashboards/Gm/UploadSalaryDeduct/template', [PayrollDeductionController::class, 'template'])
+        ->middleware('role:gm')
+        ->name('gm.payroll-deductions.template');
 
     // GM - Create Application (NEW)
     Route::get('dashboards/Gm/CreateApplication', [GmController::class, 'createApplication'])

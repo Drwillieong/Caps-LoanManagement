@@ -130,9 +130,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('gm.validate-loan');
 
     // API Routes (since no api.php)
+    Route::get('/api/salary-deductions/export', [\App\Http\Controllers\Payroll\PayrollDeductionController::class, 'exportSalaryDeductions'])
+        ->middleware(['auth', 'role:gm'])
+        ->name('api.salary-deductions.export');
+
     Route::get('/api/members/search', [MemberController::class, 'search'])
         ->middleware('auth')
         ->name('api.members.search');
+
 
     Route::get('/api/members/{memberId}/eligible', [MemberController::class, 'checkEligibility'])
         ->middleware('auth')

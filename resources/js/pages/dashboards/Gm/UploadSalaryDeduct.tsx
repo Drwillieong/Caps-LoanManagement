@@ -12,6 +12,7 @@ import {
     WalletCards,
 } from 'lucide-react';
 import { type ElementType, type FormEvent, useMemo, useState } from 'react';
+import { toast } from 'react-hot-toast';
 
 import { LiveClock } from '@/components/live-clock';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -126,6 +127,11 @@ type ManualPaymentLoan = {
     next_due_date: string | null;
 };
 
+type ExportSalaryDeductionResponse = {
+    filename?: string;
+};
+
+
 interface UploadSalaryDeductProps {
     processing: ProcessingState;
     stats: PayrollStats;
@@ -207,6 +213,60 @@ export default function UploadSalaryDeduct({
         });
     }
 
+    const [exporting, setExporting] = useState(false);
+
+    async function handleExport() {
+        const cutoffDate = uploadForm.data.cutoff_date;
+
+        if (!cutoffDate) {
+            toast.error('Please select a cutoff date before exporting.');
+            return;
+        }
+
+        setExporting(true);
+        try {
+            const url = `/api/salary-deductions/export?cutoff_date=${encodeURIComponent(cutoffDate)}`;
+
+            const res = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                },
+            });
+
+            if (!res.ok) {
+                const text = await res.text().catch(() => '');
+                throw new Error(text || `Export failed with status ${res.status}`);
+            }
+
+            const blob = await res.blob();
+
+            // Attempt to extract filename from Content-Disposition.
+            const disposition = res.headers.get('Content-Disposition');
+            const match = disposition?.match(/filename="?([^\"]+)"?/);
+            const filename = match?.[1] ?? `salary_deduction_report_${cutoffDate}.xlsx`;
+
+            const blobUrl = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = blobUrl;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(blobUrl);
+
+            const json: ExportSalaryDeductionResponse | null = null;
+            void json;
+
+            toast.success('Salary deduction report exported successfully.');
+        } catch (error) {
+            console.error('Export error:', error);
+            toast.error('Failed to export salary deduction report. Please try again.');
+        } finally {
+            setExporting(false);
+        }
+    }
+
     function submitManualPayment(event: FormEvent) {
         event.preventDefault();
 
@@ -218,6 +278,7 @@ export default function UploadSalaryDeduct({
             },
         });
     }
+
 
     return (
         <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
@@ -245,6 +306,20 @@ export default function UploadSalaryDeduct({
                         <Button
                             variant="outline"
                             type="button"
+                            disabled={exporting || processing.active}
+                            onClick={handleExport}
+                        >
+                            {exporting ? (
+                                <LoaderCircle className="size-4 animate-spin" />
+                            ) : (
+                                <FileSpreadsheet className="size-4" />
+                            )}
+                            Export Salary Deduction Report
+                        </Button>
+
+                        <Button
+                            variant="outline"
+                            type="button"
                             onClick={() => {
                                 const url = processing.active
                                     ? '/dashboards/Gm/UploadSalaryDeduct/stop-maintenance'
@@ -258,6 +333,7 @@ export default function UploadSalaryDeduct({
                                 });
                             }}
                         >
+
                             {processing.active ? (
                                 <CheckCircle2 className="size-4" />
                             ) : (

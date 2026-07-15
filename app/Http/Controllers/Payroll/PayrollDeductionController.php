@@ -19,6 +19,24 @@ class PayrollDeductionController extends Controller
         return Inertia::render('dashboards/Gm/UploadSalaryDeduct', $payrollDeductionService->dashboardData());
     }
 
+    public function exportSalaryDeductions(
+        Request $request,
+        \App\Services\Payroll\SalaryDeductionReportService $reportService
+    ) {
+        $validated = $request->validate([
+            'cutoff_date' => 'required|date',
+        ]);
+
+        $cutoffDate = Carbon::parse($validated['cutoff_date']);
+
+        // Laravel Excel stream response (efficient and avoids temp files).
+        return \Maatwebsite\Excel\Excel::download(
+            new \App\Exports\SalaryDeductionReportExport($cutoffDate, $reportService),
+            'salary_deduction_report_'.$cutoffDate->toDateString().'.xlsx',
+            \Maatwebsite\Excel\Excel::XLSX
+        );
+    }
+
     public function store(Request $request, PayrollDeductionService $payrollDeductionService)
     {
         $validated = $request->validate([

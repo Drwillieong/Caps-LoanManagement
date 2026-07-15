@@ -68,6 +68,18 @@ export default function SeeUsers({ users, filters, roles }: Props) {
     const [filter, setFilter] = useState(filters.filter || 'all')
     const [role, setRole] = useState(filters.role || 'all')
 
+    // 1. Filter out users who do not have a member profile
+    const membersOnly = users.data.filter((user) => user.member_profile !== null)
+
+    // 2. Extract only the roles that belong to users with active member profiles
+    const activeMemberRoles = Array.from(
+        new Set(
+            users.data
+                .filter((user) => user.member_profile !== null)
+                .map((user) => user.role)
+        )
+    )
+
     useEffect(() => {
         const timeout = setTimeout(() => {
             router.reload({ data: { search, filter, role } })
@@ -95,7 +107,6 @@ export default function SeeUsers({ users, filters, roles }: Props) {
 
     const exportPDF = async () => {
         try {
-            // Fetch all users with their member profiles
             const response = await fetch('/dashboards/HR/SeeUsers?export=true', {
                 headers: {
                     'Accept': 'application/json',
@@ -109,7 +120,9 @@ export default function SeeUsers({ users, filters, roles }: Props) {
             }
             
             const data = await response.json()
-            const allUsers = data.users
+            
+            // Filter PDF content to only include users with profiles
+            const allUsers = (data.users || []).filter((user: User) => user.member_profile !== null)
 
             if (!allUsers || allUsers.length === 0) {
                 alert('No members found to export')
@@ -118,7 +131,6 @@ export default function SeeUsers({ users, filters, roles }: Props) {
 
             const doc = new jsPDF()
         
-            // Title
             doc.setFontSize(18)
             doc.setFont('helvetica', 'bold')
             doc.text('Members Report', 14, 20)
@@ -128,7 +140,6 @@ export default function SeeUsers({ users, filters, roles }: Props) {
             doc.text(`Generated: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`, 14, 28)
             doc.text(`Total Members: ${allUsers.length}`, 14, 34)
 
-            // Prepare table data
             const tableData = allUsers.map((user: User) => [
                 user.id,
                 getFullName(user),
@@ -161,7 +172,6 @@ export default function SeeUsers({ users, filters, roles }: Props) {
                 },
             })
 
-            // Personal Information Details (new page)
             let currentY = (doc as any).lastAutoTable.finalY + 15
             
             allUsers.forEach((user: User) => {
@@ -201,15 +211,11 @@ export default function SeeUsers({ users, filters, roles }: Props) {
                         doc.text(`${label} ${value}`, 14, currentY)
                         currentY += 5
                     })
-                } else {
-                    doc.text('No member profile found', 14, currentY)
-                    currentY += 5
                 }
 
                 currentY += 10
             })
 
-            // Save the PDF
             doc.save('Members_Report.pdf')
         } catch (error) {
             console.error('Error exporting PDF:', error)
@@ -218,170 +224,169 @@ export default function SeeUsers({ users, filters, roles }: Props) {
     }
 
     return (
-       <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
-    <Head title="Members" />
+        <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
+            <Head title="Members" />
 
-    <div className="space-y-8 px-6 py-8">
+            <div className="space-y-8 px-6 py-8">
 
-        {/* Header */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-                <h1 className="text-3xl font-semibold tracking-tight">
-                    Members
-                </h1>
-                <p className="text-sm text-muted-foreground">
-                    Manage your team members ({users.total})
-                </p>
-            </div>
+                {/* Header */}
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <h1 className="text-3xl font-semibold tracking-tight">
+                            Members
+                        </h1>
+                        <p className="text-sm text-muted-foreground">
+                            Manage your team members ({membersOnly.length})
+                        </p>
+                    </div>
 
-            <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={() => exportPDF()}>
-                    <Download className="mr-2 h-4 w-4" />
-                    Export PDF
-                </Button>
-                <Button asChild>
-                    <Link href="/dashboards/HR/create">
-                        <Plus className="mr-2 h-4 w-4" />
-                        Create Member
-                    </Link>
-                </Button>
-            </div>
-        </div>
-
-        {/* Filters Card */}
-        <div className="rounded-xl border bg-background p-4">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
-
-                {/* Search */}
-                <div className="relative w-full lg:max-w-sm">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <input
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        placeholder="Search by ID, name, or email..."
-                        className="w-full rounded-lg border bg-background pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                    />
+                    <div className="flex items-center gap-2">
+                        <Button variant="outline" size="sm" onClick={() => exportPDF()}>
+                            <Download className="mr-2 h-4 w-4" />
+                            Export PDF
+                        </Button>
+                        <Button asChild>
+                            <Link href="/dashboards/HR/create">
+                                <Plus className="mr-2 h-4 w-4" />
+                                Create Member
+                            </Link>
+                        </Button>
+                    </div>
                 </div>
 
-                {/* Filter */}
-                <select
-                    value={filter}
-                    onChange={(e) => setFilter(e.target.value)}
-                    className="rounded-lg border px-3 py-2 text-sm bg-background"
-                >
-                    <option value="all">All Members</option>
-                    <option value="new">New (30 days)</option>
-                    <option value="old">Old</option>
-                </select>
+                {/* Filters Card */}
+                <div className="rounded-xl border bg-background p-4">
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
 
-                {/* Role */}
-                <select
-                    value={role}
-                    onChange={(e) => setRole(e.target.value)}
-                    className="rounded-lg border px-3 py-2 text-sm bg-background"
-                >
-                    <option value="all">All Roles</option>
-                    {roles.map((r) => (
-                        <option key={r} value={r}>
-                            {r.toUpperCase()}
-                        </option>
-                    ))}
-                </select>
-            </div>
-        </div>
+                        {/* Search */}
+                        <div className="relative w-full lg:max-w-sm">
+                            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                            <input
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                placeholder="Search by ID, name, or email..."
+                                className="w-full rounded-lg border bg-background pl-10 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                            />
+                        </div>
 
-        {/* Table */}
-        <div className="overflow-hidden rounded-xl border bg-background">
-            <table className="min-w-full text-sm">
-                <thead className="border-b bg-muted/40 text-muted-foreground">
-                    <tr>
-                        <th className="px-6 py-3 text-left font-medium">ID</th>
-                        <th className="px-6 py-3 text-left font-medium">Name</th>
-                        <th className="px-6 py-3 text-left font-medium">Email</th>
-                        <th className="px-6 py-3 text-left font-medium">Role</th>
-                        <th className="px-6 py-3 text-left font-medium">Status</th>
-                        <th className="px-6 py-3 text-left font-medium">Joined</th>
-                        <th className="px-6 py-3 text-right font-medium">Actions</th>
-                    </tr>
-                </thead>
+                        {/* Filter */}
+                        <select
+                            value={filter}
+                            onChange={(e) => setFilter(e.target.value)}
+                            className="rounded-lg border px-3 py-2 text-sm bg-background"
+                        >
+                            <option value="all">All Members</option>
+                            <option value="new">New (30 days)</option>
+                            <option value="old">Old</option>
+                        </select>
 
-                <tbody>
-                    {users.data.length ? (
-                        users.data.map((user) => (
-                            <tr
-                                key={user.id}
-                                className="border-b transition-colors hover:bg-muted/30"
-                            >
-                                <td className="px-6 py-4 font-medium">
-                                    #{user.id}
-                                </td>
+                        {/* Role Dropdown - dynamically filtered to only show roles belonging to active members */}
+                        <select
+                            value={role}
+                            onChange={(e) => setRole(e.target.value)}
+                            className="rounded-lg border px-3 py-2 text-sm bg-background"
+                        >
+                            <option value="all">All Roles</option>
+                            {activeMemberRoles.map((r) => (
+                                <option key={r} value={r}>
+                                    {r.toUpperCase()}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
 
-                                <td className="px-6 py-4">
-                                    <Link 
-                                        href={`/dashboards/HR/MembersProfile/${user.id}`}
-                                        className="text-primary hover:underline cursor-pointer font-medium"
-                                    >
-                                        {getFullName(user)}
-                                    </Link>
-                                </td>
-
-                                <td className="px-6 py-4 text-muted-foreground">
-                                    {user.email}
-                                </td>
-
-                                <td className="px-6 py-4">
-                                    <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary capitalize">
-                                        {user.role}
-                                    </span>
-                                </td>
-
-                                <td className="px-6 py-4">
-                                    <span
-                                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${
-                                            user.is_active
-                                                ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                                                : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                                        }`}
-                                    >
-                                        {user.is_active ? 'Active' : 'Inactive'}
-                                    </span>
-                                </td>
-
-                                <td className="px-6 py-4 text-muted-foreground">
-                                    {formatDate(user.created_at)}
-                                </td>
-
-                                <td className="px-6 py-4 text-right">
-                                    <Button variant="ghost" size="sm" asChild>
-                                        <Link href={`/dashboards/HR/EditMember/${user.id}`}>
-                                            Edit
-                                        </Link>
-                                    </Button>
-                                </td>
+                {/* Table */}
+                <div className="overflow-hidden rounded-xl border bg-background">
+                    <table className="min-w-full text-sm">
+                        <thead className="border-b bg-muted/40 text-muted-foreground">
+                            <tr>
+                                <th className="px-6 py-3 text-left font-medium">ID</th>
+                                <th className="px-6 py-3 text-left font-medium">Name</th>
+                                <th className="px-6 py-3 text-left font-medium">Email</th>
+                                <th className="px-6 py-3 text-left font-medium">Role</th>
+                                <th className="px-6 py-3 text-left font-medium">Status</th>
+                                <th className="px-6 py-3 text-left font-medium">Joined</th>
+                                <th className="px-6 py-3 text-right font-medium">Actions</th>
                             </tr>
-                        ))
-                    ) : (
-                        <tr>
-                            <td
-                                colSpan={7}
-                                className="py-12 text-center text-muted-foreground"
-                            >
-                                <div className="flex flex-col items-center gap-2">
-                                    <p className="text-sm font-medium">
-                                        No members found
-                                    </p>
-                                    <p className="text-xs">
-                                        Try adjusting your search or filters.
-                                    </p>
-                                </div>
-                            </td>
-                        </tr>
-                    )}
-                </tbody>
-            </table>
-        </div>
-    </div>
-</AppLayout>
+                        </thead>
 
+                        <tbody>
+                            {membersOnly.length ? (
+                                membersOnly.map((user) => (
+                                    <tr
+                                        key={user.id}
+                                        className="border-b transition-colors hover:bg-muted/30"
+                                    >
+                                        <td className="px-6 py-4 font-medium">
+                                            #{user.id}
+                                        </td>
+
+                                        <td className="px-6 py-4">
+                                            <Link 
+                                                href={`/dashboards/HR/MembersProfile/${user.id}`}
+                                                className="text-primary hover:underline cursor-pointer font-medium"
+                                            >
+                                                {getFullName(user)}
+                                            </Link>
+                                        </td>
+
+                                        <td className="px-6 py-4 text-muted-foreground">
+                                            {user.email}
+                                        </td>
+
+                                        <td className="px-6 py-4">
+                                            <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary capitalize">
+                                                {user.role}
+                                            </span>
+                                        </td>
+
+                                        <td className="px-6 py-4">
+                                            <span
+                                                className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${
+                                                    user.is_active
+                                                        ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                                                        : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                                                }`}
+                                            >
+                                                {user.is_active ? 'Active' : 'Inactive'}
+                                            </span>
+                                        </td>
+
+                                        <td className="px-6 py-4 text-muted-foreground">
+                                            {formatDate(user.created_at)}
+                                        </td>
+
+                                        <td className="px-6 py-4 text-right">
+                                            <Button variant="ghost" size="sm" asChild>
+                                                <Link href={`/dashboards/HR/EditMember/${user.id}`}>
+                                                    Edit
+                                                </Link>
+                                            </Button>
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td
+                                        colSpan={7}
+                                        className="py-12 text-center text-muted-foreground"
+                                    >
+                                        <div className="flex flex-col items-center gap-2">
+                                            <p className="text-sm font-medium">
+                                                No members found
+                                            </p>
+                                            <p className="text-xs">
+                                                Try adjusting your search or filters.
+                                            </p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </AppLayout>
     )
 }

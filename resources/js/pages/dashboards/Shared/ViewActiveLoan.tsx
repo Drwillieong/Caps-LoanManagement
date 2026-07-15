@@ -1,5 +1,6 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import { 
+
     ArrowLeft, 
     Clock, 
     DollarSign, 
@@ -86,12 +87,17 @@ interface Props {
 
 const breadcrumbs: BreadcrumbItem[] = [
 
-    { title: 'Active Loans', href: '/dashboards/Gm/GMActiveLoan' },
+    
 
 ];
 
 export default function ViewActiveLoan({ loan }: Props) {
+    const { props: inertiaProps } = usePage() as any;
+    const role = inertiaProps?.auth?.user?.role as string | undefined;
+    const backHref = role === 'hr' ? '/dashboards/HR/HRActiveLoan' : '/dashboards/Gm/GMActiveLoan';
+
     const [activeTab, setActiveTab] = useState('details');
+
 
     // Mock data fallback (remove in production)
     const mockLoan: DetailedLoan = {
@@ -221,10 +227,13 @@ export default function ViewActiveLoan({ loan }: Props) {
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                     <div className="flex items-center gap-3">
                         <Button variant="ghost" size="sm" asChild>
-                            <Link href="/dashboards/Gm/GMActiveLoan">
+                            <Link href={backHref}>
                                 <ArrowLeft className="h-4 w-4" />
                             </Link>
                         </Button>
+
+
+
                         <div>
                             <h1 className="text-2xl font-bold tracking-tight">{displayLoan.member_name}</h1>
                             <p className="text-muted-foreground">Loan {displayLoan.member_id} • {displayLoan.loan_type}</p>

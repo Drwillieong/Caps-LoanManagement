@@ -5,6 +5,8 @@ import { type BreadcrumbItem } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { useForm } from '@inertiajs/react';
+
 import { Separator } from "@/components/ui/separator";
 import { 
     UserCheck,
@@ -81,6 +83,9 @@ interface GmViewLoanDecisionProps {
 export default function GmViewLoanDecision() {
     const props = usePage().props as unknown as GmViewLoanDecisionProps;
     const loan = props.loan;
+
+    const { data, setData, post, processing, errors, reset } = useForm({});
+
 
     function formatDate(dateStr: string): string {
         return new Date(dateStr).toLocaleDateString('en-PH', {
@@ -182,6 +187,24 @@ export default function GmViewLoanDecision() {
                 {/* Decision Status */}
                 <Card className={['approved', 'released', 'paid_off'].includes(loan.status) ? 'border-green-500' : 'border-red-500'}>
                     <CardContent className="pt-6">
+                        {(['approved'].includes(loan.status)) && (
+                            <div className="flex justify-end mb-4">
+                                <Button
+                                    disabled={processing}
+                                    onClick={() => {
+                                        post(`/dashboards/Gm/Loan/${loan.id}/activate`, {
+                                            onSuccess: () => {
+                                                alert('Loan Activated');
+                                            },
+                                        });
+                                    }}
+                                    variant="outline"
+                                >
+                                    Activate Loan
+                                </Button>
+                            </div>
+                        )}
+                        
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
                                 {['approved', 'released', 'paid_off'].includes(loan.status) ? (

@@ -244,7 +244,7 @@ export default function GMCompletedLoan({ completed_loans: initialLoans = [], st
                                                 </TableCell>
                                                 <TableCell>
                                                     <Button variant="outline" size="sm" asChild>
-                                                        <Link href={`/dashboards/Gm/Loan/${loan.id}`}>
+<Link href={`/dashboards/Gm/completed-loans/${loan.id}/view`}>
                                                             <Eye className="h-4 w-4" />
                                                             View
                                                         </Link>

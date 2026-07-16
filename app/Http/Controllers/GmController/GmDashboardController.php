@@ -16,6 +16,59 @@ class GmDashboardController extends Controller
         protected BaseGmController $gmController
     ) {}
 
+    /**
+     * Activate loan after GM approval (approved -> active)
+     */
+    public function activateLoan(\Illuminate\Http\Request $request, \App\Models\Loan $loan)
+    {
+        // Only allow activating from approved (and optionally released)
+        if (!in_array($loan->status, ['approved', 'released'], true)) {
+            return back()->with('error', 'This loan cannot be activated from its current status.');
+        }
+
+        // If amortization schedule is missing, generate it.
+        // The existing implementation is in GmController; call it if available.
+        $hasAmortizations = $loan->amortizations()->exists();
+        if (!$hasAmortizations) {
+            // Reuse GM controller's private method by duplicating behavior here.
+            $monthlyPayment = $loan->monthly_amortization;
+            $terms = $loan->terms_months;
+            $startDate = now()->addMonth();
+            $biMonthlyPayment = $monthlyPayment / 2;
+
+            $installmentNumber = 1;
+            for ($month = 0; $month < $terms; $month++) {
+                $dueDate10 = $startDate->copy()->addMonths($month)->day(10);
+                \App\Models\LoanAmortization::create([
+                    'loan_id' => $loan->id,
+                    'installment_number' => $installmentNumber++,
+                    'amount_due' => $biMonthlyPayment,
+                    'due_date' => $dueDate10,
+                    'status' => 'pending',
+                ]);
+
+                $dueDate25 = $startDate->copy()->addMonths($month)->day(25);
+                \App\Models\LoanAmortization::create([
+                    'loan_id' => $loan->id,
+                    'installment_number' => $installmentNumber++,
+                    'amount_due' => $biMonthlyPayment,
+                    'due_date' => $dueDate25,
+                    'status' => 'pending',
+                ]);
+            }
+        }
+
+        $loan->update([
+            // The loans table enum uses 'released' for money given / active state.
+            'status' => 'released',
+            'release_date' => $loan->release_date ?? now(),
+        ]);
+
+
+        return back()->with('success', 'Loan activated successfully.');
+    }
+
+
     public function activeLoans()
     {
         $loans = Loan::whereIn('status', ['released', 'active', 'approved'])

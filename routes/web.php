@@ -175,9 +175,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware('role:gm')
         ->name('gm.completed-loan');
 
-    Route::get('dashboards/Gm/active-loans/{loan}/view', [GmDashboardController::class, 'viewActiveLoan'])
+Route::get('dashboards/Gm/active-loans/{loan}/view', [GmDashboardController::class, 'viewActiveLoan'])
         ->middleware('role:gm')
         ->name('gm.active-loan.view');
+
+    // GM - Completed loan details (reuse ViewActiveLoan UI)
+    Route::get('dashboards/Gm/completed-loans/{loan}/view', [GmDashboardController::class, 'viewActiveLoan'])
+        ->middleware('role:gm')
+        ->name('gm.completed-loan.view');
+
 
     Route::get('dashboards/Gm/ApprovedLoan', [GmDashboardController::class, 'approvedLoans'])
         ->middleware('role:gm')
@@ -256,10 +262,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware('role:gm')
         ->name('gm.loan.viewDecision');
 
+    // GM - Activate loan (approved -> active)
+    Route::post('dashboards/Gm/Loan/{loan}/activate', [GmDashboardController::class, 'activateLoan'])
+        ->middleware('role:gm')
+        ->name('gm.loan.activate');
+
     // CreditCom - View Loan Decision History
     Route::get('dashboards/CreditCom/Loan/{loan}/viewDecision', [CreditComDashboardController::class, 'viewDecision'])
         ->middleware('role:creditcom')
         ->name('creditcom.loan.viewDecision');
 });
+
 
 require __DIR__.'/settings.php';

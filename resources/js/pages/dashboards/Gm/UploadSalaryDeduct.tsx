@@ -49,7 +49,7 @@ import { cn } from '@/lib/utils';
 import { type BreadcrumbItem } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'GM Dashboard', href: '/dashboard' },
+    { title: 'Upload Payroll', href: '/dashboard' },
 
 ];
 
@@ -125,10 +125,6 @@ type ManualPaymentLoan = {
     remaining_balance: number;
     next_due_amount: number;
     next_due_date: string | null;
-};
-
-type ExportSalaryDeductionResponse = {
-    filename?: string;
 };
 
 
@@ -225,26 +221,37 @@ export default function UploadSalaryDeduct({
 
         setExporting(true);
         try {
-            const url = `/api/salary-deductions/export?cutoff_date=${encodeURIComponent(cutoffDate)}`;
+            const url = new URL('/api/salary-deductions/export', window.location.origin);
+            url.searchParams.set('cutoff_date', cutoffDate);
 
-            const res = await fetch(url, {
+            const res = await fetch(url.toString(), {
                 method: 'GET',
+                credentials: 'same-origin',
                 headers: {
-                    Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
                 },
             });
 
             if (!res.ok) {
-                const text = await res.text().catch(() => '');
-                throw new Error(text || `Export failed with status ${res.status}`);
+                throw new Error(await readExportError(res));
+            }
+
+            const contentType = res.headers.get('Content-Type') ?? '';
+            if (res.redirected || contentType.includes('text/html') || contentType.includes('application/json')) {
+                throw new Error(await readExportError(res));
             }
 
             const blob = await res.blob();
 
-            // Attempt to extract filename from Content-Disposition.
-            const disposition = res.headers.get('Content-Disposition');
-            const match = disposition?.match(/filename="?([^\"]+)"?/);
-            const filename = match?.[1] ?? `salary_deduction_report_${cutoffDate}.xlsx`;
+            if (blob.size === 0) {
+                throw new Error('The export returned an empty file.');
+            }
+
+            const filename = filenameFromDisposition(
+                res.headers.get('Content-Disposition'),
+                `salary_deduction_report_${cutoffDate}.xlsx`,
+            );
 
             const blobUrl = window.URL.createObjectURL(blob);
             const link = document.createElement('a');
@@ -255,13 +262,10 @@ export default function UploadSalaryDeduct({
             link.remove();
             window.URL.revokeObjectURL(blobUrl);
 
-            const json: ExportSalaryDeductionResponse | null = null;
-            void json;
-
             toast.success('Salary deduction report exported successfully.');
         } catch (error) {
             console.error('Export error:', error);
-            toast.error('Failed to export salary deduction report. Please try again.');
+            toast.error(error instanceof Error ? error.message : 'Failed to export salary deduction report. Please try again.');
         } finally {
             setExporting(false);
         }
@@ -951,6 +955,68 @@ function FieldError({ message }: { message?: string }) {
     if (!message) return null;
 
     return <p className="text-sm text-destructive">{message}</p>;
+}
+
+type ExportErrorResponse = {
+    message?: string;
+    errors?: Record<string, string | string[]>;
+};
+
+async function readExportError(response: Response): Promise<string> {
+    if (response.redirected) {
+        return 'The export request was redirected. Please refresh the page and sign in again.';
+    }
+
+    const contentType = response.headers.get('Content-Type') ?? '';
+
+    if (contentType.includes('application/json')) {
+        const data = (await response.json().catch(() => null)) as ExportErrorResponse | null;
+        const validationError = firstValidationError(data?.errors);
+
+        return validationError ?? data?.message ?? `Export failed with status ${response.status}.`;
+    }
+
+    const text = await response.text().catch(() => '');
+    const cleanedText = text.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+
+    if (cleanedText && !contentType.includes('text/html')) {
+        return cleanedText.slice(0, 200);
+    }
+
+    return `Export failed with status ${response.status}.`;
+}
+
+function firstValidationError(errors?: Record<string, string | string[]>): string | null {
+    if (!errors) return null;
+
+    for (const error of Object.values(errors)) {
+        if (Array.isArray(error) && error[0]) {
+            return error[0];
+        }
+
+        if (typeof error === 'string' && error) {
+            return error;
+        }
+    }
+
+    return null;
+}
+
+function filenameFromDisposition(disposition: string | null, fallback: string): string {
+    if (!disposition) return fallback;
+
+    const encodedMatch = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+    if (encodedMatch?.[1]) {
+        try {
+            return decodeURIComponent(encodedMatch[1].replace(/^"|"$/g, ''));
+        } catch {
+            return encodedMatch[1];
+        }
+    }
+
+    const filenameMatch = disposition.match(/filename="?([^";]+)"?/i);
+
+    return filenameMatch?.[1] ?? fallback;
 }
 
 function formatCurrency(amount: number | string): string {

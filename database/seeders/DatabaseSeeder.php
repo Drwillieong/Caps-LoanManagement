@@ -130,6 +130,6 @@ class DatabaseSeeder extends Seeder
 
         // Call other seeders
         $this->call(LoanTypeSeeder::class);
-       $this->call(LoanSeeder::class); 
+      // $this->call(LoanSeeder::class); //
     }
 }

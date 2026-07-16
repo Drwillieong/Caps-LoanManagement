@@ -2,14 +2,18 @@
 
 namespace App\Http\Controllers\Payroll;
 
+use App\Exports\SalaryDeductionReportExport;
 use App\Http\Controllers\Controller;
 use App\Models\Loan;
 use App\Services\Payroll\LoanPaymentPostingService;
 use App\Services\Payroll\PayrollDeductionService;
+use App\Services\Payroll\SalaryDeductionReportService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
+use Maatwebsite\Excel\Excel as ExcelWriter;
+use Maatwebsite\Excel\Facades\Excel;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class PayrollDeductionController extends Controller
@@ -21,7 +25,7 @@ class PayrollDeductionController extends Controller
 
     public function exportSalaryDeductions(
         Request $request,
-        \App\Services\Payroll\SalaryDeductionReportService $reportService
+        SalaryDeductionReportService $reportService
     ) {
         $validated = $request->validate([
             'cutoff_date' => 'required|date',
@@ -29,11 +33,10 @@ class PayrollDeductionController extends Controller
 
         $cutoffDate = Carbon::parse($validated['cutoff_date']);
 
-        // Laravel Excel stream response (efficient and avoids temp files).
-        return \Maatwebsite\Excel\Excel::download(
-            new \App\Exports\SalaryDeductionReportExport($cutoffDate, $reportService),
+        return Excel::download(
+            new SalaryDeductionReportExport($cutoffDate, $reportService),
             'salary_deduction_report_'.$cutoffDate->toDateString().'.xlsx',
-            \Maatwebsite\Excel\Excel::XLSX
+            ExcelWriter::XLSX
         );
     }
 
@@ -127,6 +130,3 @@ class PayrollDeductionController extends Controller
             ->with('success', 'Member pages are now unlocked.');
     }
 }
-
-
-

@@ -96,10 +96,11 @@ export default function HrDashboard({
             <div className="flex flex-1 flex-col gap-6 p-6">
                 {/* ===== KPI CARDS (Same Styling as GM) ===== */}
                 <div className="grid gap-4 md:grid-cols-3">
+                     <Link href="/dashboards/HR/SeeUsers">
                     <Card className="border-emerald-100 bg-white/50 dark:bg-emerald-950/10 shadow-sm">
                         <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-sm font-medium text-emerald-800 dark:text-emerald-300">
-                                Total Members
+                            <CardTitle  className="text-sm font-medium text-emerald-800 dark:text-emerald-300" >
+                                Total Members 
                             </CardTitle>
                             <Users className="h-4 w-4 text-emerald-600" />
                         </CardHeader>
@@ -112,12 +113,15 @@ export default function HrDashboard({
                             </p>
                         </CardContent>
                     </Card>
-
+                    </Link>
+                     <Link href="/dashboards/HR/HRActiveLoan">
                     <Card className="border-emerald-100 bg-white/50 dark:bg-emerald-950/10 shadow-sm">
                         <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-sm font-medium text-emerald-800 dark:text-emerald-300">
-                                Active Loans
-                            </CardTitle>
+                           
+                                <CardTitle className="text-sm font-medium text-emerald-800 dark:text-emerald-300">
+                                    Active Loans
+                                </CardTitle>
+                           
                             <TrendingUp className="h-4 w-4 text-emerald-600" />
                         </CardHeader>
                         <CardContent>
@@ -128,7 +132,7 @@ export default function HrDashboard({
                                 Currently running loans
                             </p>
                         </CardContent>
-                    </Card>
+                    </Card></Link>
 
                     <Card className="border-emerald-600 bg-emerald-600 text-white shadow-md shadow-emerald-200 dark:shadow-none">
                         <CardHeader className="flex flex-row items-center justify-between pb-2">

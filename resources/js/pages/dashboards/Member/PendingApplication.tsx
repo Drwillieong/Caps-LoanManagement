@@ -20,6 +20,10 @@ import {
     User,
     ArrowRight,
     Edit,
+    ChevronsLeft,
+    ChevronsRight,
+    ChevronLeft,
+    ChevronRight,
 } from 'lucide-react';
 import { Link } from '@inertiajs/react';
 
@@ -182,6 +186,17 @@ export default function PendingApplication({ loan, hasPendingLoan, loanHistory }
     })}`;
 }
 
+    const [historyPage, setHistoryPage] = useState(1);
+    const historyPerPage = 5;
+    const historyTotalPages = Math.max(1, Math.ceil((loanHistory?.length ?? 0) / historyPerPage));
+    const historyStart = (historyPage - 1) * historyPerPage;
+    const historyEnd = historyStart + historyPerPage;
+    const paginatedHistory = (loanHistory ?? []).slice(historyStart, historyEnd);
+
+    useEffect(() => {
+        setHistoryPage(1);
+    }, [loanHistory?.length]);
+
     if (!hasPendingLoan || !currentLoan) {
         return (
             <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
@@ -222,7 +237,7 @@ export default function PendingApplication({ loan, hasPendingLoan, loanHistory }
                             </CardHeader>
                             <CardContent>
                                 <div className="space-y-4">
-                                    {loanHistory.map((historyLoan) => (
+                                    {paginatedHistory.map((historyLoan) => (
                                         <div 
                                             key={historyLoan.id}
                                             className="flex flex-col gap-3 rounded-lg border p-4 md:flex-row md:items-center md:justify-between"
@@ -253,6 +268,19 @@ export default function PendingApplication({ loan, hasPendingLoan, loanHistory }
                                         </div>
                                     ))}
                                 </div>
+
+                                {loanHistory.length > 0 && (
+                                    <DataTablePagination
+                                        currentPage={historyPage}
+                                        pageSize={historyPerPage}
+                                        totalPages={historyTotalPages}
+                                        totalRows={loanHistory.length}
+                                        onFirstPage={() => setHistoryPage(1)}
+                                        onPreviousPage={() => setHistoryPage((prev) => Math.max(prev - 1, 1))}
+                                        onNextPage={() => setHistoryPage((prev) => Math.min(prev + 1, historyTotalPages))}
+                                        onLastPage={() => setHistoryPage(historyTotalPages)}
+                                    />
+                                )}
                             </CardContent>
                         </Card>
                     )}
@@ -433,7 +461,7 @@ export default function PendingApplication({ loan, hasPendingLoan, loanHistory }
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-4">
-                                {loanHistory.map((historyLoan) => (
+                                {paginatedHistory.map((historyLoan) => (
                                     <div 
                                         key={historyLoan.id}
                                         className="flex flex-col gap-3 rounded-lg border p-4 md:flex-row md:items-center md:justify-between"
@@ -464,10 +492,112 @@ export default function PendingApplication({ loan, hasPendingLoan, loanHistory }
                                     </div>
                                 ))}
                             </div>
+
+                            {loanHistory.length > 0 && (
+                                <DataTablePagination
+                                    currentPage={historyPage}
+                                    pageSize={historyPerPage}
+                                    totalPages={historyTotalPages}
+                                    totalRows={loanHistory.length}
+                                    onFirstPage={() => setHistoryPage(1)}
+                                    onPreviousPage={() => setHistoryPage((prev) => Math.max(prev - 1, 1))}
+                                    onNextPage={() => setHistoryPage((prev) => Math.min(prev + 1, historyTotalPages))}
+                                    onLastPage={() => setHistoryPage(historyTotalPages)}
+                                />
+                            )}
                         </CardContent>
                     </Card>
                 )}
             </div>
         </AppLayout>
+    );
+}
+
+function DataTablePagination({
+    currentPage,
+    pageSize,
+    totalPages,
+    totalRows,
+    onFirstPage,
+    onPreviousPage,
+    onNextPage,
+    onLastPage,
+}: {
+    currentPage: number;
+    pageSize: number;
+    totalPages: number;
+    totalRows: number;
+    onFirstPage: () => void;
+    onPreviousPage: () => void;
+    onNextPage: () => void;
+    onLastPage: () => void;
+}) {
+    const isFirstPage = currentPage === 1;
+    const isLastPage = currentPage === totalPages;
+
+    return (
+        <div className="flex flex-col gap-4 rounded-2xl border border-slate-100 bg-slate-50/70 p-4 md:flex-row md:items-center md:justify-between">
+            <p className="text-sm text-muted-foreground">
+                0 of {totalRows} row(s) selected.
+            </p>
+
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <div className="flex items-center gap-2">
+                    <span className="flex h-8 min-w-12 items-center justify-center rounded-md border border-input bg-background px-3 text-sm font-medium text-foreground shadow-xs">
+                        {pageSize}
+                    </span>
+                    <span className="text-sm font-medium text-foreground">
+                        Page {currentPage} of {totalPages}
+                    </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="icon-sm"
+                        onClick={onFirstPage}
+                        disabled={isFirstPage}
+                        aria-label="Go to first page"
+                        title="Go to first page"
+                    >
+                        <ChevronsLeft className="size-4" />
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="icon-sm"
+                        onClick={onPreviousPage}
+                        disabled={isFirstPage}
+                        aria-label="Go to previous page"
+                        title="Go to previous page"
+                    >
+                        <ChevronLeft className="size-4" />
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="icon-sm"
+                        onClick={onNextPage}
+                        disabled={isLastPage}
+                        aria-label="Go to next page"
+                        title="Go to next page"
+                    >
+                        <ChevronRight className="size-4" />
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="icon-sm"
+                        onClick={onLastPage}
+                        disabled={isLastPage}
+                        aria-label="Go to last page"
+                        title="Go to last page"
+                    >
+                        <ChevronsRight className="size-4" />
+                    </Button>
+                </div>
+            </div>
+        </div>
     );
 }

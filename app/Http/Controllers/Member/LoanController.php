@@ -326,12 +326,14 @@ class LoanController extends Controller
     {
         $user = Auth::user();
 
-        // Fetch the most recent pending loan for the user
+        // Fetch the most recent in-progress (pending) loan for the user.
+        // Exclude terminal states (approved/released/paid_off) and any rejected
+        // application so a stale rejected loan never shows in the pending view.
         $loan = Loan::where('user_id', $user->id)
-            ->whereIn('status', [
-                'awaiting_comaker',
-                'pending_gm_review',
+            ->whereNotIn('status', [
                 'approved',
+                'released',
+                'paid_off',
                 'rejected',
                 'rejected_by_gm',
                 'rejected_by_credit_com',

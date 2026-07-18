@@ -55,6 +55,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware('role:hr')
         ->name('hr.active-loan.view');
 
+    Route::get('dashboards/HR/completed-loans/{loan}/view', [HrDashboardController::class, 'viewActiveLoan'])
+        ->middleware('role:hr')
+        ->name('hr.completed-loan.view');
+
     // Member - Loan Routes
     Route::get('dashboards/Member/ApplyLoan', [LoanController::class, 'create'])
         ->middleware(['role:member', 'ensure.profile.completed'])

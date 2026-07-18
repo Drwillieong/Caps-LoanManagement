@@ -107,6 +107,7 @@ export interface ApplyLoanProps {
     hasPendingLoan?: boolean;
     hasAwaitingComaker?: boolean;
     hasActiveLoan?: boolean;
+    rejectedAt?: string | null;
     editingLoan?: {
         id: number;
         loan_type_id: number;
@@ -126,6 +127,8 @@ export interface PendingApplicationLoan {
     monthly_amortization: number;
     status: string;
     remarks: string | null;
+    rejected_by: string | null;
+    rejected_at: string | null;
     created_at: string;
     co_makers: Array<{
         id: number;

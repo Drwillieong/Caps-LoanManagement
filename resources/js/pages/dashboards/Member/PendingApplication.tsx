@@ -70,6 +70,7 @@ export default function PendingApplication({ loan, hasPendingLoan, loanHistory }
     const [currentLoan, setCurrentLoan] = useState<LoanData | null>(loan);
     const [isPolling, setIsPolling] = useState(true);
     const [lastUpdated, setLastUpdated] = useState(new Date());
+    const [lockoutRemaining, setLockoutRemaining] = useState<number | null>(null);
 
     // Toast removed to prevent showing on every page load
 
@@ -197,6 +198,38 @@ export default function PendingApplication({ loan, hasPendingLoan, loanHistory }
         setHistoryPage(1);
     }, [loanHistory?.length]);
 
+    const rejectedStatuses = ['rejected', 'rejected_by_co_maker', 'rejected_by_gm', 'rejected_by_credit_com'];
+    const isRejected = currentLoan && rejectedStatuses.includes(currentLoan.status);
+
+    useEffect(() => {
+        if (!isRejected || !currentLoan?.rejected_at) {
+            setLockoutRemaining(null);
+            return;
+        }
+
+        const LOCKOUT_MS = 3 * 60 * 60 * 1000;
+
+        const checkLockout = () => {
+            const rejectedTime = new Date(currentLoan.rejected_at!).getTime();
+            const now = Date.now();
+            const remaining = LOCKOUT_MS - (now - rejectedTime);
+            setLockoutRemaining(remaining > 0 ? remaining : 0);
+        };
+
+        checkLockout();
+        const interval = setInterval(checkLockout, 1000);
+        return () => clearInterval(interval);
+    }, [isRejected, currentLoan?.rejected_at]);
+
+    const formatLockoutTime = (ms: number): string => {
+        if (ms <= 0) return '0h 0m 0s';
+        const totalSeconds = Math.ceil(ms / 1000);
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
+        return `${hours}h ${minutes}m ${seconds}s`;
+    };
+
     if (!hasPendingLoan || !currentLoan) {
         return (
             <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
@@ -315,6 +348,15 @@ export default function PendingApplication({ loan, hasPendingLoan, loanHistory }
                         <CardDescription className="text-base mt-2">
                             {statusInfo.description}
                         </CardDescription>
+                        {isRejected && lockoutRemaining !== null && (
+                            <div className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3">
+                                <p className="text-sm text-red-600">
+                                    {lockoutRemaining > 0 
+                                        ? <>Reapplication available in <span className="font-mono font-bold">{formatLockoutTime(lockoutRemaining)}</span></>
+                                        : 'You can now submit a new loan application.'}
+                                </p>
+                            </div>
+                        )}
                     </CardHeader>
                 </Card>
 
@@ -416,12 +458,19 @@ export default function PendingApplication({ loan, hasPendingLoan, loanHistory }
                             </Link>
                         </Button>
                     ) : currentLoan.status === 'rejected' || currentLoan.status === 'rejected_by_co_maker' || currentLoan.status === 'rejected_by_gm' || currentLoan.status === 'rejected_by_credit_com' ? (
-                        <Button asChild className="flex-1 sm:flex-none min-w-[180px] bg-primary hover:bg-primary/90">
-                            <Link href="/dashboards/Member/ApplyLoan">
-                                <FileText className="h-4 w-4" />
-                                Apply Again
-                            </Link>
-                        </Button>
+                        lockoutRemaining !== null && lockoutRemaining > 0 ? (
+                            <Button disabled className="flex-1 sm:flex-none min-w-[180px] bg-gray-400 text-white cursor-not-allowed">
+                                <Clock className="h-4 w-4 mr-2" />
+                                Reapplication Locked ({formatLockoutTime(lockoutRemaining)})
+                            </Button>
+                        ) : (
+                            <Button asChild className="flex-1 sm:flex-none min-w-[180px] bg-primary hover:bg-primary/90">
+                                <Link href="/dashboards/Member/ApplyLoan">
+                                    <FileText className="h-4 w-4" />
+                                    Apply Again
+                                </Link>
+                            </Button>
+                        )
                     ) : currentLoan.has_edited ? (
                         <Alert className="flex-1 border-yellow-200 bg-yellow-50 text-yellow-800">
                             <Edit className="h-4 w-4 opacity-70 mt-0.5" />

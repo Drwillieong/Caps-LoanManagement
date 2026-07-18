@@ -1,10 +1,11 @@
-import { Head, useForm, Link, usePage } from '@inertiajs/react';
+import { Head, useForm, Link } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { LiveClock } from '@/components/live-clock';
 import HeadingSmall from '@/components/heading-small';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+
 import InputError from '@/components/input-error';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -21,10 +22,9 @@ import type { ApplyLoanProps, EligibleCoMaker, PreviousLoan, SharedData, Breadcr
 import { toast } from 'react-hot-toast';
 import { canSendEmail } from '@/hooks/use-internet-check';
 
-interface PreviousLoanWithPercent extends PreviousLoan {
-  percent_paid?: number;
-}
-import { Search, User, Calendar, AlertCircle, CheckCircle2, Clock, Eye, EyeOff, ArrowRight, CheckCircle } from 'lucide-react';
+// PreviousLoanWithPercent type now in index.d.ts
+
+import { Search, User, Calendar, AlertCircle, CheckCircle2, Clock, ArrowRight, CheckCircle, EyeOff, Eye,ShieldAlert, Lock, ArrowLeft } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
    
@@ -43,17 +43,81 @@ export default function ApplyLoan({
     hasPendingLoan,
     hasAwaitingComaker, // Legacy
     hasActiveLoan,
+    rejectedAt,
     editingLoan,
 }: ApplyLoanProps) {
     
     const isEditing = !!editingLoan;
 
-    // Show error message if profile is not verified
+    const { data, setData, post, processing, errors, put } = useForm({
+        loan_type_id: editingLoan?.loan_type_id?.toString() || '',
+        principal_amount: editingLoan?.principal_amount?.toString() || '',
+        terms_months: editingLoan?.terms_months?.toString() || '',
+        co_maker_user_id: editingLoan?.co_maker_user_id?.toString() || '',
+    });
+
+    // UI state
+    const [showApplicantInfo, setShowApplicantInfo] = useState(false);
+    const [coMakerSearch, setCoMakerSearch] = useState('');
+    const [preSelectedCoMaker, setPreSelectedCoMaker] = useState<EligibleCoMaker | null>(null);
+    const [isPreSelecting, setIsPreSelecting] = useState(false);
+    const [isAgreementModalOpen, setIsAgreementModalOpen] = useState(false);
+    const [lockoutRemaining, setLockoutRemaining] = useState<number | null>(null);
+
+    // Handle co_maker_id from ChooseComaker page
+    useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const coMakerId = urlParams.get('co_maker_id');
+        if (coMakerId) {
+            const matchingCoMaker = eligibleCoMakers.find(cm => cm.id.toString() === coMakerId);
+            if (matchingCoMaker) {
+                setData('co_maker_user_id', coMakerId);
+                setPreSelectedCoMaker(matchingCoMaker);
+                setIsPreSelecting(true);
+                console.log(`✅ Co-maker "${matchingCoMaker.name}" has been pre-selected!`);
+                // Clear URL param after handling
+                const newUrl = window.location.pathname;
+                window.history.replaceState({}, document.title, newUrl);
+            }
+        }
+    }, [eligibleCoMakers, setData]);
+
+    const LOCKOUT_MS = 3 * 60 * 60 * 1000;
+
+    const isReapplicationLocked = useMemo(() => {
+        if (!rejectedAt) return false;
+        const rejectedTime = new Date(rejectedAt).getTime();
+        if (Number.isNaN(rejectedTime)) return false;
+        return Date.now() - rejectedTime < LOCKOUT_MS;
+    }, [rejectedAt]);
+
+    const isFormLocked = isReapplicationLocked || (lockoutRemaining !== null && lockoutRemaining > 0);
+
+    // 3-hour reapplication lockout countdown (drives the displayed remaining time)
+    useEffect(() => {
+        if (!rejectedAt) {
+            setLockoutRemaining(null);
+            return;
+        }
+
+        const checkLockout = () => {
+            const rejectedTime = new Date(rejectedAt).getTime();
+            const now = Date.now();
+            const remaining = LOCKOUT_MS - (now - rejectedTime);
+            setLockoutRemaining(remaining > 0 ? remaining : 0);
+        };
+
+        checkLockout();
+        const interval = setInterval(checkLockout, 1000);
+        return () => clearInterval(interval);
+    }, [rejectedAt]);
+
+    // Early returns - now after all state initialization
     if (error) {
         return (
             <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
                 <Head title={isEditing ? "Edit Loan" : "Apply Loan"} />
-                <div className="space-y-6 px-6">
+                <div className="space-y-8 px-8">
                     <HeadingSmall
                         title={isEditing ? "Edit Loan Application" : "Apply for a Loan"}
                         description="Loan application form"
@@ -69,7 +133,6 @@ export default function ApplyLoan({
         );
     }
 
-    // Show message if user has an active loan (only when not editing)
     if (hasActiveLoan && !isEditing) {
         return (
             <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
@@ -99,7 +162,6 @@ export default function ApplyLoan({
         );
     }
 
-    // Show message if user has ANY pending loan (only when not editing)
     if (hasPendingLoan && !isEditing) {
         return (
            <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
@@ -132,7 +194,76 @@ export default function ApplyLoan({
         );
     }
 
-    // Don't render if memberProfile is not available yet
+    if (isFormLocked) {
+        return (
+          <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
+    <Head title="Apply Loan" />
+    <div className="max-w-10xl mx-auto space-y-8 px-6 py-8">
+        
+        {/* Sleek, professional header */}
+        <HeadingSmall
+            title="Apply for a Loan"
+            description="Manage your financing and applications"
+        />
+        
+        {/* Modern Corporate Locked State Card */}
+        <Card className="border-slate-200/80 bg-white shadow-sm overflow-hidden dark:border-slate-800 dark:bg-slate-950">
+            <div className="p-8 md:p-12 flex flex-col items-center text-center max-w-4xl mx-auto">
+                
+                {/* Modern Icon Badge */}
+                <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-full bg-amber-50 text-amber-600 ring-8 ring-amber-50/50 dark:bg-amber-950/30 dark:text-amber-500 dark:ring-amber-950/20">
+                    <Lock className="h-6 w-6" />
+                </div>
+
+                {/* Typography with better visual hierarchy */}
+                <CardTitle className="text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-50">
+                    Application Temporarily Locked
+                </CardTitle>
+                
+                <CardDescription className="mt-2 text-sm text-slate-500 dark:text-slate-400 max-w-md leading-relaxed">
+                    To maintain secure processing, there is a cool-down period following a recently declined loan application. 
+                </CardDescription>
+
+                {/* Clean Countdown Box */}
+                <div className="mt-8 w-full rounded-2xl bg-slate-50 p-6 border border-slate-100 dark:bg-slate-900/50 dark:border-slate-800/60">
+                    <span className="text-xs font-medium uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                        Time Remaining until reapplication
+                    </span>
+                    <p className="mt-2 text-4xl font-semibold tracking-tight tabular-nums text-slate-800 dark:text-slate-200">
+                        {formatLockoutTime(lockoutRemaining ?? 0)}
+                    </p>
+                    <div className="mt-4 flex items-center justify-center gap-1.5 text-xs text-slate-400 dark:text-slate-500">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        Updates automatically
+                    </div>
+                </div>
+
+                {/* Helpful, professional corporate notice */}
+                <div className="mt-8 flex gap-3 text-left bg-slate-50/60 border border-slate-100 p-4 rounded-xl dark:bg-slate-900/30 dark:border-slate-800">
+                    <ShieldAlert className="h-5 w-5 text-slate-400 shrink-0 mt-0.5" />
+                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                        Need assistance or believe this is an error? You can review our lending criteria guidelines or contact your dedicated account manager for further review.
+                    </p>
+                </div>
+
+                {/* Action steps so the user isn't stuck on a dead page */}
+                <div className="mt-8 flex flex-col sm:flex-row gap-3 w-full justify-center">
+                    <button className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 transition dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300 dark:hover:bg-slate-900">
+                        <ArrowLeft className="h-4 w-4" />
+                        Return to Dashboard
+                    </button>
+                    <button className="inline-flex items-center justify-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white shadow hover:bg-slate-800 transition dark:bg-slate-50 dark:text-slate-900 dark:hover:bg-slate-200">
+                        View Guidelines
+                    </button>
+                </div>
+
+            </div>
+        </Card>
+    </div>
+</AppLayout>
+        );
+    }
+
     if (!memberProfile) {
         return (
             <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
@@ -143,13 +274,6 @@ export default function ApplyLoan({
             </AppLayout>
         );
     }
-
-    const { data, setData, post, processing, errors, put } = useForm({
-        loan_type_id: editingLoan?.loan_type_id?.toString() || '',
-        principal_amount: editingLoan?.principal_amount?.toString() || '',
-        terms_months: editingLoan?.terms_months?.toString() || '',
-        co_maker_user_id: editingLoan?.co_maker_user_id?.toString() || '',
-    });
 
     // Handle co_maker_id from ChooseComaker page
     useEffect(() => {
@@ -169,16 +293,7 @@ export default function ApplyLoan({
         }
     }, [eligibleCoMakers]);
 
-    // toggle for showing applicant info (can be used for future expansion)
-    const [showApplicantInfo, setShowApplicantInfo] = useState(false);
 
-    // Co-maker search state
-    const [coMakerSearch, setCoMakerSearch] = useState('');
-
-    // Pre-selected co-maker from ChooseComaker page
-    const [preSelectedCoMaker, setPreSelectedCoMaker] = useState<EligibleCoMaker | null>(null);
-    const [isPreSelecting, setIsPreSelecting] = useState(false);
-    const [isAgreementModalOpen, setIsAgreementModalOpen] = useState(false);
 
     // Filter co-makers based on search
     const filteredCoMakers = useMemo(() => {
@@ -213,11 +328,20 @@ export default function ApplyLoan({
         return isNaN(num) ? 0 : num;
     };
 
-    // Mask currency based on visibility
+    // Mask currency (kept for compatibility with existing display logic)
     const maskCurrency = (amount: number | string | null, visible: boolean): string => {
         if (!visible) return '₱•••••';
         return formatCurrency(amount);
     };
+
+    function formatLockoutTime(ms: number): string {
+        if (ms <= 0) return '0h 0m 0s';
+        const totalSeconds = Math.ceil(ms / 1000);
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
+        return `${hours}h ${minutes}m ${seconds}s`;
+    }
 
     // Format date
     const formatDate = (dateStr: string | null): string => {
@@ -269,24 +393,24 @@ const computed = useMemo(() => {
             total: total.toFixed(2),
             monthly: monthly.toFixed(2),
         };
-    }, [data.principal_amount, data.terms_months, selectedLoanType]);
+    }, [data.principal_amount, data.terms_months, data.loan_type_id, loanTypes]);
 
     const activeMonthlyTotal = useMemo(() => 
-    (previousLoans as PreviousLoanWithPercent[] || [])
+    (previousLoans || [])
         ?.filter((loan) => ['approved', 'released'].includes(loan.status as string))
         ?.reduce((sum, loan) => sum + Number(loan.monthly_amortization || 0), 0) || 0
 , [previousLoans]);
 
     const allActive75Percent = useMemo(() => 
-    (previousLoans as PreviousLoanWithPercent[] || [])
+    (previousLoans || [])
         ?.filter((loan) => ['approved', 'released'].includes(loan.status as string))
-        ?.every((loan) => ((loan as any).percent_paid || 0) >= 75) || true
+        ?.every((loan) => (loan.percent_paid || 0) >= 75) || true
 , [previousLoans]);
 
     /* ===============================
      *  ELIGIBILITY CHECK (FRONTEND)
      * =============================== */
-    const maxLoanAllowed = memberProfile.share_capital_balance * 2;
+    const maxLoanAllowed = (memberProfile.share_capital_balance || 0) * 2;
     const exceedsShareCapital =
         data.principal_amount &&
         Number(data.principal_amount) > maxLoanAllowed;
@@ -358,12 +482,19 @@ const computed = useMemo(() => {
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-4">
+                            <div className="rounded-lg border bg-muted/20 p-4">
+                                <p className="text-sm font-medium">Eligibility Check</p>
+                                <p className="mt-1 text-sm text-muted-foreground">Real-time verification of your loan application</p>
+                            </div>
+
                             {/* Main eligibility status */}
-                            <div className={`flex items-center gap-3 rounded-lg p-4 ${
-                                exceedsShareCapital || newMonthlyExceedsLimit || combinedMonthlyExceedsLimit || !eligibleForActiveLoans
-                                    ? 'bg-red-50 border border-red-200' 
-                                    : 'bg-emerald-50 border border-emerald-200'
-                            }`}>
+                            <div
+                                className={`flex items-center gap-3 rounded-lg border p-4 ${
+                                    exceedsShareCapital || newMonthlyExceedsLimit || combinedMonthlyExceedsLimit || !eligibleForActiveLoans
+                                        ? 'bg-destructive/5 border-destructive/15'
+                                        : 'bg-emerald-500/5 border-emerald-500/15'
+                                }`}
+                            >
                                 {exceedsShareCapital || newMonthlyExceedsLimit || combinedMonthlyExceedsLimit || !eligibleForActiveLoans ? (
                                     <>
                                         <AlertCircle className="h-6 w-6 text-red-500" />
@@ -529,7 +660,8 @@ const computed = useMemo(() => {
                         <button
                             type="button"
                             onClick={() => setShowApplicantInfo(!showApplicantInfo)}
-                            className="text-muted-foreground hover:text-foreground"
+                            disabled={isFormLocked}
+                            className="text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {showApplicantInfo ? <EyeOff size={18} /> : <Eye size={18} />}
                         </button>
@@ -547,7 +679,7 @@ const computed = useMemo(() => {
                                 <div className="rounded-lg bg-emerald-50 border border-emerald-100 p-3">
                                     <p className="text-xs text-emerald-600">Share Capital</p>
                                     <p className="font-semibold text-lg text-emerald-700">
-                                        {maskCurrency(memberProfile.share_capital_balance, showApplicantInfo)}
+                                        {maskCurrency(memberProfile.share_capital_balance || 0, showApplicantInfo)}
                                     </p>
                                 </div>
 
@@ -572,7 +704,7 @@ const computed = useMemo(() => {
                             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                                 <div className="space-y-2">
                                     <Label>Loan Type</Label>
-                                    <Select value={data.loan_type_id} onValueChange={(value) => setData('loan_type_id', value)}>
+                                    <Select value={data.loan_type_id} onValueChange={(value) => setData('loan_type_id', value)} disabled={isFormLocked}>
                                         <SelectTrigger className="w-full">
                                             <SelectValue placeholder="Select loan type" />
                                         </SelectTrigger>
@@ -589,7 +721,7 @@ const computed = useMemo(() => {
 
                                 <div className="space-y-2">
                                     <Label>Loan Amount (₱)</Label>
-<Input
+ <Input
                                         type="text"
                                         inputMode="numeric"
                                         placeholder="0"
@@ -600,6 +732,7 @@ const computed = useMemo(() => {
                                                 setData('principal_amount', rawValue);
                                             }
                                         }}
+                                        disabled={isFormLocked}
                                     />
                                     <InputError message={errors.principal_amount} />
                                 </div>
@@ -610,6 +743,7 @@ const computed = useMemo(() => {
   <Select
     value={data.terms_months}
     onValueChange={(value) => setData("terms_months", value)}
+    disabled={isFormLocked}
   >
     <SelectTrigger className="w-full">
       <SelectValue placeholder="Select term" />
@@ -655,12 +789,12 @@ const computed = useMemo(() => {
                                         className="pl-10"
                                         value={coMakerSearch}
                                         onChange={(e) => setCoMakerSearch(e.target.value)}
-                                        disabled={isPreSelecting}
+                                        disabled={isPreSelecting || isFormLocked}
                                     />
                                 </div>
 
                                 {/* Co-maker dropdown */}
-                                <Select value={data.co_maker_user_id} onValueChange={(value) => setData('co_maker_user_id', value)}>
+                                <Select value={data.co_maker_user_id} onValueChange={(value) => setData('co_maker_user_id', value)} disabled={isFormLocked}>
                                     <SelectTrigger className="w-full">
                                         {isPreSelecting && preSelectedCoMaker ? (
                                             <div className="flex items-center gap-2 p-2">
@@ -719,6 +853,7 @@ const computed = useMemo(() => {
                                             setIsPreSelecting(false);
                                             setCoMakerSearch('');
                                         }}
+                                        disabled={isFormLocked}
                                     >
                                         Change
                                     </Button>
@@ -734,15 +869,16 @@ const computed = useMemo(() => {
                         {isEditing && (
                             <Link
                                 href="/dashboards/Member/PendingApplication"
-                                className="inline-flex items-center gap-2 rounded-xl border px-4 py-2 hover:bg-muted transition"
+                                className="inline-flex items-center gap-2 rounded-xl border px-4 py-2 hover:bg-muted transition disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none"
+                                aria-disabled={isFormLocked}
                             >
                                 Cancel
                             </Link>
                         )}
                         <Button
                             size="lg"
-                            disabled={processing || exceedsShareCapital || newMonthlyExceedsLimit || combinedMonthlyExceedsLimit || !eligibleForActiveLoans}
-                            title={processing ? 'Processing...' : exceedsShareCapital ? 'Exceeds share capital limit' : newMonthlyExceedsLimit ? 'Monthly exceeds salary limit' : combinedMonthlyExceedsLimit ? 'Combined monthly exceeds limit' : !eligibleForActiveLoans ? 'Active loans not 75% paid' : ''}
+                            disabled={processing || isFormLocked || exceedsShareCapital || newMonthlyExceedsLimit || combinedMonthlyExceedsLimit || !eligibleForActiveLoans}
+                            title={processing ? 'Processing...' : isFormLocked ? 'Reapplication locked' : exceedsShareCapital ? 'Exceeds share capital limit' : newMonthlyExceedsLimit ? 'Monthly exceeds salary limit' : combinedMonthlyExceedsLimit ? 'Combined monthly exceeds limit' : !eligibleForActiveLoans ? 'Active loans not 75% paid' : ''}
                             className="min-w-[200px]"
                         >
                             {processing 

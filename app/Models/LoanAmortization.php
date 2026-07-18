@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class LoanAmortization extends Model
 {
@@ -46,5 +47,14 @@ class LoanAmortization extends Model
     {
         return $this->belongsTo(Loan::class);
     }
-}
 
+    public function deductionRecords(): HasMany
+    {
+        return $this->hasMany(DeductionRecord::class);
+    }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(LoanPayment::class);
+    }
+}

@@ -205,52 +205,69 @@ export default function ChooseComaker() {
                     </CardContent>
                 </Card>
 
-                {/* Selected Member Summary & Action */}
-                {selectedMember && (
-                    <Card className="border-emerald-100 bg-white/50 dark:bg-emerald-950/10 shadow-sm">
-                        <CardContent className="flex flex-col gap-4 pt-6 md:flex-row md:items-center md:justify-between">
-                            <div className="flex items-center gap-4">
-                                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 border-2 border-emerald-500">
-                                    <User className="h-7 w-7 text-emerald-700" />
-                                </div>
-                                <div>
-                                    <p className="font-semibold text-emerald-900">Selected Comaker</p>
-                                    <p className="text-lg font-bold text-gray-900">{selectedMember.name}</p>
-                                    <p className="text-sm text-gray-500">{selectedMember.email}</p>
-                                </div>
-                            </div>
-                            <div className="flex flex-col gap-2 sm:flex-row">
-                                <Button
-                                    variant="outline"
-                                    onClick={() => setSelectedMemberId(null)}
-                                    className="w-full"
-                                >
-                                    Clear Selection
-                                </Button>
-                                <Button
-                                    onClick={handleProceed}
-                                    className="w-full min-w-[200px]"
-                                    size="lg"
-                                >
-                                    Proceed to Apply Loan
-                                    <ArrowRight className="h-4 w-4" />
-                                </Button>
-                            </div>
-                        </CardContent>
-                    </Card>
-                )}
+              {/* Selected Member Summary & Action */}
+{selectedMember && (
+    <Card className="border-emerald-100 bg-white/50 shadow-sm dark:bg-emerald-950/10">
+        <CardContent className="flex flex-col gap-5 p-4 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
+            
+            {/* Left Content */}
+            <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:items-center sm:text-left">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border-2 border-emerald-500 bg-emerald-100">
+                    <User className="h-7 w-7 text-emerald-700" />
+                </div>
 
-                {/* No Selection State */}
-                {!selectedMemberId && (
-                    <div className="flex items-center justify-center rounded-lg border-2 border-dashed border-emerald-200 bg-emerald-50 py-8">
-                        <div className="text-center">
-                            <User className="mx-auto h-8 w-8 text-emerald-400" />
-                            <p className="mt-2 text-sm text-emerald-600">
-                                Please select a member to continue
-                            </p>
-                        </div>
-                    </div>
-                )}
+                <div className="min-w-0">
+                    <p className="text-sm font-medium text-emerald-700">
+                        Selected Comaker
+                    </p>
+
+                    <p className="truncate text-lg font-bold text-gray-900 dark:text-white">
+                        {selectedMember.name}
+                    </p>
+
+                    <p className="truncate text-sm text-gray-500">
+                        {selectedMember.email}
+                    </p>
+                </div>
+            </div>
+
+            {/* Right Buttons */}
+            <div className="flex w-full flex-col gap-2 sm:flex-row lg:w-auto">
+                <Button
+                    variant="outline"
+                    onClick={() => setSelectedMemberId(null)}
+                    className="w-full sm:w-auto"
+                >
+                    Clear Selection
+                </Button>
+
+                <Button
+                    onClick={handleProceed}
+                    className="w-full sm:w-auto lg:min-w-[220px]"
+                    size="lg"
+                >
+                    Proceed to Apply Loan
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+            </div>
+        </CardContent>
+    </Card>
+)}
+
+{/* No Selection State */}
+{!selectedMemberId && (
+    <div className="flex items-center justify-center rounded-xl border-2 border-dashed border-emerald-200 bg-emerald-50 px-4 py-10">
+        <div className="text-center">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100">
+                <User className="h-7 w-7 text-emerald-500" />
+            </div>
+
+            <p className="mt-3 text-sm font-medium text-emerald-700 sm:text-base">
+                Please select a member to continue
+            </p>
+        </div>
+    </div>
+)}
             </div>
         </AppLayout>
     );

@@ -59,6 +59,7 @@ export interface MemberProfile {
     id?: number;
     user_id: number;
     employee_id: string;
+    payroll_id?: string | null;
     first_name: string;
     middle_name?: string;
     last_name: string;
@@ -86,31 +87,34 @@ export interface EligibleCoMaker {
 
 export interface PreviousLoan {
     id: number;
-    loan_type_name: string;
+    loan_type_name?: string;
     principal_amount: number;
     total_amount_due: number;
-    balance: number;
+    balance: number | string;
     next_due_date: string | null;
-    monthly_amortization: number;
+    monthly_amortization: number | string;
     status: string;
     release_date: string | null;
+    percent_paid?: number;
 }
 
 export interface ApplyLoanProps {
     loanTypes: LoanType[];
-    memberProfile: MemberProfile;
+    memberProfile?: MemberProfile | null;
     eligibleCoMakers: EligibleCoMaker[];
     previousLoans: PreviousLoan[];
     error?: string;
+    hasPendingLoan?: boolean;
     hasAwaitingComaker?: boolean;
     hasActiveLoan?: boolean;
+    rejectedAt?: string | null;
     editingLoan?: {
         id: number;
         loan_type_id: number;
         principal_amount: number;
         terms_months: number;
         co_maker_user_id: number | '';
-    };
+    } | null;
 }
 
 export interface PendingApplicationLoan {
@@ -123,6 +127,8 @@ export interface PendingApplicationLoan {
     monthly_amortization: number;
     status: string;
     remarks: string | null;
+    rejected_by: string | null;
+    rejected_at: string | null;
     created_at: string;
     co_makers: Array<{
         id: number;
@@ -274,6 +280,17 @@ export interface MemberActiveLoanPayment {
     payment_date: string | null;
     reference_number: string | null;
     paid_by: string;
+    payment_method?: string | null;
+}
+
+export interface MemberActiveLoanTransaction {
+    id: number;
+    date: string | null;
+    type: string;
+    amount: number;
+    remarks: string | null;
+    balance_after: number;
+    processed_by: string;
 }
 
 export interface MemberActiveLoan {
@@ -298,6 +315,7 @@ export interface MemberActiveLoan {
     payment_status: string;
     amortizations: MemberActiveLoanAmortization[];
     payments: MemberActiveLoanPayment[];
+    transactions?: MemberActiveLoanTransaction[];
 }
 
 export interface MemberActiveLoanProps {
@@ -356,4 +374,3 @@ export interface MemberCompletedLoanProps {
     totalInterestPaid: number;
     avgLoanAmount: number;
 }
-

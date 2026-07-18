@@ -123,7 +123,7 @@ export default function GmDashboard({
                             <p className="text-xs text-muted-foreground mt-1">Total active members</p>
                         </CardContent>
                     </Card>
-
+                     <Link href="/dashboards/Gm/LoanApplication">
                     <Card className="border-emerald-600 bg-emerald-600 text-white shadow-md shadow-emerald-200 dark:shadow-none">
                         <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
                             <CardTitle className="text-sm font-medium">Pending Approvals</CardTitle>
@@ -136,6 +136,7 @@ export default function GmDashboard({
                             </p>
                         </CardContent>
                     </Card>
+                    </Link>
                 </div>
 
                 {/* Main Content Area */}

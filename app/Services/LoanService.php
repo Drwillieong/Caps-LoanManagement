@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\Loan;
 use App\Models\User;
-use Illuminate\Support\Facades\Auth;
 
 class LoanService
 {
@@ -15,9 +14,9 @@ class LoanService
     {
         $totalAmortizations = $loan->amortizations->count();
         $paidAmortizations = $loan->amortizations->where('status', 'paid')->count();
-        
+
         $nextDueAmortization = $loan->amortizations
-            ->where('status', 'unpaid')
+            ->whereIn('status', ['pending', 'partial', 'overdue', 'missed', 'deferred'])
             ->sortBy('due_date')
             ->first();
 
@@ -46,6 +45,7 @@ class LoanService
     public function calculateBalance(Loan $loan): float
     {
         $totalPaid = $loan->payments->sum('amount');
+
         return max(0, (float) $loan->total_amount_due - $totalPaid);
     }
 
@@ -60,13 +60,13 @@ class LoanService
                 'amortizations as total_amortizations',
                 'amortizations as paid_amortizations' => function ($query) {
                     $query->where('status', 'paid');
-                }
+                },
             ])
             ->get();
 
         foreach ($activeLoans as $loan) {
-            $percentPaid = $loan->total_amortizations > 0 
-                ? $loan->paid_amortizations / $loan->total_amortizations 
+            $percentPaid = $loan->total_amortizations > 0
+                ? $loan->paid_amortizations / $loan->total_amortizations
                 : 0;
             if ($percentPaid < 0.75) {
                 return false;
@@ -85,6 +85,4 @@ class LoanService
             ->whereIn('status', ['approved', 'released'])
             ->sum('monthly_amortization');
     }
-
 }
-

@@ -174,7 +174,7 @@ export default function MemberCompletedLoan({
                                                 <td className="px-4 py-4 text-right text-sm text-muted-foreground">{formatDate(loan.completion_date)}</td>
                                                 <td className="px-4 py-4 text-right">
                                                     <Button asChild variant="outline" size="sm" className="min-w-[80px]">
-                                                        <Link href={`/dashboards/Member/CompletedLoan/${loan.id}`}>View</Link>
+<Link href={`/dashboards/Member/completed-loans/${loan.id}/view`}>View</Link>
                                                     </Button>
                                                 </td>
                                             </tr>

@@ -74,4 +74,3 @@ export default function FaqDetail({ slug }: Props) {
     </div>
   );
 }
-

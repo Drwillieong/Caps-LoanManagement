@@ -32,11 +32,13 @@ return new class extends Migration
                 'draft',                  // Initial draft
                 'awaiting_comaker',       // Waiting for co-maker confirmation
                 'pending_gm_review',      // Pending GM review
-                'endorsed_by_gm',         // Endorsed by GM 
+                'endorsed_by_gm',         // Endorsed by GM (legacy - pending CC review)
+                'pending_cc_review',      // Pending Credit Coordinator review
                 'approved',               // Approved by Board/GM
                 'released',               // Money given (Active)
                 'rejected_by_co_maker',
                 'rejected_by_gm',
+                'rejected_by_credit_com',        // Failed eligibility
                 'paid_off'                // Fully paid
             ])->default('draft');
 

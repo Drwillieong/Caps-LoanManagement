@@ -25,6 +25,7 @@ class DashboardService
             'member' => $this->getMemberData(),
             'hr' => $this->getHrData(),
             'gm' => $this->getGmData(),
+            'creditcom' => $this->getCreditComData(),
             default => [],
         };
     }
@@ -38,7 +39,7 @@ class DashboardService
 
         $activeLoans = Loan::where('user_id', $user->id)
             ->active()
-            ->with(['payments', 'amortizations' => fn($q) => $q->orderBy('due_date')])
+            ->with(['payments', 'amortizations' => fn ($q) => $q->orderBy('due_date')])
             ->get();
 
         $loanBalance = $activeLoans->sum(function ($loan) {
@@ -48,10 +49,10 @@ class DashboardService
         $activeLoanCount = Loan::where('user_id', $user->id)->active()->count();
         $completedLoanCount = Loan::where('user_id', $user->id)->paidOff()->count();
         $hasPendingLoan = Loan::where('user_id', $user->id)
-            ->byStatus(['pending', 'pending_gm_review', 'awaiting_comaker'])
+            ->byStatus(['pending', 'pending_gm_review', 'pending_cc_review', 'awaiting_comaker'])
             ->exists();
 
-        $loanProgress = $activeLoans->isNotEmpty() 
+        $loanProgress = $activeLoans->isNotEmpty()
             ? $this->loanService->getLoanProgress($activeLoans->first())
             : null;
 
@@ -63,7 +64,7 @@ class DashboardService
             'has_pending_loan' => $hasPendingLoan,
             'loan_progress' => $loanProgress,
             'loan_eligibility' => $this->getLoanEligibility($user),
-'profileCompleted' => $user->hasCompletedProfile(),
+            'profileCompleted' => $user->hasCompletedProfile(),
             'loan_notifications' => app(NotificationService::class)->getDashboardNotifications($user),
             'unread_notifications_count' => app(NotificationService::class)->getUnreadCount($user),
         ];
@@ -108,9 +109,9 @@ class DashboardService
             'loan_status_breakdown' => Loan::selectRaw('status, count(*) as count')
                 ->groupBy('status')
                 ->pluck('count', 'status'),
-            'recent_members' => $recentMembers->map(fn($u) => [
+            'recent_members' => $recentMembers->map(fn ($u) => [
                 'id' => $u->id,
-                'full_name' => trim($u->first_name . ' ' . $u->middle_name . ' ' . $u->last_name),
+                'full_name' => trim($u->first_name.' '.$u->middle_name.' '.$u->last_name),
                 'email' => $u->email,
                 'position' => $u->memberProfile?->position ?? 'N/A',
                 'date_hired' => $u->memberProfile?->date_hired?->format('Y-m-d'),
@@ -133,9 +134,9 @@ class DashboardService
             ->orderBy('created_at', 'desc')
             ->limit(5)
             ->get()
-            ->map(fn($l) => [
+            ->map(fn ($l) => [
                 'id' => $l->id,
-                'member_name' => trim($l->user->first_name . ' ' . $l->user->middle_name . ' ' . $l->user->last_name),
+                'member_name' => trim($l->user->first_name.' '.$l->user->middle_name.' '.$l->user->last_name),
                 'loan_type' => $l->loanType->name ?? 'N/A',
                 'principal_amount' => $l->principal_amount,
                 'total_amount_due' => $l->total_amount_due,
@@ -157,19 +158,65 @@ class DashboardService
             'recent_pending_loans' => $recentPendingLoans,
             'loan_health' => [
                 'collection_rate' => $actualCollectionRate,
+                'completed_loans' => Loan::paidOff()->count(),
+                'active_loans' => Loan::active()->count(),
             ],
             'business_loans_over_100k' => Loan::pendingGmReview()
-                ->whereHas('loanType', fn($q) => $q->where('name', 'like', '%Business%'))
+                ->whereHas('loanType', fn ($q) => $q->where('name', 'like', '%Business%'))
                 ->where('principal_amount', '>', 100000)
                 ->count(),
         ];
     }
 
+    /**
+     * CreditCom-specific dashboard data
+     */
+    protected function getCreditComData(): array
+    {
+        // Similar structure to GM but for pending_cc_review
+        $totalLoanPortfolio = Loan::active()->sum('total_amount_due');
+        $activeMembers = User::where('role', 'member')->where('is_active', true)->count();
+        $pendingValidations = Loan::pendingCcReview()->count();
 
+        $recentPendingLoans = Loan::pendingCcReview()
+            ->with(['user', 'loanType'])
+            ->orderBy('created_at', 'desc')
+            ->limit(5)
+            ->get()
+            ->map(fn ($l) => [
+                'id' => $l->id,
+                'member_name' => trim($l->user->first_name.' '.$l->user->middle_name.' '.$l->user->last_name),
+                'loan_type' => $l->loanType->name ?? 'N/A',
+                'principal_amount' => $l->principal_amount,
+                'total_amount_due' => $l->total_amount_due,
+                'created_at' => $l->created_at->format('Y-m-d'),
+            ]);
+
+        $totalPaidAmount = LoanPayment::sum('amount');
+        $totalAmountDue = Loan::active()->sum('total_amount_due');
+        $actualCollectionRate = $totalAmountDue > 0 ? round(($totalPaidAmount / $totalAmountDue) * 100) : 0;
+
+        return [
+            'stats' => [
+                'total_loan_portfolio' => $totalLoanPortfolio,
+                'active_members' => $activeMembers,
+                'pending_approvals' => $pendingValidations,
+                'total_paid_amount' => $totalPaidAmount,
+                'total_amount_due' => $totalAmountDue,
+            ],
+            'recent_pending_loans' => $recentPendingLoans,
+            'loan_health' => [
+                'collection_rate' => $actualCollectionRate,
+                'completed_loans' => Loan::paidOff()->count(),
+                'active_loans' => Loan::active()->count(),
+            ],
+        ];
+    }
 
     protected function getLoanEligibility($user): array
     {
         $profile = $user->memberProfile;
+
         return [
             'max_loan_allowed' => ($profile?->share_capital_balance ?? 0) * 2,
             'basic_salary' => $profile?->basic_salary ?? 0,
@@ -178,4 +225,3 @@ class DashboardService
         ];
     }
 }
-

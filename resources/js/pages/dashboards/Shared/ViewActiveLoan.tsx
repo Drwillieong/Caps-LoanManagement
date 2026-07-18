@@ -1,5 +1,6 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import { 
+
     ArrowLeft, 
     Clock, 
     DollarSign, 
@@ -69,6 +70,15 @@ interface DetailedLoan {
         method: string;
         reference: string;
     }>;
+    transactions?: Array<{
+        id: number;
+        date: string;
+        type: string;
+        amount: number;
+        remarks: string | null;
+        balance_after: number;
+        processed_by: string;
+    }>;
 }
 
 interface Props {
@@ -77,12 +87,17 @@ interface Props {
 
 const breadcrumbs: BreadcrumbItem[] = [
 
-    { title: 'Active Loans', href: '/dashboards/Gm/GMActiveLoan' },
+    
 
 ];
 
 export default function ViewActiveLoan({ loan }: Props) {
+    const { props: inertiaProps } = usePage() as any;
+    const role = inertiaProps?.auth?.user?.role as string | undefined;
+    const backHref = role === 'hr' ? '/dashboards/HR/HRActiveLoan' : '/dashboards/Gm/GMActiveLoan';
+
     const [activeTab, setActiveTab] = useState('details');
+
 
     // Mock data fallback (remove in production)
     const mockLoan: DetailedLoan = {
@@ -109,6 +124,7 @@ export default function ViewActiveLoan({ loan }: Props) {
         payments: [
             { id: 1, date: '2024-01-20', amount: 4500, method: 'Salary Deduct', reference: 'PMT001' },
         ],
+        transactions: [],
     };
 
     const displayLoan = loan || mockLoan;
@@ -211,10 +227,13 @@ export default function ViewActiveLoan({ loan }: Props) {
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                     <div className="flex items-center gap-3">
                         <Button variant="ghost" size="sm" asChild>
-                            <Link href="/dashboards/Gm/GMActiveLoan">
+                            <Link href={backHref}>
                                 <ArrowLeft className="h-4 w-4" />
                             </Link>
                         </Button>
+
+
+
                         <div>
                             <h1 className="text-2xl font-bold tracking-tight">{displayLoan.member_name}</h1>
                             <p className="text-muted-foreground">Loan {displayLoan.member_id} • {displayLoan.loan_type}</p>
@@ -304,6 +323,12 @@ export default function ViewActiveLoan({ loan }: Props) {
                             onClick={() => setActiveTab('payments')}
                         >
                             Payments
+                        </button>
+                        <button
+                            className={`px-4 py-2 text-sm font-medium border-b-2 ${activeTab === 'ledger' ? 'border-emerald-500 text-emerald-600' : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted'}`}
+                            onClick={() => setActiveTab('ledger')}
+                        >
+                            Ledger
                         </button>
                         <button
                             className={`px-4 py-2 text-sm font-medium border-b-2 ${activeTab === 'actions' ? 'border-emerald-500 text-emerald-600' : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted'}`}
@@ -424,7 +449,7 @@ export default function ViewActiveLoan({ loan }: Props) {
                                                     <TableRow key={payment.id}>
                                                         <TableCell>{formatDate(payment.date)}</TableCell>
                                                         <TableCell className="font-mono font-semibold">{formatCurrency(payment.amount)}</TableCell>
-                                                        <TableCell>Salary Deduct</TableCell>
+                                                        <TableCell>{payment.method}</TableCell>
                                                         <TableCell>{payment.reference}</TableCell>
                                                     </TableRow>
                                                 ))
@@ -432,6 +457,61 @@ export default function ViewActiveLoan({ loan }: Props) {
                                                 <TableRow>
                                                     <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
                                                         No payments recorded yet.
+                                                    </TableCell>
+                                                </TableRow>
+                                            )}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {activeTab === 'ledger' && (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Loan Ledger</CardTitle>
+                                <CardDescription>Audit trail for releases, deductions, missed deductions, and manual payments.</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="rounded-md border">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Date</TableHead>
+                                                <TableHead>Type</TableHead>
+                                                <TableHead>Remarks</TableHead>
+                                                <TableHead>Processed By</TableHead>
+                                                <TableHead className="text-right">Amount</TableHead>
+                                                <TableHead className="text-right">Balance</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {(displayLoan.transactions ?? []).length > 0 ? (
+                                                (displayLoan.transactions ?? []).map((transaction) => (
+                                                    <TableRow key={transaction.id}>
+                                                        <TableCell>{formatDate(transaction.date)}</TableCell>
+                                                        <TableCell>
+                                                            <Badge variant="outline">
+                                                                {transaction.type.replaceAll('_', ' ')}
+                                                            </Badge>
+                                                        </TableCell>
+                                                        <TableCell className="max-w-sm whitespace-normal text-muted-foreground">
+                                                            {transaction.remarks || 'N/A'}
+                                                        </TableCell>
+                                                        <TableCell>{transaction.processed_by}</TableCell>
+                                                        <TableCell className="text-right font-mono">
+                                                            {formatCurrency(transaction.amount)}
+                                                        </TableCell>
+                                                        <TableCell className="text-right font-mono font-semibold">
+                                                            {formatCurrency(transaction.balance_after)}
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))
+                                            ) : (
+                                                <TableRow>
+                                                    <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                                                        No ledger transactions recorded yet.
                                                     </TableCell>
                                                 </TableRow>
                                             )}

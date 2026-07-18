@@ -95,6 +95,7 @@ class MemberExportController extends Controller
             'roles' => [
                 'member',
                 'gm',
+                'creditcom',
                 'hr',
             ],
         ]);
@@ -106,6 +107,7 @@ class MemberExportController extends Controller
             'roles' => [
                 'member',
                 'gm',
+                'creditcom',
                 'hr',
             ],
         ]);
@@ -119,7 +121,7 @@ class MemberExportController extends Controller
             'last_name' => 'required|string|max:255',
             'email' => 'required|string|lowercase|email|max:255|unique:users',
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
-            'role' => 'required|in:member,gm,hr',
+            'role' => 'required|in:member,gm,creditcom,hr',
             
             // Employee ID
             'employee_id' => 'required|string|max:255|unique:member_profiles,employee_id',

@@ -192,6 +192,19 @@ export default function Create({ roles }: Props) {
                                                 />
                                                 <InputError message={errors.employee_id} />
                                             </div>
+
+                                            <div className="space-y-2">
+                                                <Label htmlFor="payroll_id">
+                                                    Payroll ID
+                                                </Label>
+                                                <Input
+                                                    id="payroll_id"
+                                                    name="payroll_id"
+                                                    placeholder="Optional payroll identifier"
+                                                    className="h-10 rounded-lg border-emerald-100 focus:ring-emerald-500/40"
+                                                />
+                                                <InputError message={errors.payroll_id} />
+                                            </div>
                                         </div>
                                     </div>
 
@@ -371,4 +384,3 @@ export default function Create({ roles }: Props) {
         </AppLayout>
     )
 }
-

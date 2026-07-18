@@ -1,4 +1,6 @@
 import { Head, usePage } from '@inertiajs/react';
+import { toast } from 'react-hot-toast';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useEffect, useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { LiveClock } from '@/components/live-clock';
@@ -18,6 +20,10 @@ import {
     User,
     ArrowRight,
     Edit,
+    ChevronsLeft,
+    ChevronsRight,
+    ChevronLeft,
+    ChevronRight,
 } from 'lucide-react';
 import { Link } from '@inertiajs/react';
 
@@ -45,6 +51,7 @@ interface LoanData {
     rejected_by: string | null;
     rejected_at: string | null;
     created_at: string;
+    has_edited: boolean;
     co_makers: Array<{
         id: number;
         name: string;
@@ -63,33 +70,13 @@ export default function PendingApplication({ loan, hasPendingLoan, loanHistory }
     const [currentLoan, setCurrentLoan] = useState<LoanData | null>(loan);
     const [isPolling, setIsPolling] = useState(true);
     const [lastUpdated, setLastUpdated] = useState(new Date());
+    const [lockoutRemaining, setLockoutRemaining] = useState<number | null>(null);
 
-    useEffect(() => {
-        if (!hasPendingLoan || !currentLoan) {
-            setIsPolling(false);
-            return;
-        }
+    // Toast removed to prevent showing on every page load
 
-        if (['approved', 'rejected', 'rejected_by_co_maker', 'rejected_by_gm', 'rejected_by_credit_com', 'released'].includes(currentLoan.status)) {
-            setIsPolling(false);
-            return;
-        }
+    // Auto-refresh removed per user request
 
-        const interval = setInterval(() => {
-            window.location.reload();
-        }, 10000);
-
-        return () => clearInterval(interval);
-    }, [hasPendingLoan, currentLoan?.status]);
-
-    useEffect(() => {
-        if (isPolling) {
-            const interval = setInterval(() => {
-                setLastUpdated(new Date());
-            }, 10000);
-            return () => clearInterval(interval);
-        }
-    }, [isPolling]);
+    // Last updated timer removed with auto-refresh
 
     function getStatusBadge(status: string) {
         switch (status) {
@@ -200,6 +187,49 @@ export default function PendingApplication({ loan, hasPendingLoan, loanHistory }
     })}`;
 }
 
+    const [historyPage, setHistoryPage] = useState(1);
+    const historyPerPage = 5;
+    const historyTotalPages = Math.max(1, Math.ceil((loanHistory?.length ?? 0) / historyPerPage));
+    const historyStart = (historyPage - 1) * historyPerPage;
+    const historyEnd = historyStart + historyPerPage;
+    const paginatedHistory = (loanHistory ?? []).slice(historyStart, historyEnd);
+
+    useEffect(() => {
+        setHistoryPage(1);
+    }, [loanHistory?.length]);
+
+    const rejectedStatuses = ['rejected', 'rejected_by_co_maker', 'rejected_by_gm', 'rejected_by_credit_com'];
+    const isRejected = currentLoan && rejectedStatuses.includes(currentLoan.status);
+
+    useEffect(() => {
+        if (!isRejected || !currentLoan?.rejected_at) {
+            setLockoutRemaining(null);
+            return;
+        }
+
+        const LOCKOUT_MS = 3 * 60 * 60 * 1000;
+
+        const checkLockout = () => {
+            const rejectedTime = new Date(currentLoan.rejected_at!).getTime();
+            const now = Date.now();
+            const remaining = LOCKOUT_MS - (now - rejectedTime);
+            setLockoutRemaining(remaining > 0 ? remaining : 0);
+        };
+
+        checkLockout();
+        const interval = setInterval(checkLockout, 1000);
+        return () => clearInterval(interval);
+    }, [isRejected, currentLoan?.rejected_at]);
+
+    const formatLockoutTime = (ms: number): string => {
+        if (ms <= 0) return '0h 0m 0s';
+        const totalSeconds = Math.ceil(ms / 1000);
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
+        return `${hours}h ${minutes}m ${seconds}s`;
+    };
+
     if (!hasPendingLoan || !currentLoan) {
         return (
             <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
@@ -240,7 +270,7 @@ export default function PendingApplication({ loan, hasPendingLoan, loanHistory }
                             </CardHeader>
                             <CardContent>
                                 <div className="space-y-4">
-                                    {loanHistory.map((historyLoan) => (
+                                    {paginatedHistory.map((historyLoan) => (
                                         <div 
                                             key={historyLoan.id}
                                             className="flex flex-col gap-3 rounded-lg border p-4 md:flex-row md:items-center md:justify-between"
@@ -271,6 +301,19 @@ export default function PendingApplication({ loan, hasPendingLoan, loanHistory }
                                         </div>
                                     ))}
                                 </div>
+
+                                {loanHistory.length > 0 && (
+                                    <DataTablePagination
+                                        currentPage={historyPage}
+                                        pageSize={historyPerPage}
+                                        totalPages={historyTotalPages}
+                                        totalRows={loanHistory.length}
+                                        onFirstPage={() => setHistoryPage(1)}
+                                        onPreviousPage={() => setHistoryPage((prev) => Math.max(prev - 1, 1))}
+                                        onNextPage={() => setHistoryPage((prev) => Math.min(prev + 1, historyTotalPages))}
+                                        onLastPage={() => setHistoryPage(historyTotalPages)}
+                                    />
+                                )}
                             </CardContent>
                         </Card>
                     )}
@@ -291,12 +334,6 @@ export default function PendingApplication({ loan, hasPendingLoan, loanHistory }
                         <h1 className="text-2xl font-bold">Pending Application</h1>
                         <p className="text-muted-foreground">Track your loan application status</p>
                     </div>
-                    {isPolling && (
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <RefreshCw className="h-4 w-4 animate-spin" />
-                            <span>Auto-refreshing every 10s</span>
-                        </div>
-                    )}
                 </div>
 
                 <Card className={`border-l-4 ${statusInfo.color.replace('bg-', 'border-').split(' ')[0]}`}>
@@ -311,6 +348,15 @@ export default function PendingApplication({ loan, hasPendingLoan, loanHistory }
                         <CardDescription className="text-base mt-2">
                             {statusInfo.description}
                         </CardDescription>
+                        {isRejected && lockoutRemaining !== null && (
+                            <div className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3">
+                                <p className="text-sm text-red-600">
+                                    {lockoutRemaining > 0 
+                                        ? <>Reapplication available in <span className="font-mono font-bold">{formatLockoutTime(lockoutRemaining)}</span></>
+                                        : 'You can now submit a new loan application.'}
+                                </p>
+                            </div>
+                        )}
                     </CardHeader>
                 </Card>
 
@@ -403,46 +449,53 @@ export default function PendingApplication({ loan, hasPendingLoan, loanHistory }
                     </Card>
                 )}
 
-                <div className="flex gap-4">
+                <div className="flex flex-col sm:flex-row gap-4 p-4 bg-muted/50 rounded-xl border">
                     {currentLoan.status === 'approved' || currentLoan.status === 'released' ? (
-                       <Link
-  href="/dashboards/Member/MemberActiveLoan"
-  className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-white hover:opacity-90 transition"
->
-  <span className="text-sm font-semibold">₱</span>
-  View Active Loan
-</Link>
+                        <Button asChild className="flex-1 sm:flex-none min-w-[180px]">
+                            <Link href="/dashboards/Member/MemberActiveLoan" className="w-full">
+                                <span className="text-sm font-semibold">₱</span>
+                                View Active Loan
+                            </Link>
+                        </Button>
                     ) : currentLoan.status === 'rejected' || currentLoan.status === 'rejected_by_co_maker' || currentLoan.status === 'rejected_by_gm' || currentLoan.status === 'rejected_by_credit_com' ? (
-                        <Link
-                            href="/dashboards/Member/ApplyLoan"
-                            className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-white hover:opacity-90 transition"
-                        >
-                            <FileText className="h-4 w-4" />
-                            Apply Again
-                        </Link>
+                        lockoutRemaining !== null && lockoutRemaining > 0 ? (
+                            <Button disabled className="flex-1 sm:flex-none min-w-[180px] bg-gray-400 text-white cursor-not-allowed">
+                                <Clock className="h-4 w-4 mr-2" />
+                                Reapplication Locked ({formatLockoutTime(lockoutRemaining)})
+                            </Button>
+                        ) : (
+                            <Button asChild className="flex-1 sm:flex-none min-w-[180px] bg-primary hover:bg-primary/90">
+                                <Link href="/dashboards/Member/ApplyLoan">
+                                    <FileText className="h-4 w-4" />
+                                    Apply Again
+                                </Link>
+                            </Button>
+                        )
+                    ) : currentLoan.has_edited ? (
+                        <Alert className="flex-1 border-yellow-200 bg-yellow-50 text-yellow-800">
+                            <Edit className="h-4 w-4 opacity-70 mt-0.5" />
+                            <AlertTitle className="font-medium">Edit Locked</AlertTitle>
+                            <AlertDescription className="text-sm">
+                                You have already edited this application once. Changes are now locked.
+                            </AlertDescription>
+                        </Alert>
                     ) : (
-                        <Link
-                            href={`/dashboards/Member/Loan/${currentLoan.id}/edit`}
-                            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-white hover:opacity-90 transition"
-                        >
-                            <Edit className="h-4 w-4" />
-                            Edit Application
-                        </Link>
+                        <Button asChild className="flex-1 sm:flex-none min-w-[180px] bg-blue-600 hover:bg-blue-700">
+                            <Link href={`/dashboards/Member/Loan/${currentLoan.id}/edit`}>
+                                <Edit className="h-4 w-4 mr-1" />
+                                Edit Application
+                            </Link>
+                        </Button>
                     )}
                     
-                    <Link
-                        href="/dashboard"
-                        className="inline-flex items-center gap-2 rounded-xl border px-4 py-2 hover:bg-muted transition"
-                    >
-                        Back to Dashboard
-                    </Link>
+                    <Button asChild variant="outline" className="flex-1 sm:flex-none min-w-[160px]">
+                        <Link href="/dashboards/Member/MemberDashboard">
+                            Back to Dashboard
+                        </Link>
+                    </Button>
                 </div>
 
-                {isPolling && (
-                    <p className="text-sm text-muted-foreground text-center">
-                        Last checked: {lastUpdated.toLocaleTimeString()}
-                    </p>
-                )}
+
 
                 {loanHistory && loanHistory.length > 0 && (
                     <Card className="mt-6 border-emerald-100 bg-white/50 dark:bg-emerald-950/10 shadow-sm">
@@ -457,7 +510,7 @@ export default function PendingApplication({ loan, hasPendingLoan, loanHistory }
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-4">
-                                {loanHistory.map((historyLoan) => (
+                                {paginatedHistory.map((historyLoan) => (
                                     <div 
                                         key={historyLoan.id}
                                         className="flex flex-col gap-3 rounded-lg border p-4 md:flex-row md:items-center md:justify-between"
@@ -488,10 +541,112 @@ export default function PendingApplication({ loan, hasPendingLoan, loanHistory }
                                     </div>
                                 ))}
                             </div>
+
+                            {loanHistory.length > 0 && (
+                                <DataTablePagination
+                                    currentPage={historyPage}
+                                    pageSize={historyPerPage}
+                                    totalPages={historyTotalPages}
+                                    totalRows={loanHistory.length}
+                                    onFirstPage={() => setHistoryPage(1)}
+                                    onPreviousPage={() => setHistoryPage((prev) => Math.max(prev - 1, 1))}
+                                    onNextPage={() => setHistoryPage((prev) => Math.min(prev + 1, historyTotalPages))}
+                                    onLastPage={() => setHistoryPage(historyTotalPages)}
+                                />
+                            )}
                         </CardContent>
                     </Card>
                 )}
             </div>
         </AppLayout>
+    );
+}
+
+function DataTablePagination({
+    currentPage,
+    pageSize,
+    totalPages,
+    totalRows,
+    onFirstPage,
+    onPreviousPage,
+    onNextPage,
+    onLastPage,
+}: {
+    currentPage: number;
+    pageSize: number;
+    totalPages: number;
+    totalRows: number;
+    onFirstPage: () => void;
+    onPreviousPage: () => void;
+    onNextPage: () => void;
+    onLastPage: () => void;
+}) {
+    const isFirstPage = currentPage === 1;
+    const isLastPage = currentPage === totalPages;
+
+    return (
+        <div className="flex flex-col gap-4 rounded-2xl border border-slate-100 bg-slate-50/70 p-4 md:flex-row md:items-center md:justify-between">
+            <p className="text-sm text-muted-foreground">
+                0 of {totalRows} row(s) selected.
+            </p>
+
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <div className="flex items-center gap-2">
+                    <span className="flex h-8 min-w-12 items-center justify-center rounded-md border border-input bg-background px-3 text-sm font-medium text-foreground shadow-xs">
+                        {pageSize}
+                    </span>
+                    <span className="text-sm font-medium text-foreground">
+                        Page {currentPage} of {totalPages}
+                    </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="icon-sm"
+                        onClick={onFirstPage}
+                        disabled={isFirstPage}
+                        aria-label="Go to first page"
+                        title="Go to first page"
+                    >
+                        <ChevronsLeft className="size-4" />
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="icon-sm"
+                        onClick={onPreviousPage}
+                        disabled={isFirstPage}
+                        aria-label="Go to previous page"
+                        title="Go to previous page"
+                    >
+                        <ChevronLeft className="size-4" />
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="icon-sm"
+                        onClick={onNextPage}
+                        disabled={isLastPage}
+                        aria-label="Go to next page"
+                        title="Go to next page"
+                    >
+                        <ChevronRight className="size-4" />
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="icon-sm"
+                        onClick={onLastPage}
+                        disabled={isLastPage}
+                        aria-label="Go to last page"
+                        title="Go to last page"
+                    >
+                        <ChevronsRight className="size-4" />
+                    </Button>
+                </div>
+            </div>
+        </div>
     );
 }

@@ -1,5 +1,6 @@
 import { Link, router } from '@inertiajs/react';
 import { LogOut, Settings } from 'lucide-react';
+import { useState } from 'react';
 
 import {
     DropdownMenuGroup,
@@ -7,6 +8,7 @@ import {
     DropdownMenuLabel,
     DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
+import LogoutConfirmationModal from '@/components/modals/LogoutConfirmationModal';
 import { UserInfo } from '@/components/user-info';
 import { useMobileNavigation } from '@/hooks/use-mobile-navigation';
 import { logout } from '@/routes';
@@ -20,9 +22,16 @@ interface UserMenuContentProps {
 export function UserMenuContent({ user }: UserMenuContentProps) {
     const cleanup = useMobileNavigation();
 
-    const handleLogout = () => {
-        cleanup();
-        router.flushAll();
+    // ✅ FIX: Add state for modal
+    const [showLogoutModal, setShowLogoutModal] = useState(false);
+
+    const handleLogoutConfirm = () => {
+        router.post(logout());
+    };
+
+    const handleLogoutClick = (e: React.MouseEvent) => {
+        e.preventDefault();
+        setShowLogoutModal(true);
     };
 
     return (
@@ -45,7 +54,6 @@ export function UserMenuContent({ user }: UserMenuContentProps) {
                             flex items-center
                             w-full rounded-md
                             px-2 py-1.5
-
                             text-sidebar-foreground
                             hover:bg-sidebar-accent
                             focus:bg-sidebar-accent
@@ -62,16 +70,13 @@ export function UserMenuContent({ user }: UserMenuContentProps) {
 
             {/* LOGOUT */}
             <DropdownMenuItem asChild>
-                <Link
-                    href={logout()}
-                    as="button"
-                    onClick={handleLogout}
+                <button
+                    onClick={handleLogoutClick}
                     data-test="logout-button"
                     className="
                         flex items-center
                         w-full rounded-md
                         px-2 py-1.5
-
                         text-[color:var(--sidebar-danger)]
                         hover:bg-[color:var(--sidebar-danger-bg)]
                         focus:bg-[color:var(--sidebar-danger-bg)]
@@ -79,8 +84,15 @@ export function UserMenuContent({ user }: UserMenuContentProps) {
                 >
                     <LogOut className="mr-2 h-4 w-4" />
                     Log out
-                </Link>
+                </button>
             </DropdownMenuItem>
+
+            {/* LOGOUT MODAL */}
+            <LogoutConfirmationModal
+                open={showLogoutModal}
+                onOpenChange={setShowLogoutModal}
+                onConfirm={handleLogoutConfirm}
+            />
         </>
     );
 }

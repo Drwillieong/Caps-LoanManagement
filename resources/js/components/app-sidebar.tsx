@@ -1,12 +1,20 @@
 import { Link, usePage } from '@inertiajs/react';
 import {
-    BookOpen,
     LayoutGrid,
     UsersRound,
-    Archive,
-    Clock,
+    BadgeDollarSign,
+    WalletCards,
+    CheckCircle2,
+    FileClock,
     FileText,
     FilePlus,
+    UserCircle2,
+    ClipboardCheck,
+    History,
+    ShieldCheck,
+    Banknote,
+    Logs,
+    FileSpreadsheet,
 } from 'lucide-react';
 
 import { NavFooter } from '@/components/nav-footer';
@@ -43,12 +51,12 @@ const hrNavItems: NavItem[] = [
     {
         title: 'Active Loan',
         href: '/dashboards/HR/HRActiveLoan',
-        icon: Clock,
+        icon: BadgeDollarSign,
     },
     {
         title: 'Completed Loan',
         href: '/dashboards/HR/HRCompletedLoan',
-        icon: Archive,
+        icon: CheckCircle2,
     },
 ];
 
@@ -58,73 +66,101 @@ const memberNavItems: NavItem[] = [
         icon: FilePlus,
         items: [
             {
-                title: 'Create Application',
+                title: 'Application Form',
                 href: '/dashboards/Member/ApplyLoan',
+                icon: FileText,
             },
             {
                 title: 'Choose CoMaker',
                 href: '/dashboards/Member/ChooseComaker',
+                icon: UsersRound,
             },
             {
                 title: 'Pending Application',
                 href: '/dashboards/Member/PendingApplication',
+                icon: FileClock,
             },
         ],
     },
     {
         title: 'Loans',
-        icon: Archive,
+        icon: WalletCards,
         items: [
             {
                 title: 'Active Loan',
-                href: '/dashboards/Member/MemberActiveLoan',
+                href: '/dashboards/Member/ShowActiveLoans',
+                icon: Banknote,
             },
             {
                 title: 'Completed Loan',
                 href: '/dashboards/Member/MemberCompletedLoan',
+                icon: CheckCircle2,
             },
         ],
     },
     {
         title: 'User Profile',
         href: '/dashboards/Member/UserProfile',
-        icon: UsersRound,
+        icon: UserCircle2,
     },
 ];
 
-/* ✅ UPDATED GM NAV SAME STYLE AS MEMBER */
 const gmNavItems: NavItem[] = [
     {
         title: 'Application',
-        icon: FilePlus,
+        icon: ClipboardCheck,
         items: [
-             {
+            {
                 title: 'Create Application',
                 href: '/dashboards/Gm/CreateApplication',
+                icon: FilePlus,
             },
             {
                 title: 'Pending Application',
                 href: '/dashboards/Gm/LoanApplication',
+                icon: FileClock,
             },
             {
                 title: 'Approved Loan',
                 href: '/dashboards/Gm/ApprovedLoan',
+                icon: ShieldCheck,
             },
+            
         ],
     },
     {
         title: 'Loan',
-        icon: Archive,
+        icon: WalletCards,
         items: [
             {
                 title: 'Active Loan',
                 href: '/dashboards/Gm/GMActiveLoan',
+                icon: Banknote,
             },
             {
                 title: 'Completed Loan',
                 href: '/dashboards/Gm/GMCompletedLoan',
+                icon: History,
+            },
+             {
+                title: 'Upload Payroll',
+                href: '/dashboards/Gm/UploadSalaryDeduct',
+                icon: FileSpreadsheet,
             },
         ],
+    },
+];
+
+const creditcomNavItems: NavItem[] = [
+    {
+        title: 'Loan Application',
+        href: '/dashboards/CreditCom/LoanApplication',
+        icon: FileText,
+    },
+    {
+        title: 'Approved Loan',
+        href: '/dashboards/CreditCom/ApprovedHistory',
+        icon: ShieldCheck,
     },
 ];
 
@@ -132,7 +168,7 @@ const footerNavItems: NavItem[] = [
     {
         title: 'Activity Log',
         href: '/dashboards/Gm/ActivityLog',
-        icon: Clock,
+        icon: Logs,
         role: 'gm',
     },
 ];
@@ -152,6 +188,9 @@ export function AppSidebar() {
             break;
         case 'gm':
             roleNavItems = gmNavItems;
+            break;
+        case 'creditcom':
+            roleNavItems = creditcomNavItems;
             break;
         default:
             roleNavItems = [];

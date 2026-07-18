@@ -17,10 +17,15 @@ class LoanPayment extends Model
      */
     protected $fillable = [
         'loan_id',
+        'loan_amortization_id',
+        'payroll_upload_id',
         'amount',
+        'payment_method',
         'payment_date',
         'reference_number',
         'paid_by',
+        'processed_by',
+        'remarks',
     ];
 
     /**
@@ -43,5 +48,19 @@ class LoanPayment extends Model
     {
         return $this->belongsTo(Loan::class);
     }
-}
 
+    public function amortization(): BelongsTo
+    {
+        return $this->belongsTo(LoanAmortization::class, 'loan_amortization_id');
+    }
+
+    public function payrollUpload(): BelongsTo
+    {
+        return $this->belongsTo(PayrollUpload::class);
+    }
+
+    public function processor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'processed_by');
+    }
+}

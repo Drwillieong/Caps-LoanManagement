@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useForm } from '@inertiajs/react';
+import { toast } from 'react-hot-toast';
 
 import { Separator } from "@/components/ui/separator";
 import { 
@@ -185,53 +186,98 @@ export default function GmViewLoanDecision() {
                 </div>
 
                 {/* Decision Status */}
-                <Card className={['approved', 'released', 'paid_off'].includes(loan.status) ? 'border-green-500' : 'border-red-500'}>
-                    <CardContent className="pt-6">
-                        {(['approved'].includes(loan.status)) && (
-                            <div className="flex justify-end mb-4">
-                                <Button
-                                    disabled={processing}
-                                    onClick={() => {
-                                        post(`/dashboards/Gm/Loan/${loan.id}/activate`, {
-                                            onSuccess: () => {
-                                                alert('Loan Activated');
-                                            },
-                                        });
-                                    }}
-                                    variant="outline"
-                                >
-                                    Activate Loan
-                                </Button>
-                            </div>
-                        )}
-                        
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                {['approved', 'released', 'paid_off'].includes(loan.status) ? (
-                                    <CheckCircle2 className="h-8 w-8 text-green-600" />
-                                ) : (
-                                    <XCircle className="h-8 w-8 text-red-600" />
-                                )}
-                                <div>
-                                    <h2 className="text-lg font-semibold">
-                                        {loan.loan_type_name}
-                                    </h2>
-                                    <p className="text-sm text-muted-foreground">
-                                        Applied on {formatDate(loan.created_at)}
-                                    </p>
-                                </div>
-                            </div>
-                            {getStatusBadge(loan.status)}
-                        </div>
-                        
-                        {loan.remarks && (
-                            <div className="mt-4 pt-4 border-t">
-                                <p className="text-sm font-medium">GM Decision Remarks:</p>
-                                <p className="text-sm text-muted-foreground mt-1">{loan.remarks}</p>
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
+              <Card
+    className={`overflow-hidden border-l-4 shadow-sm transition-all hover:shadow-md ${
+        ['approved', 'released', 'paid_off'].includes(loan.status)
+            ? 'border-l-green-600'
+            : 'border-l-red-500'
+    }`}
+>
+    <CardContent className="p-6">
+
+        {/* Header */}
+        <div className="flex items-start justify-between">
+
+            <div className="flex items-center gap-4">
+
+                <div
+                    className={`rounded-full p-3 ${
+                        ['approved', 'released', 'paid_off'].includes(loan.status)
+                            ? 'bg-green-100 text-green-600'
+                            : 'bg-red-100 text-red-600'
+                    }`}
+                >
+                    {['approved', 'released', 'paid_off', 'pending_cc_review'].includes(loan.status) ? (
+                        <CheckCircle2 className="h-7 w-7" />
+                    ) : (
+                        <XCircle className="h-7 w-7" />
+                    )}
+                </div>
+
+                <div>
+                    <h2 className="text-xl font-semibold">
+                        {loan.loan_type_name}
+                    </h2>
+
+                    <p className="text-sm text-muted-foreground mt-1">
+                        Application Date
+                    </p>
+
+                    <p className="font-medium">
+                        {formatDate(loan.created_at)}
+                    </p>
+                </div>
+
+            </div>
+
+            {getStatusBadge(loan.status)}
+
+        </div>
+
+        {/* Divider */}
+        <div className="my-6 border-t" />
+
+        {/* Remarks */}
+        {loan.remarks && (
+            <div className="rounded-lg bg-muted/40 p-4">
+
+                <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                    GM Remarks
+                </p>
+
+                <p className="mt-2 text-sm leading-6">
+                    {loan.remarks}
+                </p>
+
+            </div>
+        )}
+
+        {/* Footer */}
+        {loan.status === 'approved' && (
+            <div className="mt-2 flex justify-end">
+
+         <Button
+    size="sm"
+    disabled={processing}
+            onClick={() =>
+                post(`/dashboards/Gm/Loan/${loan.id}/activate`, {
+                    onSuccess: () => {
+                        toast.success('Loan activated and released successfully.');
+                    },
+                })
+            }
+    className="h-9 px-4 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition-colors"
+>
+    Activate Loan
+</Button>
+
+
+            </div>
+        )}
+
+    </CardContent>
+</Card>
+
 
                 <Separator />
 

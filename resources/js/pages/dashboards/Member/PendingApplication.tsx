@@ -1,4 +1,4 @@
-import { Head, usePage } from '@inertiajs/react';
+import { Head, usePage, router } from '@inertiajs/react';
 import { toast } from 'react-hot-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useEffect, useState } from 'react';
@@ -14,7 +14,6 @@ import {
     CheckCircle2, 
     XCircle, 
     AlertCircle, 
-    RefreshCw, 
     FileText,
     Calendar,
     User,
@@ -68,15 +67,47 @@ interface PendingApplicationProps {
 
 export default function PendingApplication({ loan, hasPendingLoan, loanHistory }: PendingApplicationProps) {
     const [currentLoan, setCurrentLoan] = useState<LoanData | null>(loan);
-    const [isPolling, setIsPolling] = useState(true);
-    const [lastUpdated, setLastUpdated] = useState(new Date());
     const [lockoutRemaining, setLockoutRemaining] = useState<number | null>(null);
 
-    // Toast removed to prevent showing on every page load
+    useEffect(() => {
+        setCurrentLoan(loan);
+    }, [loan]);
 
-    // Auto-refresh removed per user request
+    // Derive the real display status. If the loan row is still stale (e.g. a
+    // background job hasn't run yet) but a co-maker has already rejected the
+    // request, treat the whole application as rejected by the co-maker so the
+    // card never gets stuck on "Awaiting Co-Maker Confirmation".
+    function getEffectiveStatus(loanData: LoanData | null): string {
+        if (!loanData) return '';
 
-    // Last updated timer removed with auto-refresh
+        const rejectedStatuses = ['rejected', 'rejected_by_co_maker', 'rejected_by_gm', 'rejected_by_credit_com'];
+        if (rejectedStatuses.includes(loanData.status)) {
+            return loanData.status;
+        }
+
+        const hasCoMakerRejected = loanData.co_makers?.some((cm) => cm.status === 'rejected');
+        if (hasCoMakerRejected) {
+            return 'rejected_by_co_maker';
+        }
+
+        return loanData.status;
+    }
+
+    useEffect(() => {
+        if (!hasPendingLoan || !currentLoan) {
+            return;
+        }
+
+        if (['approved', 'rejected', 'rejected_by_co_maker', 'rejected_by_gm', 'rejected_by_credit_com', 'released'].includes(getEffectiveStatus(currentLoan))) {
+            return;
+        }
+
+        const interval = setInterval(() => {
+            router.reload({ only: ['loan', 'hasPendingLoan', 'loanHistory'] });
+        }, 5000);
+
+        return () => clearInterval(interval);
+    }, [hasPendingLoan, currentLoan?.status, currentLoan?.co_makers]);
 
     function getStatusBadge(status: string) {
         switch (status) {
@@ -199,7 +230,8 @@ export default function PendingApplication({ loan, hasPendingLoan, loanHistory }
     }, [loanHistory?.length]);
 
     const rejectedStatuses = ['rejected', 'rejected_by_co_maker', 'rejected_by_gm', 'rejected_by_credit_com'];
-    const isRejected = currentLoan && rejectedStatuses.includes(currentLoan.status);
+    const effectiveStatus = getEffectiveStatus(currentLoan);
+    const isRejected = currentLoan && rejectedStatuses.includes(effectiveStatus);
 
     useEffect(() => {
         if (!isRejected || !currentLoan?.rejected_at) {
@@ -280,7 +312,7 @@ export default function PendingApplication({ loan, hasPendingLoan, loanHistory }
                                                     <span className="font-semibold">
                                                         {historyLoan.loan_type_name}
                                                     </span>
-                                                    {getStatusBadge(historyLoan.status)}
+                                                    {getStatusBadge(getEffectiveStatus(historyLoan))}
                                                 </div>
                                                 <div className="flex flex-wrap gap-4 text-sm text-gray-600">
                                                     <span>
@@ -322,7 +354,12 @@ export default function PendingApplication({ loan, hasPendingLoan, loanHistory }
         );
     }
 
-    const statusInfo = getStatusMessage(currentLoan.status, currentLoan.rejected_by, currentLoan.rejected_at);
+    const rejectedByCoMaker = effectiveStatus === 'rejected_by_co_maker';
+    const statusInfo = getStatusMessage(
+        effectiveStatus,
+        rejectedByCoMaker ? (currentLoan.rejected_by ?? 'co_maker') : currentLoan.rejected_by,
+        currentLoan.rejected_at,
+    );
 
     return (
         <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
@@ -343,7 +380,7 @@ export default function PendingApplication({ loan, hasPendingLoan, loanHistory }
                                 {statusInfo.icon}
                                 {statusInfo.title}
                             </CardTitle>
-                            {getStatusBadge(currentLoan.status)}
+                            {getStatusBadge(effectiveStatus)}
                         </div>
                         <CardDescription className="text-base mt-2">
                             {statusInfo.description}
@@ -450,14 +487,14 @@ export default function PendingApplication({ loan, hasPendingLoan, loanHistory }
                 )}
 
                 <div className="flex flex-col sm:flex-row gap-4 p-4 bg-muted/50 rounded-xl border">
-                    {currentLoan.status === 'approved' || currentLoan.status === 'released' ? (
+                    {effectiveStatus === 'approved' || effectiveStatus === 'released' ? (
                         <Button asChild className="flex-1 sm:flex-none min-w-[180px]">
                             <Link href="/dashboards/Member/MemberActiveLoan" className="w-full">
                                 <span className="text-sm font-semibold">₱</span>
                                 View Active Loan
                             </Link>
                         </Button>
-                    ) : currentLoan.status === 'rejected' || currentLoan.status === 'rejected_by_co_maker' || currentLoan.status === 'rejected_by_gm' || currentLoan.status === 'rejected_by_credit_com' ? (
+                    ) : effectiveStatus === 'rejected' || effectiveStatus === 'rejected_by_co_maker' || effectiveStatus === 'rejected_by_gm' || effectiveStatus === 'rejected_by_credit_com' ? (
                         lockoutRemaining !== null && lockoutRemaining > 0 ? (
                             <Button disabled className="flex-1 sm:flex-none min-w-[180px] bg-gray-400 text-white cursor-not-allowed">
                                 <Clock className="h-4 w-4 mr-2" />
@@ -520,7 +557,7 @@ export default function PendingApplication({ loan, hasPendingLoan, loanHistory }
                                                 <span className="font-semibold">
                                                     {historyLoan.loan_type_name}
                                                 </span>
-                                                {getStatusBadge(historyLoan.status)}
+                                                {getStatusBadge(getEffectiveStatus(historyLoan))}
                                             </div>
                                             <div className="flex flex-wrap gap-4 text-sm text-gray-600">
                                                 <span>

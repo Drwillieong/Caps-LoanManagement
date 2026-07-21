@@ -508,6 +508,14 @@ export default function PendingApplication({ loan, hasPendingLoan, loanHistory }
                                 </Link>
                             </Button>
                         )
+                    ) : effectiveStatus === 'pending_gm_review' || effectiveStatus === 'pending_cc_review' ? (
+                        <Alert className="flex-1 border-blue-200 bg-blue-50 text-blue-800">
+                            <AlertCircle className="h-4 w-4 opacity-70 mt-0.5" />
+                            <AlertTitle className="font-medium">Application Under Review</AlertTitle>
+                            <AlertDescription className="text-sm">
+                                Your loan application is currently under review .
+                            </AlertDescription>
+                        </Alert>
                     ) : currentLoan.has_edited ? (
                         <Alert className="flex-1 border-yellow-200 bg-yellow-50 text-yellow-800">
                             <Edit className="h-4 w-4 opacity-70 mt-0.5" />
@@ -526,7 +534,7 @@ export default function PendingApplication({ loan, hasPendingLoan, loanHistory }
                     )}
                     
                     <Button asChild variant="outline" className="flex-1 sm:flex-none min-w-[160px]">
-                        <Link href="/dashboards/Member/MemberDashboard">
+                        <Link href="/dashboard">
                             Back to Dashboard
                         </Link>
                     </Button>

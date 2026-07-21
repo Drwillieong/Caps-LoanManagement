@@ -23,7 +23,8 @@ import {
     Mail,
     Phone,
     History,
-    Shield
+    Shield,
+    Loader2
 } from 'lucide-react';
 import {
     Dialog,
@@ -52,6 +53,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 export default function ValidateLoan({ pendingLoans }: GmValidateLoanProps) {
     const [selectedLoan, setSelectedLoan] = useState<GmPendingLoan | null>(null);
     const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
+    const [processingAction, setProcessingAction] = useState<"approve" | "reject" | null>(null);
 
     const approveForm = useForm({
         remarks: '',
@@ -119,7 +121,8 @@ export default function ValidateLoan({ pendingLoans }: GmValidateLoanProps) {
     }
 
     async function handleApprove(loanId: number) {
-        // Check for internet connectivity before submitting
+        setProcessingAction("approve");
+
         const isConnected = await canSendEmail();
         
         if (!isConnected) {
@@ -134,11 +137,15 @@ export default function ValidateLoan({ pendingLoans }: GmValidateLoanProps) {
                 console.error('Error approving loan:', errors);
                 toast.error('Failed to approve loan. Please try again.');
             },
+            onFinish: () => {
+                setProcessingAction(null);
+            },
         });
     }
 
     async function handleReject(loanId: number) {
-        // Check for internet connectivity before submitting
+        setProcessingAction("reject");
+
         const isConnected = await canSendEmail();
         
         if (!isConnected) {
@@ -155,6 +162,9 @@ export default function ValidateLoan({ pendingLoans }: GmValidateLoanProps) {
             onError: (errors) => {
                 console.error('Error rejecting loan:', errors);
                 toast.error('Failed to reject loan. Please try again.');
+            },
+            onFinish: () => {
+                setProcessingAction(null);
             },
         });
     }
@@ -358,9 +368,14 @@ export default function ValidateLoan({ pendingLoans }: GmValidateLoanProps) {
                                             <Button
                                                 onClick={() => handleApprove(loan.id)}
                                                 className="flex-1"
+                                                disabled={processingAction !== null}
                                             >
-                                                <CheckCircle2 className="h-4 w-4 mr-2" />
-                                                Approve Application
+                                                {processingAction === "approve" ? (
+                                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                                ) : (
+                                                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                                                )}
+                                                {processingAction === "approve" ? "Accepting..." : "Approve Application"}
                                             </Button>
                                             
                                             <Dialog open={isRejectDialogOpen && selectedLoan?.id === loan.id} onOpenChange={(open) => {
@@ -372,9 +387,11 @@ export default function ValidateLoan({ pendingLoans }: GmValidateLoanProps) {
                                                         variant="outline"
                                                         className="flex-1"
                                                         onClick={() => {
+                                                            if (processingAction) return;
                                                             setSelectedLoan(loan);
                                                             setIsRejectDialogOpen(true);
                                                         }}
+                                                        disabled={processingAction !== null}
                                                     >
                                                         <XCircle className="h-4 w-4 mr-2" />
                                                         Reject Application
@@ -410,9 +427,16 @@ export default function ValidateLoan({ pendingLoans }: GmValidateLoanProps) {
                                                         <Button 
                                                             variant="destructive"
                                                             onClick={() => handleReject(loan.id)}
-                                                            disabled={!rejectForm.data.remarks.trim()}
+                                                            disabled={!rejectForm.data.remarks.trim() || processingAction !== null}
                                                         >
-                                                            Confirm Rejection
+                                                            {processingAction === "reject" ? (
+                                                                <>
+                                                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                                                    Rejecting...
+                                                                </>
+                                                            ) : (
+                                                                "Confirm Rejection"
+                                                            )}
                                                         </Button>
                                                     </DialogFooter>
                                                 </DialogContent>

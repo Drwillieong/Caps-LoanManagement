@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Payroll;
 use App\Exports\SalaryDeductionReportExport;
 use App\Http\Controllers\Controller;
 use App\Models\Loan;
+use App\Services\ActivityLogService;
 use App\Services\Payroll\LoanPaymentPostingService;
 use App\Services\Payroll\PayrollDeductionService;
 use App\Services\Payroll\SalaryDeductionReportService;
@@ -55,6 +56,14 @@ class PayrollDeductionController extends Controller
             $validated['remarks'] ?? null,
         );
 
+        $cutoffDate = $upload->cutoff_date?->toDateString() ?? 'N/A';
+
+        app(ActivityLogService::class)->logActivity(
+            'payroll_upload_processed',
+            null,
+            'Processed payroll upload #'.$upload->id.' ('.$upload->original_file_name.') for cutoff '.$cutoffDate.'. '.$upload->processed_rows.' row(s) applied, '.$upload->failed_rows.' failed.'
+        );
+
         return redirect()
             ->route('gm.payroll-deductions')
             ->with('success', "Payroll upload #{$upload->id} processed. {$upload->processed_rows} row(s) applied, {$upload->failed_rows} failed.");
@@ -94,6 +103,12 @@ class PayrollDeductionController extends Controller
             ]);
         }
 
+        app(ActivityLogService::class)->logActivity(
+            'manual_payment_recorded',
+            $loan->id,
+            'Recorded manual payment of PHP '.number_format((float) $result['applied_amount'], 2).' for loan #'.$loan->id.'.'
+        );
+
         return redirect()
             ->route('gm.payroll-deductions')
             ->with('success', 'Manual payment recorded successfully.');
@@ -116,6 +131,12 @@ class PayrollDeductionController extends Controller
 
         app(\App\Services\Payroll\SystemSettingService::class)->startPayrollProcessing(null);
 
+        app(ActivityLogService::class)->logActivity(
+            'payroll_maintenance_started',
+            null,
+            'Started payroll maintenance mode.'.($request->filled('remarks') ? ' Remarks: '.$request->string('remarks') : '')
+        );
+
         return redirect()
             ->route('gm.payroll-deductions')
             ->with('success', 'Member pages are now locked for payroll maintenance.');
@@ -124,6 +145,12 @@ class PayrollDeductionController extends Controller
     public function stopPayrollMaintenance(): \Illuminate\Http\RedirectResponse
     {
         app(\App\Services\Payroll\SystemSettingService::class)->stopPayrollProcessing();
+
+        app(ActivityLogService::class)->logActivity(
+            'payroll_maintenance_stopped',
+            null,
+            'Stopped payroll maintenance mode.'
+        );
 
         return redirect()
             ->route('gm.payroll-deductions')

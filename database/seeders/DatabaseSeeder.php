@@ -13,7 +13,7 @@ class DatabaseSeeder extends Seeder
     {
         // HR Admin
         User::create([
-            'first_name' => 'HrAdmin',
+            'first_name' => 'SecretaryAdmin',
             'middle_name' => '',
             'last_name' => '',
             'email' => 'hradmin@gmail.com',

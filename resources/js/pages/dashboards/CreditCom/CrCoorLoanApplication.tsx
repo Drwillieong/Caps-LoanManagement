@@ -95,7 +95,7 @@ export default function CrCoorLoanApplication({ pendingLoans }: GmLoanApplicatio
             </p>
           </div>
           <Link
-            href="/dashboards/CreditCom/CreditComDashboard"
+            href="/dashboard"
             className="inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm hover:bg-muted transition"
           >
             Back to Dashboard

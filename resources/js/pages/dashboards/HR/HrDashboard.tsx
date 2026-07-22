@@ -24,7 +24,7 @@ import {
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'HR Dashboard',
+        title: 'Secretary Dashboard',
         href: dashboard().url,
     },
 ]

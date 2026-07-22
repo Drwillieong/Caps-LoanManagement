@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Member;
 use App\Http\Controllers\Controller;
 use App\Models\MemberProfile;
 use App\Models\User;
+use App\Services\ActivityLogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Storage;
@@ -221,6 +222,14 @@ class MemberProfileController extends Controller
             foreach ($validBeneficiaries as $beneficiaryData) {
                 $memberProfile->beneficiaries()->create($beneficiaryData);
             }
+        }
+
+        if (in_array($request->user()->role, ['gm', 'hr'], true)) {
+            app(ActivityLogService::class)->logActivity(
+                'member_profile_updated',
+                null,
+                'Updated member profile for '.$targetUser->name.' (ID #'.$targetUser->id.').'
+            );
         }
 
         return Redirect::route('users')->with('success', 'Member profile updated successfully!');

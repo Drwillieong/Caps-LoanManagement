@@ -239,6 +239,24 @@ export default function CoMaker({ coMakerRequests }: CoMakerProps) {
                                         <Separator className="my-4" />
 
                                         <div className="flex flex-col-reverse sm:flex-row gap-3">
+                                            
+                                            <Button
+                                                onClick={() => handleResponse(request.loan_id, 'accept')}
+                                                disabled={isProcessingThis || isApproveDisabled}
+                                                className="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700"
+                                            >
+                                                {processingAction === 'approve' ? (
+                                                    <>
+                                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                                        Accepting...
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <CheckCircle2 className="h-4 w-4 mr-2" />
+                                                        Accept Co-Maker Request
+                                                    </>
+                                                )}
+                                            </Button>
                                             <Button
                                                 onClick={() => handleResponse(request.loan_id, 'reject')}
                                                 variant="destructive"
@@ -254,23 +272,6 @@ export default function CoMaker({ coMakerRequests }: CoMakerProps) {
                                                     <>
                                                         <XCircle className="h-4 w-4 mr-2" />
                                                         Decline Request
-                                                    </>
-                                                )}
-                                            </Button>
-                                            <Button
-                                                onClick={() => handleResponse(request.loan_id, 'accept')}
-                                                disabled={isProcessingThis || isApproveDisabled}
-                                                className="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700"
-                                            >
-                                                {processingAction === 'approve' ? (
-                                                    <>
-                                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                                        Accepting...
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <CheckCircle2 className="h-4 w-4 mr-2" />
-                                                        Accept Co-Maker Request
                                                     </>
                                                 )}
                                             </Button>

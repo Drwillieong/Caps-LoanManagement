@@ -91,10 +91,10 @@ class MemberProfileController extends Controller
             // Employment
             'position' => 'required|string|max:255',
             'date_hired' => 'required|date',
-            'basic_salary' => 'required|numeric|min:0',
+            'basic_salary' => 'required|numeric|min:10000',
 
             // Financials
-            'share_capital_balance' => 'nullable|numeric|min:0',
+            'share_capital_balance' => 'nullable|numeric|min:10000',
             'bank_account_number' => 'nullable|string|max:50',
             'tin_number' => 'nullable|string|max:50',
 
@@ -178,10 +178,10 @@ class MemberProfileController extends Controller
             // Employment
             'position' => 'required|string|max:255',
             'date_hired' => 'required|date',
-            'basic_salary' => 'required|numeric|min:0',
+            'basic_salary' => 'required|numeric|min:10000',
 
             // Financials
-            'share_capital_balance' => 'nullable|numeric|min:0',
+            'share_capital_balance' => 'nullable|numeric|min:10000',
             'bank_account_number' => 'nullable|string|max:50',
             'tin_number' => 'nullable|string|max:50',
 

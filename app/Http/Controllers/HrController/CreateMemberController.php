@@ -3,13 +3,14 @@
 namespace App\Http\Controllers\HrController;
 
 use App\Http\Controllers\Controller;
-use App\Mail\SendMembersPass;
+use App\Mail\NewMemberWelcomeMail;
 use App\Models\User;
 use App\Services\ActivityLogService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Validation\Rules;
 use Inertia\Inertia;
 
 class CreateMemberController extends Controller
@@ -73,11 +74,26 @@ class CreateMemberController extends Controller
                             'spouse_name' => $user->memberProfile->spouse_name,
                             'mobile_number' => $user->memberProfile->mobile_number,
                             'present_address' => $user->memberProfile->present_address,
+                            'present_zip_code' => $user->memberProfile->present_zip_code,
                             'permanent_address' => $user->memberProfile->permanent_address,
+                            'permanent_zip_code' => $user->memberProfile->permanent_zip_code,
+                            'permanent_mobile_number' => $user->memberProfile->permanent_mobile_number,
+                            'place_of_birth' => $user->memberProfile->place_of_birth,
+                            'educational_attainment' => $user->memberProfile->educational_attainment,
                             'position' => $user->memberProfile->position,
                             'date_hired' => $user->memberProfile->date_hired,
                             'basic_salary' => $user->memberProfile->basic_salary,
+                            'income_type' => $user->memberProfile->income_type,
+                            'net_income' => $user->memberProfile->net_income,
                             'share_capital_balance' => $user->memberProfile->share_capital_balance,
+                            'other_source_of_income' => $user->memberProfile->other_source_of_income,
+                            'facebook_account_name' => $user->memberProfile->facebook_account_name,
+                            'spouse_occupation' => $user->memberProfile->spouse_occupation,
+                            'spouse_gross_income' => $user->memberProfile->spouse_gross_income,
+                            'spouse_income_type' => $user->memberProfile->spouse_income_type,
+                            'spouse_net_income' => $user->memberProfile->spouse_net_income,
+                            'legal_beneficiary_1_name' => $user->memberProfile->legal_beneficiary_1_name,
+                            'real_properties_owned' => $user->memberProfile->real_properties_owned,
                             'bank_account_number' => $user->memberProfile->bank_account_number,
                             'tin_number' => $user->memberProfile->tin_number,
                         ] : null,
@@ -121,56 +137,99 @@ class CreateMemberController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'first_name' => 'required|string|max:255',
             'middle_name' => 'nullable|string|max:255',
             'last_name' => 'required|string|max:255',
             'email' => 'required|string|lowercase|email|max:255|unique:users',
-            'password' => ['required', 'confirmed', Rules\Password::defaults()],
-            'role' => 'required|in:member,gm,creditcom,hr',
+            'role' => 'required|in:member',
 
             // Employee ID
             'employee_id' => 'required|string|max:255|unique:member_profiles,employee_id',
             'payroll_id' => 'nullable|string|max:255|unique:member_profiles,payroll_id',
 
+            // Personal fields
+            'place_of_birth' => 'required|string|max:255',
+            'date_of_birth' => 'required|date|before:today',
+            'civil_status' => 'required|in:single,married,widowed',
+            'sex' => 'required|in:male,female',
+            'educational_attainment' => 'required|string|max:255',
+
+            // Contact and address fields
+            'permanent_address' => 'required|string|max:1000',
+            'permanent_zip_code' => 'required|string|max:20',
+            'permanent_mobile_number' => 'required|string|max:20',
+            'present_address' => 'required|string|max:1000',
+            'present_zip_code' => 'required|string|max:20',
+            'mobile_number' => 'required|string|max:20',
+
             // Employment fields
             'position' => 'required|string|max:255',
             'date_hired' => 'required|date',
-            'basic_salary' => 'required|numeric|min:0',
-            'share_capital_balance' => 'nullable|numeric|min:0',
-            'bank_account_number' => 'nullable|string|max:50',
-            'tin_number' => 'nullable|string|max:50',
+            'basic_salary' => 'required|numeric|min:10000',
+            'income_type' => 'required|in:monthly,daily,yearly',
+            'net_income' => 'required|numeric|min:0',
+            'share_capital_balance' => 'required|numeric|min:10000',
+            'other_source_of_income' => 'nullable|string|max:255',
+            'facebook_account_name' => 'nullable|string|max:255',
+            'spouse_occupation' => 'nullable|string|max:255',
+            'spouse_gross_income' => 'nullable|numeric|min:0',
+            'spouse_income_type' => 'required|in:monthly,daily,yearly',
+            'spouse_net_income' => 'nullable|numeric|min:0',
+            'legal_beneficiary_1_name' => 'nullable|string|max:255',
+            'real_properties_owned' => 'nullable|string|max:2000',
+        ], [
+            'basic_salary.min' => 'Income (Gross) must be at least 10,000.',
+            'share_capital_balance.min' => 'Share capital balance must be at least 10,000.',
         ]);
 
-        // Create the user first
-        $user = User::create([
-            'first_name' => $request->first_name,
-            'middle_name' => $request->middle_name,
-            'last_name' => $request->last_name,
-            'email' => $request->email,
-            'role' => $request->role,
-            'password' => Hash::make($request->password),
-        ]);
+        $temporaryPassword = $this->generateTemporaryPassword();
 
-        // Create the member profile with employment information
-        $user->memberProfile()->create([
-            'employee_id' => $request->employee_id,
-            'payroll_id' => $request->payroll_id,
-            'first_name' => $request->first_name,
-            'middle_name' => $request->middle_name,
-            'last_name' => $request->last_name,
-            'position' => $request->position,
-            'date_hired' => $request->date_hired,
-            'basic_salary' => $request->basic_salary,
-            'share_capital_balance' => $request->share_capital_balance ?? 0,
-            'bank_account_number' => $request->bank_account_number,
-            'tin_number' => $request->tin_number,
-            'mobile_number' => '',
-            'present_address' => '',
-            'civil_status' => 'single',
-            'sex' => 'male',
-            'date_of_birth' => '1990-01-01',
-        ]);
+        $user = DB::transaction(function () use ($validated, $temporaryPassword) {
+            $user = User::create([
+                'first_name' => $validated['first_name'],
+                'middle_name' => $validated['middle_name'] ?? null,
+                'last_name' => $validated['last_name'],
+                'email' => strtolower($validated['email']),
+                'role' => 'member',
+                'password' => Hash::make($temporaryPassword),
+            ]);
+
+            $user->memberProfile()->create([
+                'employee_id' => $validated['employee_id'],
+                'payroll_id' => $validated['payroll_id'] ?? null,
+                'first_name' => $validated['first_name'],
+                'middle_name' => $validated['middle_name'] ?? null,
+                'last_name' => $validated['last_name'],
+                'place_of_birth' => $validated['place_of_birth'],
+                'date_of_birth' => $validated['date_of_birth'],
+                'civil_status' => $validated['civil_status'],
+                'sex' => $validated['sex'],
+                'educational_attainment' => $validated['educational_attainment'],
+                'mobile_number' => $validated['mobile_number'],
+                'permanent_mobile_number' => $validated['permanent_mobile_number'],
+                'present_address' => $validated['present_address'],
+                'present_zip_code' => $validated['present_zip_code'],
+                'permanent_address' => $validated['permanent_address'],
+                'permanent_zip_code' => $validated['permanent_zip_code'],
+                'position' => $validated['position'],
+                'date_hired' => $validated['date_hired'],
+                'basic_salary' => $validated['basic_salary'],
+                'income_type' => $validated['income_type'],
+                'net_income' => $validated['net_income'],
+                'share_capital_balance' => $validated['share_capital_balance'],
+                'other_source_of_income' => $validated['other_source_of_income'] ?? null,
+                'facebook_account_name' => $validated['facebook_account_name'] ?? null,
+                'spouse_occupation' => $validated['spouse_occupation'] ?? null,
+                'spouse_gross_income' => $validated['spouse_gross_income'] ?? null,
+                'spouse_income_type' => $validated['spouse_income_type'],
+                'spouse_net_income' => $validated['spouse_net_income'] ?? null,
+                'legal_beneficiary_1_name' => $validated['legal_beneficiary_1_name'] ?? null,
+                'real_properties_owned' => $validated['real_properties_owned'] ?? null,
+            ]);
+
+            return $user;
+        });
 
         app(ActivityLogService::class)->logActivity(
             'user_created',
@@ -180,13 +239,41 @@ class CreateMemberController extends Controller
 
         // Send email with credentials
         try {
-            Mail::to($request->email)->send(new SendMembersPass($request->email, $request->password));
+            Mail::to($user->email)->send(new NewMemberWelcomeMail($user, $temporaryPassword));
         } catch (\Exception $e) {
             // Log error but don't fail the request - data was already saved
-            \Log::error('Failed to send welcome email: '.$e->getMessage());
+            Log::error('Failed to send welcome email: '.$e->getMessage());
         }
 
-        return redirect()->route('users')->with('success', 'User created successfully.');
+        return redirect()->route('users')->with('success', 'Member created successfully.');
+    }
+
+    private function generateTemporaryPassword(int $length = 14): string
+    {
+        $groups = [
+            'ABCDEFGHJKLMNPQRSTUVWXYZ',
+            'abcdefghijkmnopqrstuvwxyz',
+            '23456789',
+            '!@#$%^&*',
+        ];
+
+        $characters = implode('', $groups);
+        $password = [];
+
+        foreach ($groups as $group) {
+            $password[] = $group[random_int(0, strlen($group) - 1)];
+        }
+
+        while (count($password) < $length) {
+            $password[] = $characters[random_int(0, strlen($characters) - 1)];
+        }
+
+        for ($i = count($password) - 1; $i > 0; $i--) {
+            $j = random_int(0, $i);
+            [$password[$i], $password[$j]] = [$password[$j], $password[$i]];
+        }
+
+        return implode('', $password);
     }
 
     public function updateStatus(Request $request, User $user)

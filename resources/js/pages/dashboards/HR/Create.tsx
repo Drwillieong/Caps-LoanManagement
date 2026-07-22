@@ -1,71 +1,331 @@
-import { useState, useEffect } from 'react'
-import { Transition } from '@headlessui/react'
-import AppLayout from '@/layouts/app-layout'
-import { Form, Head } from '@inertiajs/react'
+import { Transition } from '@headlessui/react';
+import { Head, useForm } from '@inertiajs/react';
+import { type FormEvent, useEffect } from 'react';
+import { toast } from 'react-hot-toast';
+import { z } from 'zod';
 
-import HeadingSmall from '@/components/heading-small'
-import InputError from '@/components/input-error'
-import { LiveClock } from '@/components/live-clock'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Spinner } from '@/components/ui/spinner'
-import { type BreadcrumbItem } from '@/types'
-import { store } from '@/routes/users'
-import { canSendEmail } from '@/hooks/use-internet-check'
-import { toast } from 'react-hot-toast'
-
-interface Props {
-    roles: string[]
-}
+import HeadingSmall from '@/components/heading-small';
+import InputError from '@/components/input-error';
+import { LiveClock } from '@/components/live-clock';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import { Spinner } from '@/components/ui/spinner';
+import { Textarea } from '@/components/ui/textarea';
+import { canSendEmail } from '@/hooks/use-internet-check';
+import AppLayout from '@/layouts/app-layout';
+import { store } from '@/routes/users';
+import { type BreadcrumbItem } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Members', href: '/dashboards/HR/SeeUsers' },
     { title: 'Create', href: '/dashboards/HR/create' },
-]
+];
 
-// Password Generator
-function generatePassword(length: number = 12) {
-    const chars =
-        'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*'
-    let password = ''
-    for (let i = 0; i < length; i++) {
-        password += chars.charAt(Math.floor(Math.random() * chars.length))
+const MIN_FINANCIAL_AMOUNT = 10000;
+
+const inputClass =
+    'h-10 rounded-lg border-emerald-100 focus:ring-emerald-500/40';
+const selectClass =
+    'h-10 rounded-lg border-emerald-100 focus:ring-emerald-500/40';
+const sectionClass =
+    'rounded-xl border border-emerald-100 bg-white/50 p-6 dark:bg-emerald-950/10';
+
+const requiredText = (label: string, max = 255) =>
+    z
+        .string()
+        .trim()
+        .min(1, `${label} is required.`)
+        .max(max, `${label} must not exceed ${max} characters.`);
+
+const optionalText = (label: string, max = 255) =>
+    z.string().trim().max(max, `${label} must not exceed ${max} characters.`);
+
+const requiredAmount = (label: string, minimum = 0) =>
+    z
+        .string()
+        .trim()
+        .min(1, `${label} is required.`)
+        .refine(
+            (value) => Number.isFinite(Number(value)),
+            `${label} must be a valid amount.`,
+        )
+        .refine(
+            (value) => Number(value) >= minimum,
+            `${label} must be at least ${minimum.toLocaleString()}.`,
+        );
+
+const optionalAmount = (label: string) =>
+    z
+        .string()
+        .trim()
+        .refine(
+            (value) => value === '' || Number.isFinite(Number(value)),
+            `${label} must be a valid amount.`,
+        )
+        .refine(
+            (value) => value === '' || Number(value) >= 0,
+            `${label} must not be negative.`,
+        );
+
+const requiredPastDate = (label: string) =>
+    z
+        .string()
+        .trim()
+        .min(1, `${label} is required.`)
+        .refine((value) => {
+            const date = new Date(`${value}T00:00:00`);
+            const today = new Date();
+
+            today.setHours(0, 0, 0, 0);
+
+            return !Number.isNaN(date.getTime()) && date < today;
+        }, `${label} must be before today.`);
+
+export const createMemberSchema = z.object({
+    first_name: requiredText('First name'),
+    middle_name: optionalText('Middle name'),
+    last_name: requiredText('Family name'),
+    email: z
+        .string()
+        .trim()
+        .min(1, 'Email address is required.')
+        .email('Enter a valid email address.'),
+    role: z.literal('member'),
+    employee_id: requiredText('Member ID'),
+    payroll_id: optionalText('Payroll ID'),
+    place_of_birth: requiredText('Place of birth'),
+    date_of_birth: requiredPastDate('Date of birth'),
+    civil_status: z.enum(['single', 'married', 'widowed']),
+    sex: z.enum(['male', 'female']),
+    educational_attainment: requiredText('Educational attainment'),
+    permanent_address: requiredText('Permanent address', 1000),
+    permanent_zip_code: requiredText('Permanent address zip code', 20),
+    permanent_mobile_number: requiredText('Permanent mobile number', 20),
+    present_address: requiredText('Present address', 1000),
+    present_zip_code: requiredText('Present address zip code', 20),
+    mobile_number: requiredText('Present cellphone number', 20),
+    position: requiredText('Position'),
+    date_hired: z.string().trim().min(1, 'Date hired is required.'),
+    basic_salary: requiredAmount('Income (Gross)', MIN_FINANCIAL_AMOUNT),
+    income_type: z.enum(['monthly', 'daily', 'yearly']),
+    net_income: requiredAmount('Income (Net)'),
+    share_capital_balance: requiredAmount(
+        'Share capital balance',
+        MIN_FINANCIAL_AMOUNT,
+    ),
+    other_source_of_income: optionalText('Other source of income'),
+    facebook_account_name: optionalText('Facebook account name'),
+    spouse_occupation: optionalText('Occupation of spouse'),
+    spouse_gross_income: optionalAmount('Spouse income (gross)'),
+    spouse_income_type: z.enum(['monthly', 'daily', 'yearly']),
+    spouse_net_income: optionalAmount('Spouse income (net)'),
+    legal_beneficiary_1_name: optionalText('Legal beneficiary 1 name'),
+    real_properties_owned: optionalText('Real properties owned', 2000),
+});
+
+type CreateMemberForm = z.infer<typeof createMemberSchema>;
+type CreateMemberField = keyof CreateMemberForm;
+
+const initialFormData: CreateMemberForm = {
+    first_name: '',
+    middle_name: '',
+    last_name: '',
+    email: '',
+    role: 'member',
+    employee_id: '',
+    payroll_id: '',
+    place_of_birth: '',
+    date_of_birth: '',
+    civil_status: 'single',
+    sex: 'male',
+    educational_attainment: '',
+    permanent_address: '',
+    permanent_zip_code: '',
+    permanent_mobile_number: '',
+    present_address: '',
+    present_zip_code: '',
+    mobile_number: '',
+    position: '',
+    date_hired: '',
+    basic_salary: '',
+    income_type: 'monthly',
+    net_income: '',
+    share_capital_balance: '',
+    other_source_of_income: '',
+    facebook_account_name: '',
+    spouse_occupation: '',
+    spouse_gross_income: '',
+    spouse_income_type: 'monthly',
+    spouse_net_income: '',
+    legal_beneficiary_1_name: '',
+    real_properties_owned: '',
+};
+
+const civilStatusOptions = [
+    { label: 'Single', value: 'single' },
+    { label: 'Married', value: 'married' },
+    { label: 'Widower/Widow', value: 'widowed' },
+] as const;
+
+const sexOptions = [
+    { label: 'Male', value: 'male' },
+    { label: 'Female', value: 'female' },
+] as const;
+
+const incomeTypeOptions = [
+    { label: 'Monthly', value: 'monthly' },
+    { label: 'Daily', value: 'daily' },
+    { label: 'Yearly', value: 'yearly' },
+] as const;
+
+const educationalAttainmentOptions = [
+    'Elementary',
+    'High School',
+    'Vocational',
+    'College',
+    'Postgraduate',
+    'Other',
+];
+
+function getZodErrors(error: z.ZodError<CreateMemberForm>) {
+    const errors: Partial<Record<CreateMemberField, string>> = {};
+
+    for (const issue of error.issues) {
+        const field = issue.path[0];
+
+        if (typeof field === 'string' && !errors[field as CreateMemberField]) {
+            errors[field as CreateMemberField] = issue.message;
+        }
     }
-    return password
+
+    return errors;
 }
 
-function formatNumberWithCommas(value: string | number): string {
-    if (!value) return ''
-    return Number(value).toLocaleString('en-US', {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 2,
-    })
-}
+export default function Create() {
+    const form = useForm<CreateMemberForm>(initialFormData);
+    const { data, setData, post, processing, errors, recentlySuccessful } =
+        form;
 
-export default function Create({ roles }: Props) {
-    const [password, setPassword] = useState('admin123')
-    const [showPassword, setShowPassword] = useState(false)
-    const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-    const [basicSalaryRaw, setBasicSalaryRaw] = useState('')
-    const [shareCapitalRaw, setShareCapitalRaw] = useState('')
-
-    // Check for email notification failure flag after redirect
     useEffect(() => {
         const emailFailed = sessionStorage.getItem('emailNotificationFailed');
+
         if (emailFailed) {
-            toast.error('No internet connection. The email notification cannot be sent, but the member has been created successfully.');
+            toast.error(
+                'No internet connection. The email notification cannot be sent, but the member has been created successfully.',
+            );
             sessionStorage.removeItem('emailNotificationFailed');
         }
     }, []);
 
+    const submit = (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        form.clearErrors();
+
+        const result = createMemberSchema.safeParse(data);
+
+        if (!result.success) {
+            const clientErrors = getZodErrors(result.error);
+
+            for (const [field, message] of Object.entries(clientErrors)) {
+                form.setError(field as CreateMemberField, message);
+            }
+
+            toast.error('Please review the highlighted fields.');
+
+            return;
+        }
+
+        void canSendEmail().then((isConnected) => {
+            if (!isConnected) {
+                sessionStorage.setItem('emailNotificationFailed', 'true');
+            }
+        });
+
+        form.transform(() => result.data);
+
+        post(store.url(), {
+            preserveScroll: true,
+            onError: () => toast.error('Please review the highlighted fields.'),
+        });
+    };
+
+    const renderTextInput = (
+        name: CreateMemberField,
+        label: string,
+        options: {
+            type?: string;
+            required?: boolean;
+            placeholder?: string;
+            min?: number;
+            step?: string;
+        } = {},
+    ) => (
+        <div className="space-y-2">
+            <Label htmlFor={name}>
+                {label}
+                {options.required && <span className="text-red-500"> *</span>}
+            </Label>
+            <Input
+                id={name}
+                name={name}
+                type={options.type ?? 'text'}
+                required={options.required}
+                min={options.min}
+                step={options.step}
+                placeholder={options.placeholder}
+                value={String(data[name])}
+                onChange={(event) => setData(name, event.target.value)}
+                className={inputClass}
+            />
+            <InputError message={errors[name]} />
+        </div>
+    );
+
+    const renderSelect = <TValue extends string>(
+        name: CreateMemberField,
+        label: string,
+        value: TValue,
+        onValueChange: (value: TValue) => void,
+        options: ReadonlyArray<{ label: string; value: TValue }>,
+        required = true,
+    ) => (
+        <div className="space-y-2">
+            <Label htmlFor={name}>
+                {label}
+                {required && <span className="text-red-500"> *</span>}
+            </Label>
+            <Select value={value} onValueChange={onValueChange}>
+                <SelectTrigger id={name} className={selectClass}>
+                    <SelectValue
+                        placeholder={`Select ${label.toLowerCase()}`}
+                    />
+                </SelectTrigger>
+                <SelectContent>
+                    {options.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                        </SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+            <InputError message={errors[name]} />
+        </div>
+    );
+
     return (
         <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
-            <Head title="Create User" />
+            <Head title="Create Member" />
 
             <div className="flex flex-1 flex-col gap-6 p-6">
-                {/* Header */}
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <HeadingSmall
                         title="Create New Member"
                         description="Add a new member to your organization"
@@ -75,312 +335,399 @@ export default function Create({ roles }: Props) {
                     </p>
                 </div>
 
-                <Form
-                    {...store.form()}
-                    transform={(data) => ({
-                        ...data,
-                        basic_salary: data.basic_salary ? String(data.basic_salary).replace(/,/g, '') : '',
-                        share_capital_balance: data.share_capital_balance ? String(data.share_capital_balance).replace(/,/g, '') : '',
-                    })}
-                    resetOnSuccess={['password', 'password_confirmation']}
-                    onSubmit={(e) => {
-                        // Check for internet connectivity before submitting
-                        canSendEmail().then((isConnected) => {
-                            if (!isConnected) {
-                                // Store a flag in sessionStorage to show toast after redirect
-                                sessionStorage.setItem('emailNotificationFailed', 'true');
-                            }
-                        });
-                        // Continue with form submission - data will still be saved
-                    }}
-                >
-                    {({ processing, errors, recentlySuccessful }) => {
-                        return (
-                            <>
-                                <div className="space-y-6">
-                                    {/* Success */}
-                                    <Transition
-                                        show={recentlySuccessful}
-                                        enter="transition ease-out duration-300"
-                                        enterFrom="opacity-0 translate-y-2"
-                                        enterTo="opacity-100 translate-y-0"
+                <form onSubmit={submit} className="space-y-6">
+                    <Transition
+                        show={recentlySuccessful}
+                        enter="transition ease-out duration-300"
+                        enterFrom="opacity-0 translate-y-2"
+                        enterTo="opacity-100 translate-y-0"
+                    >
+                        <div className="flex items-start gap-4 rounded-xl border border-emerald-100 bg-emerald-50 px-6 py-5 shadow-sm">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 text-sm font-bold text-white">
+                                OK
+                            </div>
+                            <div>
+                                <p className="font-semibold text-emerald-800">
+                                    Successfully created
+                                </p>
+                                <p className="text-sm text-emerald-700">
+                                    The member has been created. Their temporary
+                                    password is generated on the server and
+                                    emailed to them.
+                                </p>
+                            </div>
+                        </div>
+                    </Transition>
+
+                    <section className={`${sectionClass} space-y-6`}>
+                        <div>
+                            <h3 className="text-base font-semibold tracking-tight text-emerald-900 dark:text-emerald-100">
+                                Account Information
+                            </h3>
+                            <p className="text-sm text-muted-foreground">
+                                The member role is fixed and the temporary
+                                password is generated automatically.
+                            </p>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                            {renderTextInput(
+                                'last_name',
+                                'Name - Family Name',
+                                {
+                                    required: true,
+                                    placeholder: 'Enter family name',
+                                },
+                            )}
+                            {renderTextInput(
+                                'first_name',
+                                'Name - First Name',
+                                {
+                                    required: true,
+                                    placeholder: 'Enter first name',
+                                },
+                            )}
+                            {renderTextInput(
+                                'middle_name',
+                                'Name - Middle Name',
+                                {
+                                    placeholder: 'Enter middle name',
+                                },
+                            )}
+                            {renderTextInput('email', 'Email Address', {
+                                type: 'email',
+                                required: true,
+                                placeholder: 'member@gmail.com',
+                            })}
+                            {renderTextInput('employee_id', 'Member ID', {
+                                required: true,
+                                placeholder: 'Enter member ID',
+                            })}
+                            {renderTextInput('payroll_id', 'Payroll ID', {
+                                placeholder: 'Optional payroll identifier',
+                            })}
+
+                            <div className="space-y-2">
+                                <Label>
+                                    Role <span className="text-red-500">*</span>
+                                </Label>
+                                <Input
+                                    type="hidden"
+                                    name="role"
+                                    value={data.role}
+                                />
+                                <p className="flex h-10 items-center rounded-lg border border-emerald-100 bg-gray-50 px-3 text-sm font-medium text-muted-foreground">
+                                    MEMBER
+                                </p>
+                                <InputError message={errors.role} />
+                            </div>
+                        </div>
+                    </section>
+
+                    <section className={`${sectionClass} space-y-6`}>
+                        <div>
+                            <h3 className="text-base font-semibold tracking-tight text-emerald-900 dark:text-emerald-100">
+                                Personal Information
+                            </h3>
+                            <p className="text-sm text-muted-foreground">
+                                Identity, birth, education, and family details.
+                            </p>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                            {renderSelect(
+                                'civil_status',
+                                'Civil Status',
+                                data.civil_status,
+                                (value) => setData('civil_status', value),
+                                civilStatusOptions,
+                            )}
+                            {renderSelect(
+                                'sex',
+                                'Sex',
+                                data.sex,
+                                (value) => setData('sex', value),
+                                sexOptions,
+                            )}
+                            {renderTextInput(
+                                'place_of_birth',
+                                'Place of Birth',
+                                {
+                                    required: true,
+                                    placeholder: 'Enter place of birth',
+                                },
+                            )}
+                            {renderTextInput('date_of_birth', 'Date of Birth', {
+                                type: 'date',
+                                required: true,
+                            })}
+
+                            <div className="space-y-2">
+                                <Label htmlFor="educational_attainment">
+                                    Educational Attainment{' '}
+                                    <span className="text-red-500">*</span>
+                                </Label>
+                                <Select
+                                    value={data.educational_attainment}
+                                    onValueChange={(value) =>
+                                        setData('educational_attainment', value)
+                                    }
+                                >
+                                    <SelectTrigger
+                                        id="educational_attainment"
+                                        className={selectClass}
                                     >
-                                        <div className="flex items-start gap-4 rounded-xl border border-emerald-100 bg-emerald-50 px-6 py-5 shadow-sm">
-                                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 text-white text-sm font-bold">
-                                                ✓
-                                            </div>
-                                            <div>
-                                                <p className="font-semibold text-emerald-800">
-                                                    Successfully created
-                                                </p>
-                                                <p className="text-sm text-emerald-700">
-                                                    The member has been created successfully.
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </Transition>
-
-                                    {/* Personal Information */}
-                                    <div className="rounded-xl border border-emerald-100 bg-white/50 dark:bg-emerald-950/10 p-6 space-y-6">
-                                        <div>
-                                            <h3 className="text-base font-semibold tracking-tight text-emerald-900 dark:text-emerald-100">
-                                                Personal Information
-                                            </h3>
-                                            <p className="text-sm text-muted-foreground">
-                                                Basic member details
-                                            </p>
-                                        </div>
-
-                                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                                            {[
-                                                { id: 'first_name', label: 'First Name', placeholder: 'Enter first name', required: true },
-                                                { id: 'middle_name', label: 'Middle Name', placeholder: 'Enter middle name' },
-                                                { id: 'last_name', label: 'Last Name', placeholder: 'Enter last name', required: true },
-                                                { id: 'email', label: 'Email Address', type: 'email', placeholder: 'Enter email address', required: true },
-                                            ].map((field) => (
-                                                <div key={field.id} className="space-y-2">
-                                                    <Label htmlFor={field.id}>
-                                                        {field.label}
-                                                        {field.required && (
-                                                            <span className="text-red-500"> *</span>
-                                                        )}
-                                                    </Label>
-                                                    <Input
-                                                        id={field.id}
-                                                        name={field.id}
-                                                        type={field.type ?? 'text'}
-                                                        required={field.required}
-                                                        placeholder={field.placeholder}
-                                                        className="h-10 rounded-lg border-emerald-100 focus:ring-emerald-500/40"
-                                                    />
-                                                    <InputError message={(errors as any)[field.id]} />
-                                                </div>
-                                            ))}
-
-                                            {/* Role */}
-                                            <div className="space-y-2">
-                                                <Label htmlFor="role">
-                                                    Role <span className="text-red-500">*</span>
-                                                </Label>
-                                                <select
-                                                    id="role"
-                                                    name="role"
-                                                    required
-                                                    className="h-10 w-full rounded-lg border border-emerald-100 bg-background px-3 text-sm focus:ring-2 focus:ring-emerald-500/40"
+                                        <SelectValue placeholder="Select educational attainment" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {educationalAttainmentOptions.map(
+                                            (option) => (
+                                                <SelectItem
+                                                    key={option}
+                                                    value={option}
                                                 >
-                                                    <option value="">Select a role</option>
-{roles.filter(role => role === 'member').map((role) => (
-    <option key={role} value={role}>
-        {role.toUpperCase()}
-    </option>
-))}
-                                                </select>
-                                                <InputError message={errors.role} />
-                                            </div>
+                                                    {option}
+                                                </SelectItem>
+                                            ),
+                                        )}
+                                    </SelectContent>
+                                </Select>
+                                <InputError
+                                    message={errors.educational_attainment}
+                                />
+                            </div>
 
-                                            {/* Employee ID */}
-                                            <div className="space-y-2">
-                                                <Label htmlFor="employee_id">
-                                                    Employee ID <span className="text-red-500">*</span>
-                                                </Label>
-                                                <Input
-                                                    id="employee_id"
-                                                    name="employee_id"
-                                                    required
-                                                    placeholder="Enter employee ID"
-                                                    className="h-10 rounded-lg border-emerald-100 focus:ring-emerald-500/40"
-                                                />
-                                                <InputError message={errors.employee_id} />
-                                            </div>
+                            {renderTextInput(
+                                'facebook_account_name',
+                                'Facebook Account (Name)',
+                                {
+                                    placeholder: 'Enter Facebook account name',
+                                },
+                            )}
+                        </div>
+                    </section>
 
-                                            <div className="space-y-2">
-                                                <Label htmlFor="payroll_id">
-                                                    Payroll ID
-                                                </Label>
-                                                <Input
-                                                    id="payroll_id"
-                                                    name="payroll_id"
-                                                    placeholder="Optional payroll identifier"
-                                                    className="h-10 rounded-lg border-emerald-100 focus:ring-emerald-500/40"
-                                                />
-                                                <InputError message={errors.payroll_id} />
-                                            </div>
-                                        </div>
-                                    </div>
+                    <section className={`${sectionClass} space-y-6`}>
+                        <div>
+                            <h3 className="text-base font-semibold tracking-tight text-emerald-900 dark:text-emerald-100">
+                                Contact and Address
+                            </h3>
+                            <p className="text-sm text-muted-foreground">
+                                Permanent and present address details.
+                            </p>
+                        </div>
 
-                                    {/* Security */}
-                                    <div className="rounded-xl border border-emerald-100 bg-white/50 dark:bg-emerald-950/10 p-6 space-y-6">
-                                        <div>
-                                            <h3 className="text-base font-semibold tracking-tight text-emerald-900 dark:text-emerald-100">
-                                                Account Security
-                                            </h3>
-                                        </div>
+                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                            {renderTextInput(
+                                'permanent_address',
+                                'Permanent (Provincial) Address',
+                                {
+                                    required: true,
+                                    placeholder: 'Enter permanent address',
+                                },
+                            )}
+                            {renderTextInput(
+                                'permanent_zip_code',
+                                'Permanent Address Zip Code',
+                                {
+                                    required: true,
+                                    placeholder: 'Enter zip code',
+                                },
+                            )}
+                            {renderTextInput(
+                                'permanent_mobile_number',
+                                'Permanent Mobile Number',
+                                {
+                                    type: 'tel',
+                                    required: true,
+                                    placeholder: 'Enter mobile number',
+                                },
+                            )}
+                            {renderTextInput(
+                                'present_address',
+                                'Present Address',
+                                {
+                                    required: true,
+                                    placeholder: 'Enter present address',
+                                },
+                            )}
+                            {renderTextInput(
+                                'present_zip_code',
+                                'Present Address Zip Code',
+                                {
+                                    required: true,
+                                    placeholder: 'Enter zip code',
+                                },
+                            )}
+                            {renderTextInput(
+                                'mobile_number',
+                                'Present Cellphone Number',
+                                {
+                                    type: 'tel',
+                                    required: true,
+                                    placeholder: 'Enter cellphone number',
+                                },
+                            )}
+                        </div>
+                    </section>
 
-                                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                                            {/* Password */}
-                                            <div className="space-y-2">
-                                                <Label>Password *</Label>
-                                                <div className="flex gap-2">
-                                                    <div className="relative flex-1">
-                                                        <Input
-                                                            name="password"
-                                                            type={showPassword ? 'text' : 'password'}
-                                                            value={password}
-                                                            onChange={(e) => setPassword(e.target.value)}
-                                                            className="pr-10 h-10 border-emerald-100 focus:ring-emerald-500/40"
-                                                            required
-                                                        />
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => setShowPassword(!showPassword)}
-                                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground"
-                                                        >
-                                                            {showPassword ? 'Hide' : 'Show'}
-                                                        </button>
-                                                    </div>
-                                                    <Button
-                                                        type="button"
-                                                        variant="outline"
-                                                        onClick={() => setPassword(generatePassword())}
-                                                        className="border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800"
-                                                    >
-                                                        Auto
-                                                    </Button>
-                                                </div>
-                                                <InputError message={errors.password} />
-                                            </div>
+                    <section className={`${sectionClass} space-y-6`}>
+                        <div>
+                            <h3 className="text-base font-semibold tracking-tight text-emerald-900 dark:text-emerald-100">
+                                Employment and Income
+                            </h3>
+                            <p className="text-sm text-muted-foreground">
+                                Income values are used for loan eligibility
+                                checks.
+                            </p>
+                        </div>
 
-                                            {/* Confirm */}
-                                            <div className="space-y-2">
-                                                <Label>Confirm Password *</Label>
-                                                <div className="relative">
-                                                    <Input
-                                                        name="password_confirmation"
-                                                        type={showConfirmPassword ? 'text' : 'password'}
-                                                        value={password}
-                                                        onChange={(e) => setPassword(e.target.value)}
-                                                        className="pr-10 h-10 border-emerald-100 focus:ring-emerald-500/40"
-                                                        required
-                                                    />
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground"
-                                                    >
-                                                        {showConfirmPassword ? 'Hide' : 'Show'}
-                                                    </button>
-                                                </div>
-                                                <InputError message={errors.password_confirmation} />
-                                            </div>
-                                        </div>
-                                    </div>
+                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                            {renderTextInput('position', 'Position', {
+                                required: true,
+                                placeholder: 'Enter position',
+                            })}
+                            {renderTextInput('date_hired', 'Date Hired', {
+                                type: 'date',
+                                required: true,
+                            })}
+                            {renderTextInput('basic_salary', 'Income (Gross)', {
+                                type: 'number',
+                                required: true,
+                                min: MIN_FINANCIAL_AMOUNT,
+                                step: '0.01',
+                                placeholder: '10000.00',
+                            })}
+                            {renderSelect(
+                                'income_type',
+                                'Income Type',
+                                data.income_type,
+                                (value) => setData('income_type', value),
+                                incomeTypeOptions,
+                            )}
+                            {renderTextInput('net_income', 'Income (Net)', {
+                                type: 'number',
+                                required: true,
+                                min: 0,
+                                step: '0.01',
+                                placeholder: '0.00',
+                            })}
+                            {renderTextInput(
+                                'share_capital_balance',
+                                'Share Capital Balance',
+                                {
+                                    type: 'number',
+                                    required: true,
+                                    min: MIN_FINANCIAL_AMOUNT,
+                                    step: '0.01',
+                                    placeholder: '10000.00',
+                                },
+                            )}
+                            {renderTextInput(
+                                'other_source_of_income',
+                                'Other Source of Income (Specify)',
+                                {
+                                    placeholder: 'Specify other income source',
+                                },
+                            )}
+                        </div>
+                    </section>
 
-                                    {/* Employment */}
-                                    <div className="rounded-xl border border-emerald-100 bg-white/50 dark:bg-emerald-950/10 p-6 space-y-6">
-                                        <div>
-                                            <h3 className="text-base font-semibold tracking-tight text-emerald-900 dark:text-emerald-100">
-                                                Employment Information
-                                            </h3>
-                                        </div>
+                    <section className={`${sectionClass} space-y-6`}>
+                        <div>
+                            <h3 className="text-base font-semibold tracking-tight text-emerald-900 dark:text-emerald-100">
+                                Spouse, Beneficiary, and Assets
+                            </h3>
+                            <p className="text-sm text-muted-foreground">
+                                Optional household and property information.
+                            </p>
+                        </div>
 
-                                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-                                            <div className="space-y-2">
-                                                <Label>Position *</Label>
-                                                <Input name="position" required placeholder="Enter position" className="h-10 border-emerald-100 focus:ring-emerald-500/40" />
-                                                <InputError message={errors.position} />
-                                            </div>
+                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                            {renderTextInput(
+                                'spouse_occupation',
+                                'Occupation of Spouse',
+                                {
+                                    placeholder: 'Enter spouse occupation',
+                                },
+                            )}
+                            {renderTextInput(
+                                'spouse_gross_income',
+                                'Spouse Income (Gross)',
+                                {
+                                    type: 'number',
+                                    min: 0,
+                                    step: '0.01',
+                                    placeholder: '0.00',
+                                },
+                            )}
+                            {renderSelect(
+                                'spouse_income_type',
+                                'Spouse Income Type',
+                                data.spouse_income_type,
+                                (value) => setData('spouse_income_type', value),
+                                incomeTypeOptions,
+                                false,
+                            )}
+                            {renderTextInput(
+                                'spouse_net_income',
+                                'Spouse Income (Net)',
+                                {
+                                    type: 'number',
+                                    min: 0,
+                                    step: '0.01',
+                                    placeholder: '0.00',
+                                },
+                            )}
+                            {renderTextInput(
+                                'legal_beneficiary_1_name',
+                                'Legal Beneficiary 1 Name',
+                                {
+                                    placeholder: 'Enter beneficiary name',
+                                },
+                            )}
 
-                                            <div className="space-y-2">
-                                                <Label>Date Hired *</Label>
-                                                <Input
-                                                    type="date"
-                                                    name="date_hired"
-                                                    required
-                                                    className="h-10 border-emerald-100 focus:ring-emerald-500/40"
-                                                />
-                                                <InputError message={errors.date_hired} />
-                                            </div>
+                            <div className="space-y-2 md:col-span-2 lg:col-span-3">
+                                <Label htmlFor="real_properties_owned">
+                                    Real Properties Owned (Specify)
+                                </Label>
+                                <Textarea
+                                    id="real_properties_owned"
+                                    name="real_properties_owned"
+                                    value={data.real_properties_owned}
+                                    onChange={(event) =>
+                                        setData(
+                                            'real_properties_owned',
+                                            event.target.value,
+                                        )
+                                    }
+                                    placeholder="Specify real properties owned"
+                                    className="min-h-28 rounded-lg border-emerald-100 focus-visible:ring-emerald-500/40"
+                                />
+                                <InputError
+                                    message={errors.real_properties_owned}
+                                />
+                            </div>
+                        </div>
+                    </section>
 
-                                            {/* Basic Salary */}
-                                            <div className="space-y-2">
-                                                <Label>Basic Salary *</Label>
-                                                <div className="relative">
-                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-emerald-600">
-                                                        ₱
-                                                    </span>
-                                                    <Input
-                                                        name="basic_salary"
-                                                        required
-                                                        className="pl-8 text-left font-medium tracking-wide h-10 border-emerald-100 focus:ring-emerald-500/40"
-                                                        placeholder="0.00"
-                                                        value={basicSalaryRaw}
-                                                        onChange={(e) => {
-                                                            const raw = e.target.value.replace(/,/g, '')
-                                                            if (!/^\d*\.?\d*$/.test(raw)) return
-                                                            setBasicSalaryRaw(formatNumberWithCommas(raw))
-                                                        }}
-                                                    />
-                                                </div>
-                                                <InputError message={errors.basic_salary} />
-                                            </div>
+                    <div className="flex flex-col gap-4 border-t border-emerald-100 pt-6 sm:flex-row sm:items-center sm:justify-between">
+                        <p className="text-sm text-muted-foreground">
+                            Double-check all information before submitting. The
+                            temporary password will be emailed to the member.
+                        </p>
 
-                                            {/* Share Capital */}
-                                            <div className="space-y-2">
-                                                <Label>Share Capital Balance</Label>
-                                                <div className="relative">
-                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-emerald-600">
-                                                        ₱
-                                                    </span>
-                                                    <Input
-                                                        name="share_capital_balance"
-                                                        className="pl-8 text-left font-medium tracking-wide h-10 border-emerald-100 focus:ring-emerald-500/40"
-                                                        placeholder="0.00"
-                                                        value={shareCapitalRaw}
-                                                        onChange={(e) => {
-                                                            const raw = e.target.value.replace(/,/g, '')
-                                                            if (!/^\d*\.?\d*$/.test(raw)) return
-                                                            setShareCapitalRaw(formatNumberWithCommas(raw))
-                                                        }}
-                                                    />
-                                                </div>
-                                                <InputError message={errors.share_capital_balance} />
-                                            </div>
-
-                                            <div className="space-y-2">
-                                                <Label>Bank Account Number</Label>
-                                                <Input name="bank_account_number" placeholder="Enter bank account number" className="h-10 border-emerald-100 focus:ring-emerald-500/40" />
-                                                <InputError message={errors.bank_account_number} />
-                                            </div>
-
-                                            <div className="space-y-2">
-                                                <Label>TIN Number</Label>
-                                                <Input name="tin_number" placeholder="Enter TIN number" className="h-10 border-emerald-100 focus:ring-emerald-500/40" />
-                                                <InputError message={errors.tin_number} />
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Footer */}
-                                    <div className="flex items-center justify-between border-t border-emerald-100 pt-6">
-                                        <p className="text-sm text-muted-foreground">
-                                            Double-check all information before submitting.
-                                        </p>
-
-                                        <Button
-                                            type="submit"
-                                            disabled={processing}
-                                            className="min-w-[180px] h-10 font-medium bg-emerald-600 hover:bg-emerald-700"
-                                        >
-                                            {processing && <Spinner className="mr-2 h-4 w-4" />}
-                                            Create Member
-                                        </Button>
-                                    </div>
-                                </div>
-                            </>
-                        )
-                    }}
-                </Form>
+                        <Button
+                            type="submit"
+                            disabled={processing}
+                            className="h-10 min-w-[180px] bg-emerald-600 font-medium hover:bg-emerald-700"
+                        >
+                            {processing && <Spinner className="mr-2 h-4 w-4" />}
+                            Create Member
+                        </Button>
+                    </div>
+                </form>
             </div>
         </AppLayout>
-    )
+    );
 }

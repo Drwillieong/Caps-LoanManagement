@@ -352,18 +352,24 @@ class LoanController extends Controller
         $user = Auth::user();
 
         // Fetch the most recent in-progress (pending) loan for the user.
-        // Exclude terminal states (approved/released/paid_off) and any rejected
-        // application so a stale rejected loan never shows in the pending view.
+        // Exclude terminal states (approved/released/paid_off). Rejected loans are
+        // still shown while inside the 3-hour reapplication cool-down so the member
+        // can see the rejection reason and the lockout countdown instead of a stale
+        // "Awaiting Co-Maker" card.
         $loan = Loan::where('user_id', $user->id)
             ->whereNotIn('status', [
                 'approved',
                 'released',
                 'paid_off',
-                'rejected',
-                'rejected_by_gm',
-                'rejected_by_credit_com',
-                'rejected_by_co_maker',
             ])
+            ->where(function ($query) {
+                $query->whereNotIn('status', [
+                    'rejected',
+                    'rejected_by_gm',
+                    'rejected_by_credit_com',
+                    'rejected_by_co_maker',
+                ])->orWhere('rejected_at', '>=', now()->subHours(3));
+            })
             ->with(['loanType', 'coMakers.user'])
             ->orderBy('created_at', 'desc')
             ->first();

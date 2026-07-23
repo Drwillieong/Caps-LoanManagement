@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\ActivityLogController as AdminActivityLogController;
 use App\Http\Controllers\CreditComController\CreditComController;
 use App\Http\Controllers\CreditComController\CreditComDashboardController;
 use App\Http\Controllers\DashBoardController;
@@ -42,6 +43,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('dashboards/HR/create', [CreateMemberController::class, 'create'])->middleware('role:hr')->name('users.create');
     Route::post('dashboards/HR/SeeUsers', [CreateMemberController::class, 'store'])->middleware('role:hr')->name('users.store');
+    Route::patch('dashboards/HR/users/{user}/status', [CreateMemberController::class, 'updateStatus'])->middleware('role:hr')->name('users.status.update');
 
     Route::get('dashboards/HR/HRActiveLoan', [HrDashboardController::class, 'activeLoans'])
         ->middleware('role:hr')
@@ -109,7 +111,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware(['role:member', 'ensure.profile.completed'])
         ->name('member.completed-loan.view');
 
-
     Route::get('dashboards/Member/CoMaker', [LoanController::class, 'comakerRequests'])
         ->middleware(['role:member', 'ensure.profile.completed'])
         ->name('member.co-maker');
@@ -148,10 +149,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware('auth')
         ->name('api.members.search');
 
-
     Route::get('/api/members/{memberId}/eligible', [MemberController::class, 'checkEligibility'])
         ->middleware('auth')
         ->name('api.members.eligible');
+
+    Route::get('/api/admin/activity-logs', [AdminActivityLogController::class, 'index'])
+        ->middleware('role:gm,hr')
+        ->name('api.admin.activity-logs.index');
 
     Route::post('/api/admin/loan-applications', [GmController::class, 'storeApplicationApi'])
         ->middleware(['auth', 'role:gm'])
@@ -185,7 +189,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware('role:gm')
         ->name('gm.completed-loan');
 
-Route::get('dashboards/Gm/active-loans/{loan}/view', [GmDashboardController::class, 'viewActiveLoan'])
+    Route::get('dashboards/Gm/active-loans/{loan}/view', [GmDashboardController::class, 'viewActiveLoan'])
         ->middleware('role:gm')
         ->name('gm.active-loan.view');
 
@@ -194,12 +198,11 @@ Route::get('dashboards/Gm/active-loans/{loan}/view', [GmDashboardController::cla
         ->middleware('role:gm')
         ->name('gm.completed-loan.view');
 
-
     Route::get('dashboards/Gm/ApprovedLoan', [GmDashboardController::class, 'approvedLoans'])
         ->middleware('role:gm')
         ->name('gm.approved-loan');
 
-    Route::get('dashboards/Gm/ActivityLog', \App\Http\Controllers\GmController\ActivityLogController::class)
+    Route::get('dashboards/Gm/ActivityLog', [AdminActivityLogController::class, 'gm'])
         ->middleware('role:gm')
         ->name('gm.activity-log');
 
@@ -224,7 +227,6 @@ Route::get('dashboards/Gm/active-loans/{loan}/view', [GmDashboardController::cla
         ->middleware('role:gm')
         ->name('gm.payroll-deductions.manual-payment');
 
-
     Route::get('dashboards/Gm/UploadSalaryDeduct/template', [PayrollDeductionController::class, 'template'])
         ->middleware('role:gm')
         ->name('gm.payroll-deductions.template');
@@ -237,6 +239,10 @@ Route::get('dashboards/Gm/active-loans/{loan}/view', [GmDashboardController::cla
     Route::post('dashboards/Gm/CreateApplication', [GmController::class, 'storeApplication'])
         ->middleware('role:gm')
         ->name('gm.create-application.store');
+
+    Route::get('dashboards/HR/SecActivityLog', [AdminActivityLogController::class, 'hr'])
+        ->middleware('role:hr')
+        ->name('hr.activity-log');
 
     // Credit Coordinator
     Route::get('dashboards/CreditCom/ValidateLoan', [CreditComController::class, 'index'])
@@ -282,6 +288,5 @@ Route::get('dashboards/Gm/active-loans/{loan}/view', [GmDashboardController::cla
         ->middleware('role:creditcom')
         ->name('creditcom.loan.viewDecision');
 });
-
 
 require __DIR__.'/settings.php';

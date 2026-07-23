@@ -246,16 +246,7 @@ export default function ApplyLoan({
                     </p>
                 </div>
 
-                {/* Action steps so the user isn't stuck on a dead page */}
-                <div className="mt-8 flex flex-col sm:flex-row gap-3 w-full justify-center">
-                    <button className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 transition dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300 dark:hover:bg-slate-900">
-                        <ArrowLeft className="h-4 w-4" />
-                        Return to Dashboard
-                    </button>
-                    <button className="inline-flex items-center justify-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white shadow hover:bg-slate-800 transition dark:bg-slate-50 dark:text-slate-900 dark:hover:bg-slate-200">
-                        View Guidelines
-                    </button>
-                </div>
+              
 
             </div>
         </Card>

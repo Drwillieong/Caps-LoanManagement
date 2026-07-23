@@ -29,14 +29,20 @@ class SalaryDeductionReportService
      *
      * Schedules in this system are generated on the 10th and 25th. A selected cutoff
      * from the 1st-10th maps to the 10th; any later cutoff maps to the 25th.
+     *
+     * CRITICAL: The result is strictly limited to the single installment whose
+     * `due_date` equals the targeted semi-monthly billing date. We must NOT pull
+     * every open amortization on a released loan (which would dump the entire loan
+     * term into one cutoff export).
      */
     public function rowsForCutoff(Carbon $cutoffDate): LazyCollection
     {
         $billingDate = $this->billingDateForCutoff($cutoffDate)->toDateString();
 
         $query = LoanAmortization::query()
-            ->whereDate('due_date', $billingDate)
             ->whereIn('status', LoanPaymentPostingService::OPEN_AMORTIZATION_STATUSES)
+            // Strictly target the installment belonging to THIS cutoff only.
+            ->whereDate('due_date', $billingDate)
             ->whereHas('loan', function ($q) {
                 $q->whereIn('status', ['approved', 'released'])
                     ->whereHas('user', fn ($uq) => $uq->where('is_active', true));
@@ -64,8 +70,17 @@ class SalaryDeductionReportService
 
     private function mapRow(LoanAmortization $amortization, string $billingDate): ?array
     {
+        // Safety net: only emit the single installment tied to this cutoff.
+        // Never pull other installments or the aggregate loan balance.
+        if (! $amortization->due_date || $amortization->due_date->toDateString() !== $billingDate) {
+            return null;
+        }
+
         $user = $amortization->loan->user;
         $profile = $user->memberProfile;
+
+        // Isolate THIS installment's outstanding amount only. Do NOT sum the
+        // parent loan's remaining/principal balance here.
         $deductionAmount = $this->remainingForAmortization($amortization);
 
         if ($deductionAmount <= 0) {
@@ -104,6 +119,13 @@ class SalaryDeductionReportService
         return $billingDate->day(25);
     }
 
+    /**
+     * Outstanding amount for THIS specific installment only.
+     *
+     * It is the difference between the installment's own `amount_due` and the
+     * amount already paid against it. It deliberately does NOT touch the parent
+     * loan's total principal, remaining balance, or any other installments.
+     */
     private function remainingForAmortization(LoanAmortization $amortization): float
     {
         return max(0, round((float) $amortization->amount_due - (float) $amortization->amount_paid, 2));

@@ -3,10 +3,10 @@ import type { BreadcrumbItem } from '@/types';
 import AdminActivityLogPage from '../Shared/AdminActivityLogPage';
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Activity Logs', href: '/dashboards/Gm/ActivityLog' },
+    { title: 'Activity Logs', href: '/dashboards/HR/SecActivityLog' },
 ];
 
-export default function ActivityLogPage() {
+export default function SecActivityLogPage() {
     return (
         <AdminActivityLogPage
             breadcrumbs={breadcrumbs}
@@ -16,3 +16,4 @@ export default function ActivityLogPage() {
         />
     );
 }
+ 

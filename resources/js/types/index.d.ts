@@ -346,6 +346,12 @@ export interface CompletedLoan {
     }>;
 }
 
+export interface ActivityLogActor {
+    id: number;
+    name: string;
+    role: string;
+}
+
 export interface ActivityLog {
     id: number;
     user_id: number;
@@ -356,14 +362,32 @@ export interface ActivityLog {
     ip_address: string | null;
     created_at: string;
     updated_at: string;
-    user: {
-        id: number;
-        name: string;
-    };
+    actor: ActivityLogActor | null;
+    user: ActivityLogActor | null;
     loan: {
         id: number;
         principal_amount: number;
     } | null;
+}
+
+export interface ActivityLogApiResponse {
+    data: ActivityLog[];
+    meta: {
+        current_page: number;
+        last_page: number;
+        per_page: number;
+        total: number;
+        from: number | null;
+        to: number | null;
+    };
+    stats: {
+        total: number;
+        today: number;
+        filtered: number;
+    };
+    filters: {
+        action_types: string[];
+    };
 }
 
 export interface MemberCompletedLoanProps {

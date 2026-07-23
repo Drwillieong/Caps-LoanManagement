@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\GmController\GmController as BaseGmController;
 use App\Models\Loan;
 use App\Models\LoanPayment;
+use App\Services\ActivityLogService;
 use App\Services\LoanService;
 use Inertia\Inertia;
 
@@ -22,14 +23,14 @@ class GmDashboardController extends Controller
     public function activateLoan(\Illuminate\Http\Request $request, \App\Models\Loan $loan)
     {
         // Only allow activating from approved (and optionally released)
-        if (!in_array($loan->status, ['approved', 'released'], true)) {
+        if (! in_array($loan->status, ['approved', 'released'], true)) {
             return back()->with('error', 'This loan cannot be activated from its current status.');
         }
 
         // If amortization schedule is missing, generate it.
         // The existing implementation is in GmController; call it if available.
         $hasAmortizations = $loan->amortizations()->exists();
-        if (!$hasAmortizations) {
+        if (! $hasAmortizations) {
             // Reuse GM controller's private method by duplicating behavior here.
             $monthlyPayment = $loan->monthly_amortization;
             $terms = $loan->terms_months;
@@ -64,10 +65,16 @@ class GmDashboardController extends Controller
             'release_date' => $loan->release_date ?? now(),
         ]);
 
+        $loan->loadMissing('user');
+
+        app(ActivityLogService::class)->logActivity(
+            'loan_activated',
+            $loan->id,
+            'Activated loan #'.$loan->id.' for '.$loan->user->name.'.'
+        );
 
         return back()->with('success', 'Loan activated successfully.');
     }
-
 
     public function activeLoans()
     {

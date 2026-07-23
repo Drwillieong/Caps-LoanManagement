@@ -5,6 +5,7 @@ namespace App\Http\Controllers\HrController;
 use App\Http\Controllers\Controller;
 use App\Mail\SendMembersPass;
 use App\Models\User;
+use App\Services\ActivityLogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
@@ -171,6 +172,12 @@ class CreateMemberController extends Controller
             'date_of_birth' => '1990-01-01',
         ]);
 
+        app(ActivityLogService::class)->logActivity(
+            'user_created',
+            null,
+            'Created '.$user->role.' user '.$user->name.' (ID #'.$user->id.').'
+        );
+
         // Send email with credentials
         try {
             Mail::to($request->email)->send(new SendMembersPass($request->email, $request->password));
@@ -180,5 +187,28 @@ class CreateMemberController extends Controller
         }
 
         return redirect()->route('users')->with('success', 'User created successfully.');
+    }
+
+    public function updateStatus(Request $request, User $user)
+    {
+        $validated = $request->validate([
+            'is_active' => 'required|boolean',
+        ]);
+
+        $previousStatus = $user->is_active ? 'active' : 'inactive';
+
+        $user->update([
+            'is_active' => $validated['is_active'],
+        ]);
+
+        $newStatus = $user->is_active ? 'active' : 'inactive';
+
+        app(ActivityLogService::class)->logActivity(
+            'user_status_updated',
+            null,
+            'Updated user status for '.$user->name.' (ID #'.$user->id.') from '.$previousStatus.' to '.$newStatus.'.'
+        );
+
+        return redirect()->route('users')->with('success', 'User status updated successfully.');
     }
 }

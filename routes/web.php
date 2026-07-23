@@ -240,6 +240,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware('role:gm')
         ->name('gm.create-application.store');
 
+    // GM - Member Validation
+    Route::get('dashboards/Gm/MemberValidate', [GmController::class, 'pendingMembers'])
+        ->middleware('role:gm')
+        ->name('gm.pending-members');
+
+    Route::post('dashboards/Gm/Member/{user}/approve', [GmController::class, 'approveMember'])
+        ->middleware('role:gm')
+        ->name('gm.member.approve');
+
+    Route::post('dashboards/Gm/Member/{user}/reject', [GmController::class, 'rejectMember'])
+        ->middleware('role:gm')
+        ->name('gm.member.reject');
+
     Route::get('dashboards/HR/SecActivityLog', [AdminActivityLogController::class, 'hr'])
         ->middleware('role:hr')
         ->name('hr.activity-log');

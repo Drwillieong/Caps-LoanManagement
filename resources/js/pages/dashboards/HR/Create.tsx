@@ -1,6 +1,6 @@
 import { Transition } from '@headlessui/react';
 import { Head, useForm } from '@inertiajs/react';
-import { type FormEvent, useEffect } from 'react';
+import { type FormEvent } from 'react';
 import { toast } from 'react-hot-toast';
 import { z } from 'zod';
 
@@ -19,7 +19,6 @@ import {
 } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
-import { canSendEmail } from '@/hooks/use-internet-check';
 import AppLayout from '@/layouts/app-layout';
 import { store } from '@/routes/users';
 import { type BreadcrumbItem } from '@/types';
@@ -127,7 +126,12 @@ export const createMemberSchema = z.object({
     spouse_gross_income: optionalAmount('Spouse income (gross)'),
     spouse_income_type: z.enum(['monthly', 'daily', 'yearly']),
     spouse_net_income: optionalAmount('Spouse income (net)'),
-    legal_beneficiary_1_name: optionalText('Legal beneficiary 1 name'),
+    legal_beneficiaries: z.array(
+        z.object({
+            full_name: optionalText('Legal beneficiary name', 255),
+            relationship: optionalText('Relationship', 255),
+        }),
+    ),
     real_properties_owned: optionalText('Real properties owned', 2000),
 });
 
@@ -165,7 +169,7 @@ const initialFormData: CreateMemberForm = {
     spouse_gross_income: '',
     spouse_income_type: 'monthly',
     spouse_net_income: '',
-    legal_beneficiary_1_name: '',
+    legal_beneficiaries: [{ full_name: '', relationship: '' }],
     real_properties_owned: '',
 };
 
@@ -214,17 +218,6 @@ export default function Create() {
     const { data, setData, post, processing, errors, recentlySuccessful } =
         form;
 
-    useEffect(() => {
-        const emailFailed = sessionStorage.getItem('emailNotificationFailed');
-
-        if (emailFailed) {
-            toast.error(
-                'No internet connection. The email notification cannot be sent, but the member has been created successfully.',
-            );
-            sessionStorage.removeItem('emailNotificationFailed');
-        }
-    }, []);
-
     const submit = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         form.clearErrors();
@@ -243,12 +236,6 @@ export default function Create() {
             return;
         }
 
-        void canSendEmail().then((isConnected) => {
-            if (!isConnected) {
-                sessionStorage.setItem('emailNotificationFailed', 'true');
-            }
-        });
-
         form.transform(() => result.data);
 
         post(store.url(), {
@@ -257,37 +244,71 @@ export default function Create() {
         });
     };
 
+    const addBeneficiary = () => {
+        const current = data.legal_beneficiaries ?? [];
+        form.setData('legal_beneficiaries', [
+            ...current,
+            { full_name: '', relationship: '' },
+        ]);
+    };
+
+    const removeBeneficiary = (index: number) => {
+        const current = data.legal_beneficiaries ?? [];
+        if (current.length <= 1) return;
+        const updated = current.filter((_, i) => i !== index);
+        form.setData('legal_beneficiaries', updated);
+    };
+
+    const updateBeneficiary = (
+        index: number,
+        field: 'full_name' | 'relationship',
+        value: string,
+    ) => {
+        const current = [...(data.legal_beneficiaries ?? [])];
+        current[index] = { ...current[index], [field]: value };
+        form.setData('legal_beneficiaries', current);
+    };
+
     const renderTextInput = (
-        name: CreateMemberField,
-        label: string,
-        options: {
-            type?: string;
-            required?: boolean;
-            placeholder?: string;
-            min?: number;
-            step?: string;
-        } = {},
-    ) => (
-        <div className="space-y-2">
-            <Label htmlFor={name}>
-                {label}
-                {options.required && <span className="text-red-500"> *</span>}
-            </Label>
-            <Input
-                id={name}
-                name={name}
-                type={options.type ?? 'text'}
-                required={options.required}
-                min={options.min}
-                step={options.step}
-                placeholder={options.placeholder}
-                value={String(data[name])}
-                onChange={(event) => setData(name, event.target.value)}
-                className={inputClass}
-            />
-            <InputError message={errors[name]} />
-        </div>
-    );
+    name: CreateMemberField,
+    label: string,
+    options: {
+        type?: string;
+        required?: boolean;
+        placeholder?: string;
+        min?: number;
+        max?: string | number;
+        step?: string;
+    } = {},
+) => (
+    <div className="space-y-2">
+        <Label htmlFor={name}>
+            {label}
+            {options.required && <span className="text-red-500"> *</span>}
+        </Label>
+        <Input
+            id={name}
+            name={name}
+            type={options.type ?? 'text'}
+            required={options.required}
+            min={options.min}
+            max={options.max}
+            step={options.step}
+            placeholder={options.placeholder}
+            value={String(data[name])}
+            onChange={(event) => setData(name, event.target.value)}
+            className={inputClass}
+        />
+        <InputError message={errors[name]} />
+    </div>
+);
+const yesterday = new Date();
+yesterday.setDate(yesterday.getDate() - 1);
+
+const maxHireDate = `${yesterday.getFullYear()}-${String(
+    yesterday.getMonth() + 1,
+).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+
 
     const renderSelect = <TValue extends string>(
         name: CreateMemberField,
@@ -348,12 +369,10 @@ export default function Create() {
                             </div>
                             <div>
                                 <p className="font-semibold text-emerald-800">
-                                    Successfully created
+                                    Profile Submitted for Validation
                                 </p>
                                 <p className="text-sm text-emerald-700">
-                                    The member has been created. Their temporary
-                                    password is generated on the server and
-                                    emailed to them.
+                                    The member profile has been created and is now pending GM approval. The welcome email with credentials will be sent once the General Manager validates and accepts the member.
                                 </p>
                             </div>
                         </div>
@@ -588,9 +607,10 @@ export default function Create() {
                                 placeholder: 'Enter position',
                             })}
                             {renderTextInput('date_hired', 'Date Hired', {
-                                type: 'date',
-                                required: true,
-                            })}
+    type: 'date',
+    required: true,
+    max: maxHireDate,
+})}
                             {renderTextInput('basic_salary', 'Income (Gross)', {
                                 type: 'number',
                                 required: true,
@@ -679,13 +699,67 @@ export default function Create() {
                                     placeholder: '0.00',
                                 },
                             )}
-                            {renderTextInput(
-                                'legal_beneficiary_1_name',
-                                'Legal Beneficiary 1 Name',
-                                {
-                                    placeholder: 'Enter beneficiary name',
-                                },
-                            )}
+                            <div className="md:col-span-2 lg:col-span-3 space-y-4">
+                                <Label>Legal Beneficiaries</Label>
+                                {(data.legal_beneficiaries ?? [{ full_name: '', relationship: '' }]).map((beneficiary, index) => (
+                                    <div key={index} className="rounded-lg border border-emerald-100 p-4 bg-emerald-50/50">
+                                        <div className="mb-2 flex items-center justify-between">
+                                            <span className="text-sm font-medium text-emerald-800">
+                                                Legal Beneficiary {index + 1}
+                                            </span>
+                                            {(data.legal_beneficiaries?.length ?? 1) > 1 && (
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => removeBeneficiary(index)}
+                                                    className="text-red-600 hover:text-red-700"
+                                                >
+                                                    Remove
+                                                </Button>
+                                            )}
+                                        </div>
+                                        <div className="grid gap-4 md:grid-cols-2">
+                                            <div className="space-y-2">
+                                                <Label htmlFor={`legal-beneficiary-${index}-name`}>
+                                                    Full Name
+                                                </Label>
+                                                <Input
+                                                    id={`legal-beneficiary-${index}-name`}
+                                                    value={beneficiary.full_name}
+                                                    onChange={(e) => updateBeneficiary(index, 'full_name', e.target.value)}
+                                                    placeholder="Enter beneficiary name"
+                                                    className={inputClass}
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label htmlFor={`legal-beneficiary-${index}-relationship`}>
+                                                    Relationship
+                                                </Label>
+                                                <Input
+                                                    id={`legal-beneficiary-${index}-relationship`}
+                                                    value={beneficiary.relationship}
+                                                    onChange={(e) => updateBeneficiary(index, 'relationship', e.target.value)}
+                                                    placeholder="e.g., Wife, Daughter, Parent"
+                                                    className={inputClass}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                                {(errors.legal_beneficiaries as string | undefined) && (
+                                    <p className="text-sm text-red-600">{errors.legal_beneficiaries as string}</p>
+                                )}
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={addBeneficiary}
+                                    className="mt-1"
+                                >
+                                    Add Beneficiary
+                                </Button>
+                            </div>
 
                             <div className="space-y-2 md:col-span-2 lg:col-span-3">
                                 <Label htmlFor="real_properties_owned">
@@ -713,8 +787,7 @@ export default function Create() {
 
                     <div className="flex flex-col gap-4 border-t border-emerald-100 pt-6 sm:flex-row sm:items-center sm:justify-between">
                         <p className="text-sm text-muted-foreground">
-                            Double-check all information before submitting. The
-                            temporary password will be emailed to the member.
+                            Double-check all information before submitting. The member profile will be submitted for GM validation, and the welcome email with credentials will be sent upon approval.
                         </p>
 
                         <Button

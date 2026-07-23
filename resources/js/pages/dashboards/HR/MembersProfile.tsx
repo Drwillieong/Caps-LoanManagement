@@ -14,6 +14,8 @@ interface UserData {
     email: string;
     role: string;
     is_active: boolean;
+    status: string;
+    rejection_reason: string | null;
     created_at: string;
     updated_at: string;
 }
@@ -265,11 +267,13 @@ export default function MembersProfile({ user, memberProfile, beneficiaries }: P
 
                     <div className="flex items-center gap-2">
                         <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${
-                            user.is_active
+                            user.status === 'active'
                                 ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                                : user.status === 'pending'
+                                ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
                                 : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
                         }`}>
-                            {user.is_active ? 'Active' : 'Inactive'}
+                            {user.status === 'pending' ? 'Pending' : user.status === 'active' ? 'Active' : 'Rejected'}
                         </span>
                         <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary capitalize">
                             {user.role}
@@ -280,6 +284,43 @@ export default function MembersProfile({ user, memberProfile, beneficiaries }: P
                         </Button>
                     </div>
                 </div>
+
+                {/* Rejection Reason Alert */}
+                {user.status === 'rejected' && user.rejection_reason && (
+                    <div className="rounded-xl border border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-800 p-6">
+                        <div className="flex items-start gap-3">
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-red-100 dark:bg-red-900">
+                                <span className="text-sm font-bold text-red-600 dark:text-red-400">!</span>
+                            </div>
+                            <div>
+                                <h3 className="font-semibold text-red-800 dark:text-red-300">Membership Rejected</h3>
+                                <p className="mt-1 text-sm text-red-700 dark:text-red-400">
+                                    <strong>Reason:</strong> {user.rejection_reason}
+                                </p>
+                                <p className="mt-1 text-xs text-red-500">
+                                    Please review the rejection reason and contact the General Manager if you need further clarification.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Pending Validation Alert */}
+                {user.status === 'pending' && (
+                    <div className="rounded-xl border border-yellow-200 bg-yellow-50 dark:bg-yellow-950/20 dark:border-yellow-800 p-6">
+                        <div className="flex items-start gap-3">
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-yellow-100 dark:bg-yellow-900">
+                                <span className="text-sm font-bold text-yellow-600 dark:text-yellow-400">⏳</span>
+                            </div>
+                            <div>
+                                <h3 className="font-semibold text-yellow-800 dark:text-yellow-300">Pending GM Validation</h3>
+                                <p className="mt-1 text-sm text-yellow-700 dark:text-yellow-400">
+                                    This member account is currently awaiting approval from the General Manager. The welcome email with credentials will be sent once the account is approved.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Personal Information */}
                 <div className="rounded-xl border bg-background">

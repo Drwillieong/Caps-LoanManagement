@@ -3,14 +3,11 @@
 namespace App\Http\Controllers\HrController;
 
 use App\Http\Controllers\Controller;
-use App\Mail\NewMemberWelcomeMail;
 use App\Models\User;
 use App\Services\ActivityLogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
 
 class CreateMemberController extends Controller
@@ -193,6 +190,9 @@ class CreateMemberController extends Controller
                 'email' => strtolower($validated['email']),
                 'role' => 'member',
                 'password' => Hash::make($temporaryPassword),
+                'status' => 'pending',
+                'temporary_password' => $temporaryPassword,
+                'is_active' => false,
             ]);
 
             $user->memberProfile()->create([
@@ -237,15 +237,8 @@ class CreateMemberController extends Controller
             'Created '.$user->role.' user '.$user->name.' (ID #'.$user->id.').'
         );
 
-        // Send email with credentials
-        try {
-            Mail::to($user->email)->send(new NewMemberWelcomeMail($user, $temporaryPassword));
-        } catch (\Exception $e) {
-            // Log error but don't fail the request - data was already saved
-            Log::error('Failed to send welcome email: '.$e->getMessage());
-        }
-
-        return redirect()->route('users')->with('success', 'Member created successfully.');
+        // Email dispatch is deferred — will be sent when GM approves the member
+        return redirect()->route('users')->with('success', 'Member created successfully. The application has been submitted for GM validation. The welcome email with credentials will be sent upon GM approval.');
     }
 
     private function generateTemporaryPassword(int $length = 14): string

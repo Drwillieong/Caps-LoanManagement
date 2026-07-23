@@ -15,6 +15,7 @@ import {
     UserCircle2,
     UsersRound,
     WalletCards,
+    Users
 } from 'lucide-react';
 
 import { NavFooter } from '@/components/nav-footer';
@@ -65,6 +66,7 @@ const memberNavItems: NavItem[] = [
         title: 'Application',
         icon: FilePlus,
         items: [
+            
             {
                 title: 'Application Form',
                 href: '/dashboards/Member/ApplyLoan',
@@ -110,6 +112,11 @@ const gmNavItems: NavItem[] = [
         title: 'Application',
         icon: ClipboardCheck,
         items: [
+              {
+                title: 'Member Application',
+                href: '/dashboards/Gm/MemberValidate',
+                icon: Users,
+            },
             {
                 title: 'Create Application',
                 href: '/dashboards/Gm/CreateApplication',

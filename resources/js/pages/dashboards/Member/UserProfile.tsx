@@ -8,8 +8,6 @@ import {
     Briefcase, 
     Heart, 
     Camera, 
-    Eye, 
-    EyeOff 
 } from 'lucide-react';
 
 import HeadingSmall from '@/components/heading-small';
@@ -20,7 +18,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
-import { dashboard } from '@/routes';
 import member from '@/routes/member';
 import { type BreadcrumbItem, type SharedData } from '@/types';
 
@@ -37,7 +34,6 @@ interface Beneficiary {
     id?: number;
     full_name: string;
     relationship: string;
-    date_of_birth?: string;
 }
 
 interface MemberProfile {
@@ -48,17 +44,30 @@ interface MemberProfile {
     first_name: string;
     middle_name?: string;
     last_name: string;
+    place_of_birth?: string | null;
     date_of_birth: string;
     sex: string;
     civil_status: string;
-    spouse_name?: string;
+    educational_attainment?: string | null;
     mobile_number: string;
+    permanent_mobile_number?: string | null;
     present_address: string;
+    present_zip_code?: string | null;
     permanent_address?: string;
+    permanent_zip_code?: string | null;
     position: string;
     date_hired: string;
     basic_salary: number;
+    income_type?: string | null;
+    net_income?: number | null;
     share_capital_balance?: number;
+    other_source_of_income?: string | null;
+    facebook_account_name?: string | null;
+    spouse_occupation?: string | null;
+    spouse_gross_income?: number | null;
+    spouse_income_type?: string | null;
+    spouse_net_income?: number | null;
+    real_properties_owned?: string | null;
     bank_account_number?: string;
     tin_number?: string;
     profile_picture?: string;
@@ -100,27 +109,40 @@ const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
         first_name: memberProfile?.first_name || '',
         middle_name: memberProfile?.middle_name || '',
         last_name: memberProfile?.last_name || '',
+        place_of_birth: memberProfile?.place_of_birth || '',
         date_of_birth: memberProfile?.date_of_birth || '',
         sex: memberProfile?.sex || '',
         civil_status: memberProfile?.civil_status || '',
-        spouse_name: memberProfile?.spouse_name || '',
+        educational_attainment: memberProfile?.educational_attainment || '',
         mobile_number: memberProfile?.mobile_number || '',
+        permanent_mobile_number: memberProfile?.permanent_mobile_number || '',
+        present_zip_code: memberProfile?.present_zip_code || '',
         present_address: memberProfile?.present_address || '',
         permanent_address: memberProfile?.permanent_address || '',
+        permanent_zip_code: memberProfile?.permanent_zip_code || '',
         position: memberProfile?.position || '',
         date_hired: memberProfile?.date_hired || '',
         basic_salary: memberProfile?.basic_salary || '',
+        income_type: memberProfile?.income_type || 'monthly',
+        net_income: memberProfile?.net_income || '',
         share_capital_balance: memberProfile?.share_capital_balance || '',
+        other_source_of_income: memberProfile?.other_source_of_income || '',
+        facebook_account_name: memberProfile?.facebook_account_name || '',
+        spouse_occupation: memberProfile?.spouse_occupation || '',
+        spouse_gross_income: memberProfile?.spouse_gross_income || '',
+        spouse_income_type: memberProfile?.spouse_income_type || 'monthly',
+        spouse_net_income: memberProfile?.spouse_net_income || '',
+        real_properties_owned: memberProfile?.real_properties_owned || '',
         bank_account_number: memberProfile?.bank_account_number || '',
         tin_number: memberProfile?.tin_number || '',
         profile_picture: memberProfile?.profile_picture || '',
-        beneficiaries: beneficiaries.length > 0 ? beneficiaries : [{ full_name: '', relationship: '', date_of_birth: '' }],
+        beneficiaries: beneficiaries.length > 0 ? beneficiaries : [{ full_name: '', relationship: '' }],
     });
 
     const addBeneficiary = () => {
         setFormData({
             ...formData,
-            beneficiaries: [...formData.beneficiaries, { full_name: '', relationship: '', date_of_birth: '' }],
+            beneficiaries: [...formData.beneficiaries, { full_name: '', relationship: '' }],
         });
     };
 
@@ -128,7 +150,7 @@ const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
         const updatedBeneficiaries = formData.beneficiaries.filter((_, i) => i !== index);
         setFormData({
             ...formData,
-            beneficiaries: updatedBeneficiaries.length > 0 ? updatedBeneficiaries : [{ full_name: '', relationship: '', date_of_birth: '' }],
+            beneficiaries: updatedBeneficiaries.length > 0 ? updatedBeneficiaries : [{ full_name: '', relationship: '' }],
         });
     };
 
@@ -450,23 +472,80 @@ const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
                                             <option value="">Select civil status</option>
                                             <option value="single">Single</option>
                                             <option value="married">Married</option>
-                                            <option value="widowed">Widowed</option>
-                                            <option value="separated">Separated</option>
+                                            <option value="widowed">Widower/Widow</option>
                                         </select>
                                         <InputError message={errors.civil_status} />
                                     </div>
 
                                     <div className="grid gap-2">
-                                        <Label htmlFor="spouse_name">Spouse Name</Label>
-                                        <Input
-                                            id="spouse_name"
-                                            name="spouse_name"
-                                            value={formData.spouse_name}
-                                            onChange={(e) => setFormData({ ...formData, spouse_name: e.target.value })}
-                                            placeholder="Spouse name (if married)"
-                                            disabled={!isEditing}
-                                        />
-                                        <InputError message={errors.spouse_name} />
+                                        <Label htmlFor="place_of_birth">
+                                            Place of Birth <span className="text-red-500">*</span>
+                                        </Label>
+                                        {!isEditing ? (
+                                            <div className="rounded-md border bg-muted px-3 py-2 text-sm">
+                                                {formData.place_of_birth || 'Not provided'}
+                                            </div>
+                                        ) : (
+                                            <Input
+                                                id="place_of_birth"
+                                                name="place_of_birth"
+                                                value={formData.place_of_birth}
+                                                onChange={(e) => setFormData({ ...formData, place_of_birth: e.target.value })}
+                                                required
+                                                placeholder="Enter place of birth"
+                                                disabled={!isEditing}
+                                            />
+                                        )}
+                                        <InputError message={errors.place_of_birth} />
+                                    </div>
+
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="educational_attainment">
+                                            Educational Attainment <span className="text-red-500">*</span>
+                                        </Label>
+                                        {!isEditing ? (
+                                            <div className="rounded-md border bg-muted px-3 py-2 text-sm">
+                                                {formData.educational_attainment || 'Not provided'}
+                                            </div>
+                                        ) : (
+                                            <select
+                                                id="educational_attainment"
+                                                name="educational_attainment"
+                                                value={formData.educational_attainment}
+                                                onChange={(e) => setFormData({ ...formData, educational_attainment: e.target.value })}
+                                                required
+                                                disabled={!isEditing}
+                                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                            >
+                                                <option value="">Select educational attainment</option>
+                                                <option value="Elementary">Elementary</option>
+                                                <option value="High School">High School</option>
+                                                <option value="Vocational">Vocational</option>
+                                                <option value="College">College</option>
+                                                <option value="Postgraduate">Postgraduate</option>
+                                                <option value="Other">Other</option>
+                                            </select>
+                                        )}
+                                        <InputError message={errors.educational_attainment} />
+                                    </div>
+
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="facebook_account_name">Facebook Account (Name)</Label>
+                                        {!isEditing ? (
+                                            <div className="rounded-md border bg-muted px-3 py-2 text-sm">
+                                                {formData.facebook_account_name || 'Not provided'}
+                                            </div>
+                                        ) : (
+                                            <Input
+                                                id="facebook_account_name"
+                                                name="facebook_account_name"
+                                                value={formData.facebook_account_name}
+                                                onChange={(e) => setFormData({ ...formData, facebook_account_name: e.target.value })}
+                                                placeholder="Enter Facebook account name"
+                                                disabled={!isEditing}
+                                            />
+                                        )}
+                                        <InputError message={errors.facebook_account_name} />
                                     </div>
                                 </div>
                             </CardContent>
@@ -483,10 +562,10 @@ const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
                                 </div>
                             </CardHeader>
                             <CardContent>
-                                <div className="grid gap-4 md:grid-cols-2">
+                                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                                     <div className="grid gap-2">
                                         <Label htmlFor="mobile_number">
-                                            Mobile Number <span className="text-red-500">*</span>
+                                            Present Cellphone Number <span className="text-red-500">*</span>
                                         </Label>
                                         <Input
                                             id="mobile_number"
@@ -498,7 +577,6 @@ const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
                                             minLength={11}
                                             value={formData.mobile_number}
                                             onChange={(e) => {
-                                                // Only allow numeric input and limit to 11 characters
                                                 const value = e.target.value.replace(/[^0-9]/g, '').slice(0, 11);
                                                 setFormData({ ...formData, mobile_number: value });
                                             }}
@@ -510,15 +588,47 @@ const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
                                     </div>
 
                                     <div className="grid gap-2">
+                                        <Label htmlFor="permanent_mobile_number">Permanent Mobile Number</Label>
+                                        {!isEditing ? (
+                                            <div className="rounded-md border bg-muted px-3 py-2 text-sm">
+                                                {formData.permanent_mobile_number || 'Not provided'}
+                                            </div>
+                                        ) : (
+                                            <Input
+                                                id="permanent_mobile_number"
+                                                name="permanent_mobile_number"
+                                                type="tel"
+                                                inputMode="numeric"
+                                                pattern="[0-9]{11}"
+                                                maxLength={11}
+                                                value={formData.permanent_mobile_number}
+                                                onChange={(e) => {
+                                                    const value = e.target.value.replace(/[^0-9]/g, '').slice(0, 11);
+                                                    setFormData({ ...formData, permanent_mobile_number: value });
+                                                }}
+                                                placeholder="e.g., 09123456789"
+                                                disabled={!isEditing}
+                                            />
+                                        )}
+                                        <InputError message={errors.permanent_mobile_number} />
+                                    </div>
+
+                                    <div className="grid gap-2">
                                         <Label htmlFor="tin_number">TIN Number</Label>
-                                        <Input
-                                            id="tin_number"
-                                            name="tin_number"
-                                            value={formData.tin_number}
-                                            onChange={(e) => setFormData({ ...formData, tin_number: e.target.value })}
-                                            placeholder="e.g., 123-456-789"
-                                            disabled={!isEditing}
-                                        />
+                                        {!isEditing ? (
+                                            <div className="rounded-md border bg-muted px-3 py-2 text-sm">
+                                                {formData.tin_number || 'Not provided'}
+                                            </div>
+                                        ) : (
+                                            <Input
+                                                id="tin_number"
+                                                name="tin_number"
+                                                value={formData.tin_number}
+                                                onChange={(e) => setFormData({ ...formData, tin_number: e.target.value })}
+                                                placeholder="e.g., 123-456-789"
+                                                disabled={!isEditing}
+                                            />
+                                        )}
                                         <InputError message={errors.tin_number} />
                                     </div>
 
@@ -541,7 +651,26 @@ const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
                                     </div>
 
                                     <div className="grid gap-2">
-                                        <Label htmlFor="permanent_address">Permanent Address</Label>
+                                        <Label htmlFor="present_zip_code">Present Address Zip Code</Label>
+                                        {!isEditing ? (
+                                            <div className="rounded-md border bg-muted px-3 py-2 text-sm">
+                                                {formData.present_zip_code || 'Not provided'}
+                                            </div>
+                                        ) : (
+                                            <Input
+                                                id="present_zip_code"
+                                                name="present_zip_code"
+                                                value={formData.present_zip_code}
+                                                onChange={(e) => setFormData({ ...formData, present_zip_code: e.target.value })}
+                                                placeholder="Enter zip code"
+                                                disabled={!isEditing}
+                                            />
+                                        )}
+                                        <InputError message={errors.present_zip_code} />
+                                    </div>
+
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="permanent_address">Permanent (Provincial) Address</Label>
                                         <textarea
                                             id="permanent_address"
                                             name="permanent_address"
@@ -553,6 +682,25 @@ const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
                                             className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                                         />
                                         <InputError message={errors.permanent_address} />
+                                    </div>
+
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="permanent_zip_code">Permanent Address Zip Code</Label>
+                                        {!isEditing ? (
+                                            <div className="rounded-md border bg-muted px-3 py-2 text-sm">
+                                                {formData.permanent_zip_code || 'Not provided'}
+                                            </div>
+                                        ) : (
+                                            <Input
+                                                id="permanent_zip_code"
+                                                name="permanent_zip_code"
+                                                value={formData.permanent_zip_code}
+                                                onChange={(e) => setFormData({ ...formData, permanent_zip_code: e.target.value })}
+                                                placeholder="Enter zip code"
+                                                disabled={!isEditing}
+                                            />
+                                        )}
+                                        <InputError message={errors.permanent_zip_code} />
                                     </div>
                                 </div>
                             </CardContent>
@@ -643,24 +791,219 @@ const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
                                     </div>
 
                                     <div className="grid gap-2">
-                                        <Label htmlFor="bank_account_number">Bank Account Number (RCBC)</Label>
-                                        <Input
-                                            id="bank_account_number"
-                                            name="bank_account_number"
-                                            value={formData.bank_account_number}
-                                            onChange={(e) => setFormData({ ...formData, bank_account_number: e.target.value })}
-                                            placeholder="e.g., 1234567890"
-                                            disabled={!canEditEmployment}
-                                        />
-                                         
-                                        <InputError message={errors.bank_account_number} />
-                                        
+                                        <Label htmlFor="income_type">
+                                            Income Type <span className="text-red-500">*</span>
+                                        </Label>
+                                        {!isEditing ? (
+                                            <div className="rounded-md border bg-muted px-3 py-2 text-sm capitalize">
+                                                {formData.income_type || 'Not provided'}
+                                            </div>
+                                        ) : (
+                                            <select
+                                                id="income_type"
+                                                name="income_type"
+                                                value={formData.income_type}
+                                                onChange={(e) => setFormData({ ...formData, income_type: e.target.value })}
+                                                required
+                                                disabled={!canEditEmployment}
+                                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                            >
+                                                <option value="monthly">Monthly</option>
+                                                <option value="daily">Daily</option>
+                                                <option value="yearly">Yearly</option>
+                                            </select>
+                                        )}
+                                        <InputError message={errors.income_type} />
                                     </div>
-                                    
+
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="net_income">
+                                            Income (Net) <span className="text-red-500">*</span>
+                                        </Label>
+                                        {!isEditing ? (
+                                            <div className="rounded-md border bg-muted px-3 py-2 text-sm">
+                                                {formData.net_income ? parseFloat(String(formData.net_income)).toLocaleString('en-US', { style: 'currency', currency: 'PHP' }) : 'Not provided'}
+                                            </div>
+                                        ) : (
+                                            <Input
+                                                id="net_income"
+                                                name="net_income"
+                                                type="number"
+                                                step="0.01"
+                                                min="0"
+                                                value={formData.net_income}
+                                                onChange={(e) => setFormData({ ...formData, net_income: e.target.value })}
+                                                required
+                                                placeholder="0.00"
+                                                disabled={!canEditEmployment}
+                                            />
+                                        )}
+                                        <InputError message={errors.net_income} />
+                                    </div>
+
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="bank_account_number">Bank Account Number (RCBC)</Label>
+                                        {!isEditing ? (
+                                            <div className="rounded-md border bg-muted px-3 py-2 text-sm">
+                                                {formData.bank_account_number || 'Not provided'}
+                                            </div>
+                                        ) : (
+                                            <Input
+                                                id="bank_account_number"
+                                                name="bank_account_number"
+                                                value={formData.bank_account_number}
+                                                onChange={(e) => setFormData({ ...formData, bank_account_number: e.target.value })}
+                                                placeholder="e.g., 1234567890"
+                                                disabled={!canEditEmployment}
+                                            />
+                                        )}
+                                        <InputError message={errors.bank_account_number} />
+                                    </div>
+
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="other_source_of_income">Other Source of Income (Specify)</Label>
+                                        {!isEditing ? (
+                                            <div className="rounded-md border bg-muted px-3 py-2 text-sm">
+                                                {formData.other_source_of_income || 'Not provided'}
+                                            </div>
+                                        ) : (
+                                            <Input
+                                                id="other_source_of_income"
+                                                name="other_source_of_income"
+                                                value={formData.other_source_of_income}
+                                                onChange={(e) => setFormData({ ...formData, other_source_of_income: e.target.value })}
+                                                placeholder="Specify other income source"
+                                                disabled={!canEditEmployment}
+                                            />
+                                        )}
+                                        <InputError message={errors.other_source_of_income} />
+                                    </div>
                                 </div>
                                  <p className="text-xs text-muted-foreground p-2">
                                             Note: If you want to add your share capital balance, you should go to the main office.
                                         </p>
+                            </CardContent>
+                        </Card>
+
+                        {/* Spouse, Beneficiary, and Assets Section */}
+                        <Card className="border-emerald-100">
+                            <CardHeader className="flex flex-row items-center justify-between pb-3">
+                                <div className="flex items-center gap-2">
+                                    <Heart className="h-5 w-5 text-emerald-600" />
+                                    <CardTitle className="text-emerald-900 dark:text-emerald-100 text-lg">
+                                        Spouse, Beneficiary, and Assets
+                                    </CardTitle>
+                                </div>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="spouse_occupation">Occupation of Spouse</Label>
+                                        {!isEditing ? (
+                                            <div className="rounded-md border bg-muted px-3 py-2 text-sm">
+                                                {formData.spouse_occupation || 'Not provided'}
+                                            </div>
+                                        ) : (
+                                            <Input
+                                                id="spouse_occupation"
+                                                name="spouse_occupation"
+                                                value={formData.spouse_occupation}
+                                                onChange={(e) => setFormData({ ...formData, spouse_occupation: e.target.value })}
+                                                placeholder="Enter spouse occupation"
+                                                disabled={!isEditing}
+                                            />
+                                        )}
+                                        <InputError message={errors.spouse_occupation} />
+                                    </div>
+
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="spouse_gross_income">Spouse Income (Gross)</Label>
+                                        {!isEditing ? (
+                                            <div className="rounded-md border bg-muted px-3 py-2 text-sm">
+                                                {formData.spouse_gross_income ? parseFloat(String(formData.spouse_gross_income)).toLocaleString('en-US', { style: 'currency', currency: 'PHP' }) : 'Not provided'}
+                                            </div>
+                                        ) : (
+                                            <Input
+                                                id="spouse_gross_income"
+                                                name="spouse_gross_income"
+                                                type="number"
+                                                step="0.01"
+                                                min="0"
+                                                value={formData.spouse_gross_income}
+                                                onChange={(e) => setFormData({ ...formData, spouse_gross_income: e.target.value })}
+                                                placeholder="0.00"
+                                                disabled={!isEditing}
+                                            />
+                                        )}
+                                        <InputError message={errors.spouse_gross_income} />
+                                    </div>
+
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="spouse_income_type">Spouse Income Type</Label>
+                                        {!isEditing ? (
+                                            <div className="rounded-md border bg-muted px-3 py-2 text-sm capitalize">
+                                                {formData.spouse_income_type || 'Not provided'}
+                                            </div>
+                                        ) : (
+                                            <select
+                                                id="spouse_income_type"
+                                                name="spouse_income_type"
+                                                value={formData.spouse_income_type}
+                                                onChange={(e) => setFormData({ ...formData, spouse_income_type: e.target.value })}
+                                                disabled={!isEditing}
+                                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                            >
+                                                <option value="monthly">Monthly</option>
+                                                <option value="daily">Daily</option>
+                                                <option value="yearly">Yearly</option>
+                                            </select>
+                                        )}
+                                        <InputError message={errors.spouse_income_type} />
+                                    </div>
+
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="spouse_net_income">Spouse Income (Net)</Label>
+                                        {!isEditing ? (
+                                            <div className="rounded-md border bg-muted px-3 py-2 text-sm">
+                                                {formData.spouse_net_income ? parseFloat(String(formData.spouse_net_income)).toLocaleString('en-US', { style: 'currency', currency: 'PHP' }) : 'Not provided'}
+                                            </div>
+                                        ) : (
+                                            <Input
+                                                id="spouse_net_income"
+                                                name="spouse_net_income"
+                                                type="number"
+                                                step="0.01"
+                                                min="0"
+                                                value={formData.spouse_net_income}
+                                                onChange={(e) => setFormData({ ...formData, spouse_net_income: e.target.value })}
+                                                placeholder="0.00"
+                                                disabled={!isEditing}
+                                            />
+                                        )}
+                                        <InputError message={errors.spouse_net_income} />
+                                    </div>
+
+                                    <div className="grid gap-2 md:col-span-2 lg:col-span-3">
+                                        <Label htmlFor="real_properties_owned">Real Properties Owned (Specify)</Label>
+                                        {!isEditing ? (
+                                            <div className="rounded-md border bg-muted px-3 py-2 text-sm min-h-20">
+                                                {formData.real_properties_owned || 'Not provided'}
+                                            </div>
+                                        ) : (
+                                            <textarea
+                                                id="real_properties_owned"
+                                                name="real_properties_owned"
+                                                value={formData.real_properties_owned}
+                                                onChange={(e) => setFormData({ ...formData, real_properties_owned: e.target.value })}
+                                                placeholder="Specify real properties owned"
+                                                rows={3}
+                                                disabled={!isEditing}
+                                                className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                            />
+                                        )}
+                                        <InputError message={errors.real_properties_owned} />
+                                    </div>
+                                </div>
                             </CardContent>
                         </Card>
 
@@ -729,25 +1072,7 @@ const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
                                                         disabled={!isEditing}
                                                     />
                                                 </div>
-                                                <div className="grid gap-2">
-                                                    <Label htmlFor={`beneficiaries[${index}][date_of_birth]`}>
-                                                        Date of Birth
-                                                    </Label>
-                                                    {!isEditing ? (
-                                                        <div className="rounded-md border bg-muted px-3 py-2 text-sm">
-                                                            {formatDate(beneficiary.date_of_birth)}
-                                                        </div>
-                                                    ) : (
-                                                        <Input
-                                                            id={`beneficiaries[${index}][date_of_birth]`}
-                                                            name={`beneficiaries[${index}][date_of_birth]`}
-                                                            type="date"
-                                                            value={beneficiary.date_of_birth}
-                                                            disabled={!isEditing}
-                                                            onChange={(e) => updateBeneficiary(index, 'date_of_birth', e.target.value)}
-                                                        />
-                                                    )}
-                                                </div>
+                                               
                                             </div>
                                         </div>
                                     ))}

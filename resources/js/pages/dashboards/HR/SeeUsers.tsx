@@ -35,6 +35,8 @@ interface User {
     email: string
     role: string
     is_active: boolean
+    status: string
+    rejection_reason: string | null
     created_at: string
     updated_at: string
     member_profile: MemberProfile | null
@@ -344,12 +346,14 @@ export default function SeeUsers({ users, filters, roles }: Props) {
                                         <td className="px-6 py-4">
                                             <span
                                                 className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${
-                                                    user.is_active
+                                                    user.status === 'active'
                                                         ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                                                        : user.status === 'pending'
+                                                        ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
                                                         : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
                                                 }`}
                                             >
-                                                {user.is_active ? 'Active' : 'Inactive'}
+                                                {user.status === 'pending' ? 'Pending' : user.status === 'active' ? 'Active' : 'Rejected'}
                                             </span>
                                         </td>
 

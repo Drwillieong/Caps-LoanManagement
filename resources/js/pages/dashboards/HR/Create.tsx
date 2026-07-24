@@ -88,6 +88,23 @@ const requiredPastDate = (label: string) =>
             return !Number.isNaN(date.getTime()) && date < today;
         }, `${label} must be before today.`);
 
+// ===== FORMATTING UTILITIES (mirrored from ApplyLoan.tsx) =====
+const formatCurrency = (amount: number | string | null | undefined): string => {
+    if (amount == null || amount === '') return '₱0.00';
+    const num = typeof amount === 'string' ? parseFloat(amount.toString().replace(/,/g, '')) : Number(amount);
+    return isNaN(num) ? '₱0.00' : `₱${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
+
+const formatNumberInput = (value: string): string => {
+    const num = parseFloat(value.replace(/,/g, ''));
+    return isNaN(num) || num === 0 ? '' : num.toLocaleString('en-US', { maximumFractionDigits: 2 });
+};
+
+const parseNumber = (value: string): number => {
+    const num = parseFloat(value.replace(/,/g, ''));
+    return isNaN(num) ? 0 : num;
+};
+
 export const createMemberSchema = z.object({
     first_name: requiredText('First name'),
     middle_name: optionalText('Middle name'),
@@ -302,6 +319,45 @@ export default function Create() {
         <InputError message={errors[name]} />
     </div>
 );
+
+    const renderAmountInput = (
+        name: CreateMemberField,
+        label: string,
+        options: {
+            required?: boolean;
+            placeholder?: string;
+            min?: number;
+        } = {},
+    ) => {
+        const rawValue = String(data[name] ?? '');
+        const displayValue = rawValue ? formatNumberInput(rawValue) : '';
+
+        return (
+            <div className="space-y-2">
+                <Label htmlFor={name}>
+                    {label}
+                    {options.required && <span className="text-red-500"> *</span>}
+                </Label>
+                <Input
+                    id={name}
+                    name={name}
+                    type="text"
+                    inputMode="numeric"
+                    required={options.required}
+                    placeholder={options.placeholder}
+                    value={displayValue}
+                    onChange={(event) => {
+                        const raw = event.target.value.replace(/,/g, '');
+                        if (raw === '' || /^\d*\.?\d{0,2}$/.test(raw)) {
+                            setData(name, raw);
+                        }
+                    }}
+                    className={inputClass}
+                />
+                <InputError message={errors[name]} />
+            </div>
+        );
+    };
 const yesterday = new Date();
 yesterday.setDate(yesterday.getDate() - 1);
 
@@ -611,12 +667,10 @@ const maxHireDate = `${yesterday.getFullYear()}-${String(
     required: true,
     max: maxHireDate,
 })}
-                            {renderTextInput('basic_salary', 'Income (Gross)', {
-                                type: 'number',
+                            {renderAmountInput('basic_salary', 'Income (Gross)', {
                                 required: true,
                                 min: MIN_FINANCIAL_AMOUNT,
-                                step: '0.01',
-                                placeholder: '10000.00',
+                                placeholder: '10,000.00',
                             })}
                             {renderSelect(
                                 'income_type',
@@ -625,24 +679,15 @@ const maxHireDate = `${yesterday.getFullYear()}-${String(
                                 (value) => setData('income_type', value),
                                 incomeTypeOptions,
                             )}
-                            {renderTextInput('net_income', 'Income (Net)', {
-                                type: 'number',
+                            {renderAmountInput('net_income', 'Income (Net)', {
                                 required: true,
-                                min: 0,
-                                step: '0.01',
                                 placeholder: '0.00',
                             })}
-                            {renderTextInput(
-                                'share_capital_balance',
-                                'Share Capital Balance',
-                                {
-                                    type: 'number',
-                                    required: true,
-                                    min: MIN_FINANCIAL_AMOUNT,
-                                    step: '0.01',
-                                    placeholder: '10000.00',
-                                },
-                            )}
+                            {renderAmountInput('share_capital_balance', 'Share Capital Balance', {
+                                required: true,
+                                min: MIN_FINANCIAL_AMOUNT,
+                                placeholder: '10,000.00',
+                            })}
                             {renderTextInput(
                                 'other_source_of_income',
                                 'Other Source of Income (Specify)',
@@ -671,16 +716,9 @@ const maxHireDate = `${yesterday.getFullYear()}-${String(
                                     placeholder: 'Enter spouse occupation',
                                 },
                             )}
-                            {renderTextInput(
-                                'spouse_gross_income',
-                                'Spouse Income (Gross)',
-                                {
-                                    type: 'number',
-                                    min: 0,
-                                    step: '0.01',
-                                    placeholder: '0.00',
-                                },
-                            )}
+                            {renderAmountInput('spouse_gross_income', 'Spouse Income (Gross)', {
+                                placeholder: '0.00',
+                            })}
                             {renderSelect(
                                 'spouse_income_type',
                                 'Spouse Income Type',
@@ -689,16 +727,9 @@ const maxHireDate = `${yesterday.getFullYear()}-${String(
                                 incomeTypeOptions,
                                 false,
                             )}
-                            {renderTextInput(
-                                'spouse_net_income',
-                                'Spouse Income (Net)',
-                                {
-                                    type: 'number',
-                                    min: 0,
-                                    step: '0.01',
-                                    placeholder: '0.00',
-                                },
-                            )}
+                            {renderAmountInput('spouse_net_income', 'Spouse Income (Net)', {
+                                placeholder: '0.00',
+                            })}
                             <div className="md:col-span-2 lg:col-span-3 space-y-4">
                                 <Label>Legal Beneficiaries</Label>
                                 {(data.legal_beneficiaries ?? [{ full_name: '', relationship: '' }]).map((beneficiary, index) => (
@@ -790,20 +821,16 @@ const maxHireDate = `${yesterday.getFullYear()}-${String(
                             Double-check all information before submitting. The member profile will be submitted for GM validation, and the welcome email with credentials will be sent upon approval.
                         </p>
 
-                                        <Button
-                                            type="submit"
-                                            disabled={processing}
-                                            className="min-w-[180px] h-10 font-medium bg-emerald-600 hover:bg-emerald-700"
-                                        >
-                                            {processing && <Spinner className="mr-2 h-4 w-4" />}
-                                            Create Member Account
-                                        </Button>
-                                    </div>
-                                </div>
-                            </>
-                        )
-                    }}
-                </Form>
+                        <Button
+                            type="submit"
+                            disabled={processing}
+                            className="h-10 min-w-[180px] bg-emerald-600 font-medium hover:bg-emerald-700"
+                        >
+                            {processing && <Spinner className="mr-2 h-4 w-4" />}
+                            Create Member
+                        </Button>
+                    </div>
+                </form>
             </div>
         </AppLayout>
     );

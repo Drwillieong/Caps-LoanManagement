@@ -359,7 +359,7 @@ export default function Create({ roles }: Props) {
                                             className="min-w-[180px] h-10 font-medium bg-emerald-600 hover:bg-emerald-700"
                                         >
                                             {processing && <Spinner className="mr-2 h-4 w-4" />}
-                                            Create Member
+                                            Create Member Account
                                         </Button>
                                     </div>
                                 </div>

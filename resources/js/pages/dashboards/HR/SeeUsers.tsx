@@ -250,7 +250,7 @@ export default function SeeUsers({ users, filters, roles }: Props) {
                 <Button asChild>
                     <Link href="/dashboards/HR/create">
                         <Plus className="mr-2 h-4 w-4" />
-                        Create Member
+                        Create Member Account
                     </Link>
                 </Button>
             </div>

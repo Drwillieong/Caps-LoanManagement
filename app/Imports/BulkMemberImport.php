@@ -39,6 +39,8 @@ class BulkMemberImport implements ToCollection, WithHeadingRow, SkipsEmptyRows
         'basic_salary',
     ];
 
+    protected int|null $nextEmployeeIdCounter = null;
+
     /**
      * Generate a cryptographically secure temporary password.
      */
@@ -162,6 +164,34 @@ class BulkMemberImport implements ToCollection, WithHeadingRow, SkipsEmptyRows
     }
 
     /**
+     * Resolve or auto-generate a unique employee_id for the incoming row.
+     *
+     * If a value is provided in the spreadsheet it is returned as-is (duplicate
+     * validation is handled separately). If the value is blank the system will
+     * generate the next sequential ID (EMP-XXX) based on the highest existing
+     * value already stored in the database.
+     */
+    protected function resolveEmployeeId(?string $provided): string
+    {
+        if (filled($provided)) {
+            return $provided;
+        }
+
+        if ($this->nextEmployeeIdCounter === null) {
+            $max = MemberProfile::query()
+                ->where('employee_id', 'like', 'EMP-%')
+                ->selectRaw("MAX(SUBSTR(employee_id, INSTR(employee_id, '-') + 1) + 0) as max_num")
+                ->value('max_num');
+
+            $this->nextEmployeeIdCounter = (int) ($max ?: 0);
+        }
+
+        $this->nextEmployeeIdCounter++;
+
+        return 'EMP-'.str_pad((string) $this->nextEmployeeIdCounter, 3, '0', STR_PAD_LEFT);
+    }
+
+    /**
      * Validate a single row.
      *
      * @return string[] Array of error messages
@@ -169,6 +199,8 @@ class BulkMemberImport implements ToCollection, WithHeadingRow, SkipsEmptyRows
     protected function validateRow(array $row, int $rowNumber): array
     {
         $errors = [];
+
+        $row['employee_id'] = $this->resolveEmployeeId($row['employee_id'] ?? null);
 
         // Required field presence check
         foreach (self::REQUIRED_FIELDS as $field) {

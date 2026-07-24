@@ -109,8 +109,8 @@ const memberNavItems: NavItem[] = [
 
 const gmNavItems: NavItem[] = [
     {
-        title: 'Application',
-        icon: ClipboardCheck,
+        title: 'Members',
+        icon: Users,
         items: [
             {
                 title: 'Member Application',
@@ -122,6 +122,14 @@ const gmNavItems: NavItem[] = [
                 href: '/dashboards/Gm/BulkUploadMembers',
                 icon: FileSpreadsheet,
             },
+          
+        ],
+    },
+    {
+        title: 'Application',
+        icon: ClipboardCheck,
+        items: [
+           
             {
                 title: 'Create Application',
                 href: '/dashboards/Gm/CreateApplication',

@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\ActivityLogController as AdminActivityLogControll
 use App\Http\Controllers\CreditComController\CreditComController;
 use App\Http\Controllers\CreditComController\CreditComDashboardController;
 use App\Http\Controllers\DashBoardController;
+use App\Http\Controllers\GmController\BulkMemberUploadController;
 use App\Http\Controllers\GmController\GmController;
 use App\Http\Controllers\GmController\GmDashboardController;
 use App\Http\Controllers\HrController\CreateMemberController;
@@ -252,6 +253,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('dashboards/Gm/Member/{user}/reject', [GmController::class, 'rejectMember'])
         ->middleware('role:gm')
         ->name('gm.member.reject');
+
+    // GM - Bulk Member Upload
+    Route::get('dashboards/Gm/BulkUploadMembers', [BulkMemberUploadController::class, 'index'])
+        ->middleware('role:gm')
+        ->name('gm.bulk-upload-members');
+
+    Route::post('dashboards/Gm/BulkUploadMembers', [BulkMemberUploadController::class, 'store'])
+        ->middleware('role:gm')
+        ->name('gm.bulk-upload-members.store');
+
+    Route::get('dashboards/Gm/BulkUploadMembers/template', [BulkMemberUploadController::class, 'template'])
+        ->middleware('role:gm')
+        ->name('gm.bulk-upload-members.template');
 
     Route::get('dashboards/HR/SecActivityLog', [AdminActivityLogController::class, 'hr'])
         ->middleware('role:hr')

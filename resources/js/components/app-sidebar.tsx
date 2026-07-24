@@ -112,10 +112,15 @@ const gmNavItems: NavItem[] = [
         title: 'Application',
         icon: ClipboardCheck,
         items: [
-              {
+            {
                 title: 'Member Application',
                 href: '/dashboards/Gm/MemberValidate',
                 icon: Users,
+            },
+            {
+                title: 'Bulk Upload Members',
+                href: '/dashboards/Gm/BulkUploadMembers',
+                icon: FileSpreadsheet,
             },
             {
                 title: 'Create Application',

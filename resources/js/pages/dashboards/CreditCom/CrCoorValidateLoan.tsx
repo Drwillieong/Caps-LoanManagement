@@ -21,7 +21,8 @@ import {
     Mail,
     Phone,
     History,
-    Shield
+    Shield,
+    Loader2
 } from 'lucide-react';
 import {
     Dialog,
@@ -44,9 +45,10 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-export default function CrCoorValidateLoan({ pendingLoans }: React.PropsWithChildren<GmValidateLoanProps>): JSX.Element {
+export default function CrCoorValidateLoan({ pendingLoans }: React.PropsWithChildren<GmValidateLoanProps>): React.ReactElement {
     const [selectedLoan, setSelectedLoan] = useState<GmPendingLoan | null>(null);
     const [isRejectDialogOpen, setIsRejectDialogOpen] = useState<boolean>(false);
+    const [processingAction, setProcessingAction] = useState<"approve" | "reject" | null>(null);
 
     const approveForm = useForm({
         remarks: '',
@@ -116,20 +118,27 @@ export default function CrCoorValidateLoan({ pendingLoans }: React.PropsWithChil
     }
 
     function handleApprove(loanId: number) {
+        setProcessingAction("approve");
+
         approveForm.post(`/dashboards/CreditCom/Loan/${loanId}/approve`, {
-onSuccess: () => {
+            onSuccess: () => {
                 toast.success('Loan application approved successfully!');
             },
             onError: (errors: Record<string, string>) => {
                 console.error('Error approving loan:', errors);
                 toast.error('Failed to approve loan. Please try again.');
             },
+            onFinish: () => {
+                setProcessingAction(null);
+            },
         });
     }
 
     function handleReject(loanId: number) {
+        setProcessingAction("reject");
+
         rejectForm.post(`/dashboards/CreditCom/Loan/${loanId}/reject`, {
-onSuccess: () => {
+            onSuccess: () => {
                 toast.success('Loan application rejected.');
                 setIsRejectDialogOpen(false);
                 setSelectedLoan(null);
@@ -138,6 +147,9 @@ onSuccess: () => {
             onError: (errors: Record<string, string>) => {
                 console.error('Error rejecting loan:', errors);
                 toast.error('Failed to reject loan. Please try again.');
+            },
+            onFinish: () => {
+                setProcessingAction(null);
             },
         });
     }
@@ -156,7 +168,7 @@ onSuccess: () => {
                         </p>
                     </div>
                     <Link
-                        href="/dashboards/CreditCom/CreditComDashboard"
+                        href="/dashboard"
                         className="inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm hover:bg-muted transition"
                     >
                         Back 
@@ -354,9 +366,14 @@ onSuccess: () => {
                                             <Button
                                                 onClick={() => handleApprove(loan.id)}
                                                 className="flex-1"
+                                                disabled={processingAction !== null}
                                             >
-                                                <CheckCircle2 className="h-4 w-4 mr-2" />
-                                                Approve Application
+                                                {processingAction === "approve" ? (
+                                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                                ) : (
+                                                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                                                )}
+                                                {processingAction === "approve" ? "Accepting..." : "Approve Application"}
                                             </Button>
                                             
                                             <Dialog open={isRejectDialogOpen && selectedLoan?.id === loan.id} onOpenChange={(open: boolean) => {
@@ -368,12 +385,18 @@ onSuccess: () => {
                                                         variant="outline"
                                                         className="flex-1"
                                                         onClick={() => {
+                                                            if (processingAction) return;
                                                             setSelectedLoan(loan);
                                                             setIsRejectDialogOpen(true);
                                                         }}
+                                                        disabled={processingAction !== null}
                                                     >
-                                                        <XCircle className="h-4 w-4 mr-2" />
-                                                        Reject Application
+                                                        {processingAction === "reject" ? (
+                                                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                                        ) : (
+                                                            <XCircle className="h-4 w-4 mr-2" />
+                                                        )}
+                                                        {processingAction === "reject" ? "Rejecting..." : "Reject Application"}
                                                     </Button>
                                                 </DialogTrigger>
                                                 <DialogContent>
@@ -406,9 +429,16 @@ onSuccess: () => {
                                                         <Button 
                                                             variant="destructive"
                                                             onClick={() => handleReject(loan.id)}
-                                                            disabled={!rejectForm.data.remarks.trim()}
+                                                            disabled={!rejectForm.data.remarks.trim() || processingAction !== null}
                                                         >
-                                                            Confirm Rejection
+                                                            {processingAction === "reject" ? (
+                                                                <>
+                                                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                                                    Rejecting...
+                                                                </>
+                                                            ) : (
+                                                                "Confirm Rejection"
+                                                            )}
                                                         </Button>
                                                     </DialogFooter>
                                                 </DialogContent>

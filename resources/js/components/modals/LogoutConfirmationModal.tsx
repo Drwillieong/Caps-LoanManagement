@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { useMobileNavigation } from '@/hooks/use-mobile-navigation';
-import { LogOut } from 'lucide-react';
+
 
 interface LogoutConfirmationModalProps {
   open: boolean;
@@ -38,7 +38,7 @@ export default function LogoutConfirmationModal({
       <AlertDialogContent className="sm:max-w-md">
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-center gap-2 text-destructive">
-            <LogOut className="h-5 w-5" />
+            
             Confirm Logout
           </AlertDialogTitle>
           <AlertDialogDescription className="text-muted-foreground">

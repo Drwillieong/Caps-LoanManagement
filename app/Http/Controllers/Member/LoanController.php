@@ -34,14 +34,24 @@ class LoanController extends Controller
             'eligibleCoMakers' => [],
             'previousLoans' => [],
             'error' => 'Your profile is not yet completed. Please complete your profile.',
+            'rejectedAt' => null,
             'unread_notifications_count' => $this->getMemberUnreadNotificationCount(request()),
         ]);
         }
 
-// Check if user has ANY pending loan application
+        // Check if user has ANY pending loan application
         $hasPendingLoan = Loan::where('user_id', $user->id)
             ->whereIn('status', ['awaiting_comaker', 'pending_gm_review', 'pending_cc_review'])
             ->exists();
+
+        // Check for recent rejection lockout (3 hours)
+        $recentRejection = Loan::where('user_id', $user->id)
+            ->whereIn('status', ['rejected', 'rejected_by_co_maker', 'rejected_by_gm', 'rejected_by_credit_com'])
+            ->where('rejected_at', '>=', now()->subHours(3))
+            ->orderBy('rejected_at', 'desc')
+            ->first();
+
+        $rejectedAt = $recentRejection?->rejected_at?->format('c');
 
         // Check new eligibility rules using service helpers
         $loanService = new LoanService();
@@ -129,6 +139,7 @@ class LoanController extends Controller
             'hasPendingLoan' => $hasPendingLoan,
             'hasAwaitingComaker' => false, // Legacy - deprecated
             'hasActiveLoan' => $hasActiveLoan,
+            'rejectedAt' => $rejectedAt,
             'unread_notifications_count' => $this->getMemberUnreadNotificationCount(request()),
         ]);
     }
@@ -157,6 +168,20 @@ class LoanController extends Controller
         if ($hasPendingLoan) {
             return back()->withErrors([
                 'principal_amount' => 'You have a pending loan application. Please wait for it to be processed before applying for a new loan.'
+            ]);
+        }
+
+        // Check for 3-hour reapplication lockout after rejection
+        $recentRejection = Loan::where('user_id', $user->id)
+            ->whereIn('status', ['rejected', 'rejected_by_co_maker', 'rejected_by_gm', 'rejected_by_credit_com'])
+            ->where('rejected_at', '>=', now()->subHours(3))
+            ->orderBy('rejected_at', 'desc')
+            ->first();
+
+        if ($recentRejection) {
+            $lockoutEnd = $recentRejection->rejected_at->addHours(3);
+            return back()->withErrors([
+                'principal_amount' => "You cannot submit a new loan application yet. Please wait until {$lockoutEnd->format('h:i A, F j, Y')}."
             ]);
         }
 
@@ -277,7 +302,7 @@ class LoanController extends Controller
             ]);
         }
 
-        // Update loan
+// Update loan
         $loan->update([
             'loan_type_id' => $loanType->id,
             'principal_amount' => $validated['principal_amount'],
@@ -288,6 +313,7 @@ class LoanController extends Controller
             'status' => $loanType->requires_comaker
                 ? 'awaiting_comaker'
                 : 'pending_gm_review',
+            'has_edited' => true,
         ]);
 
         // Update co-maker
@@ -325,17 +351,25 @@ class LoanController extends Controller
     {
         $user = Auth::user();
 
-        // Fetch the most recent pending loan for the user
+        // Fetch the most recent in-progress (pending) loan for the user.
+        // Exclude terminal states (approved/released/paid_off). Rejected loans are
+        // still shown while inside the 3-hour reapplication cool-down so the member
+        // can see the rejection reason and the lockout countdown instead of a stale
+        // "Awaiting Co-Maker" card.
         $loan = Loan::where('user_id', $user->id)
-            ->whereIn('status', [
-                'awaiting_comaker',
-                'pending_gm_review',
+            ->whereNotIn('status', [
                 'approved',
-                'rejected',
-                'rejected_by_gm',
-                'rejected_by_credit_com',
-                'rejected_by_co_maker',
+                'released',
+                'paid_off',
             ])
+            ->where(function ($query) {
+                $query->whereNotIn('status', [
+                    'rejected',
+                    'rejected_by_gm',
+                    'rejected_by_credit_com',
+                    'rejected_by_co_maker',
+                ])->orWhere('rejected_at', '>=', now()->subHours(3));
+            })
             ->with(['loanType', 'coMakers.user'])
             ->orderBy('created_at', 'desc')
             ->first();
@@ -357,7 +391,7 @@ class LoanController extends Controller
                     'status' => $loanItem->status,
                     'remarks' => $loanItem->remarks,
                     'rejected_by' => $loanItem->rejected_by,
-                    'rejected_at' => $loanItem->rejected_at?->format('Y-m-d H:i:s'),
+                    'rejected_at' => $loanItem->rejected_at?->format('c'),
                     'created_at' => $loanItem->created_at->format('Y-m-d H:i:s'),
                     'co_makers' => $loanItem->coMakers->map(function ($coMaker) {
                         return [
@@ -379,7 +413,7 @@ class LoanController extends Controller
         ]);
         }
 
-        return Inertia::render('dashboards/Member/PendingApplication', [
+return Inertia::render('dashboards/Member/PendingApplication', [
             'loan' => [
                 'id' => $loan->id,
                 'loan_type_name' => $loan->loanType->name ?? 'N/A',
@@ -391,8 +425,9 @@ class LoanController extends Controller
                 'status' => $loan->status,
                 'remarks' => $loan->remarks,
                 'rejected_by' => $loan->rejected_by,
-                'rejected_at' => $loan->rejected_at?->format('Y-m-d H:i:s'),
+                'rejected_at' => $loan->rejected_at?->format('c'),
                 'created_at' => $loan->created_at->format('Y-m-d H:i:s'),
+                'has_edited' => $loan->has_edited,
                 'co_makers' => $loan->coMakers->map(function ($coMaker) {
                     return [
                         'id' => $coMaker->user->id,
@@ -594,7 +629,12 @@ class LoanController extends Controller
                 Loan::class
             );
             // If rejected, update loan status
-            $loan->update(['status' => 'rejected_by_co_maker', 'remarks' => 'Co-maker declined the request.']);
+            $loan->update([
+                'status' => 'rejected_by_co_maker',
+                'remarks' => 'Co-maker declined the request.',
+                'rejected_by' => 'co_maker',
+                'rejected_at' => now(),
+            ]);
         }
 
         // Send email notification to the borrower

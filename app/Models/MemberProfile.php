@@ -19,20 +19,36 @@ class MemberProfile extends Model
     protected $fillable = [
         'user_id',
         'employee_id',
+        'payroll_id',
         'first_name',
         'middle_name',
         'last_name',
+        'place_of_birth',
         'date_of_birth',
         'sex',
         'civil_status',
+        'educational_attainment',
         'spouse_name',
         'mobile_number',
+        'permanent_mobile_number',
         'present_address',
+        'present_zip_code',
         'permanent_address',
+        'permanent_zip_code',
         'position',
         'date_hired',
         'basic_salary',
+        'income_type',
+        'net_income',
         'share_capital_balance',
+        'other_source_of_income',
+        'facebook_account_name',
+        'spouse_occupation',
+        'spouse_gross_income',
+        'spouse_income_type',
+        'spouse_net_income',
+        'legal_beneficiary_1_name',
+        'real_properties_owned',
         'bank_account_number',
         'tin_number',
         'profile_picture',
@@ -49,7 +65,10 @@ class MemberProfile extends Model
             'date_of_birth' => 'date',
             'date_hired' => 'date',
             'basic_salary' => 'decimal:2',
+            'net_income' => 'decimal:2',
             'share_capital_balance' => 'decimal:2',
+            'spouse_gross_income' => 'decimal:2',
+            'spouse_net_income' => 'decimal:2',
         ];
     }
 
@@ -67,6 +86,11 @@ class MemberProfile extends Model
     public function beneficiaries(): HasMany
     {
         return $this->hasMany(Beneficiary::class);
+    }
+
+    public function deductionRecords(): HasMany
+    {
+        return $this->hasMany(DeductionRecord::class);
     }
 
     /**

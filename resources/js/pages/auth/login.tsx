@@ -55,7 +55,7 @@ export default function Login({
                     tabIndex={1}
                     autoComplete="email"
                     placeholder="Enter your email"
-                    className="border-green-200 placeholder:text-green-300/70 focus:border-green-500 focus:ring-green-500/20"
+                    className="border-green-200 text-black dark:text-black placeholder:text-green-300/70 focus:border-green-500 focus:ring-green-500/20"
                   />
                   <InputError message={errors.email} />
                 </div>
@@ -88,7 +88,7 @@ export default function Login({
                       tabIndex={2}
                       autoComplete="current-password"
                       placeholder="Enter your password"
-                      className="border-green-200 pr-10 placeholder:text-green-300/70 focus:border-green-500 focus:ring-green-500/20"
+                      className="border-green-200 pr-10 text-black dark:text-black placeholder:text-green-300/70 focus:border-green-500 focus:ring-green-500/20"
                     />
                     <button
                       type="button"

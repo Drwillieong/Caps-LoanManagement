@@ -59,20 +59,36 @@ export interface MemberProfile {
     id?: number;
     user_id: number;
     employee_id: string;
+    payroll_id?: string | null;
     first_name: string;
     middle_name?: string;
     last_name: string;
+    place_of_birth?: string | null;
     date_of_birth: string;
     sex: string;
     civil_status: string;
+    educational_attainment?: string | null;
     spouse_name?: string;
     mobile_number: string;
+    permanent_mobile_number?: string | null;
     present_address: string;
+    present_zip_code?: string | null;
     permanent_address?: string;
+    permanent_zip_code?: string | null;
     position: string;
     date_hired: string;
     basic_salary: number;
+    income_type?: string | null;
+    net_income?: number | null;
     share_capital_balance?: number;
+    other_source_of_income?: string | null;
+    facebook_account_name?: string | null;
+    spouse_occupation?: string | null;
+    spouse_gross_income?: number | null;
+    spouse_income_type?: string | null;
+    spouse_net_income?: number | null;
+    legal_beneficiary_1_name?: string | null;
+    real_properties_owned?: string | null;
     bank_account_number?: string;
     tin_number?: string;
     profile_picture?: string;
@@ -106,6 +122,7 @@ export interface ApplyLoanProps {
     hasPendingLoan?: boolean;
     hasAwaitingComaker?: boolean;
     hasActiveLoan?: boolean;
+    rejectedAt?: string | null;
     editingLoan?: {
         id: number;
         loan_type_id: number;
@@ -125,6 +142,8 @@ export interface PendingApplicationLoan {
     monthly_amortization: number;
     status: string;
     remarks: string | null;
+    rejected_by: string | null;
+    rejected_at: string | null;
     created_at: string;
     co_makers: Array<{
         id: number;
@@ -276,6 +295,17 @@ export interface MemberActiveLoanPayment {
     payment_date: string | null;
     reference_number: string | null;
     paid_by: string;
+    payment_method?: string | null;
+}
+
+export interface MemberActiveLoanTransaction {
+    id: number;
+    date: string | null;
+    type: string;
+    amount: number;
+    remarks: string | null;
+    balance_after: number;
+    processed_by: string;
 }
 
 export interface MemberActiveLoan {
@@ -300,6 +330,7 @@ export interface MemberActiveLoan {
     payment_status: string;
     amortizations: MemberActiveLoanAmortization[];
     payments: MemberActiveLoanPayment[];
+    transactions?: MemberActiveLoanTransaction[];
 }
 
 export interface MemberActiveLoanProps {
@@ -330,6 +361,12 @@ export interface CompletedLoan {
     }>;
 }
 
+export interface ActivityLogActor {
+    id: number;
+    name: string;
+    role: string;
+}
+
 export interface ActivityLog {
     id: number;
     user_id: number;
@@ -340,14 +377,32 @@ export interface ActivityLog {
     ip_address: string | null;
     created_at: string;
     updated_at: string;
-    user: {
-        id: number;
-        name: string;
-    };
+    actor: ActivityLogActor | null;
+    user: ActivityLogActor | null;
     loan: {
         id: number;
         principal_amount: number;
     } | null;
+}
+
+export interface ActivityLogApiResponse {
+    data: ActivityLog[];
+    meta: {
+        current_page: number;
+        last_page: number;
+        per_page: number;
+        total: number;
+        from: number | null;
+        to: number | null;
+    };
+    stats: {
+        total: number;
+        today: number;
+        filtered: number;
+    };
+    filters: {
+        action_types: string[];
+    };
 }
 
 export interface MemberCompletedLoanProps {
@@ -358,4 +413,3 @@ export interface MemberCompletedLoanProps {
     totalInterestPaid: number;
     avgLoanAmount: number;
 }
-

@@ -1,16 +1,19 @@
 <?php
 
+use App\Http\Controllers\Admin\ActivityLogController as AdminActivityLogController;
 use App\Http\Controllers\CreditComController\CreditComController;
 use App\Http\Controllers\CreditComController\CreditComDashboardController;
 use App\Http\Controllers\DashBoardController;
+use App\Http\Controllers\GmController\BulkMemberUploadController;
 use App\Http\Controllers\GmController\GmController;
 use App\Http\Controllers\GmController\GmDashboardController;
-use App\Http\Controllers\HrController\HrDashboardController;
 use App\Http\Controllers\HrController\CreateMemberController;
+use App\Http\Controllers\HrController\HrDashboardController;
 use App\Http\Controllers\HrController\MemberProfileViewController;
 use App\Http\Controllers\Member\LoanController;
 use App\Http\Controllers\Member\MemberController;
 use App\Http\Controllers\Member\MemberProfileController;
+use App\Http\Controllers\Payroll\PayrollDeductionController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
@@ -41,7 +44,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('dashboards/HR/create', [CreateMemberController::class, 'create'])->middleware('role:hr')->name('users.create');
     Route::post('dashboards/HR/SeeUsers', [CreateMemberController::class, 'store'])->middleware('role:hr')->name('users.store');
-
+    Route::patch('dashboards/HR/users/{user}/status', [CreateMemberController::class, 'updateStatus'])->middleware('role:hr')->name('users.status.update');
 
     Route::get('dashboards/HR/HRActiveLoan', [HrDashboardController::class, 'activeLoans'])
         ->middleware('role:hr')
@@ -53,8 +56,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('dashboards/HR/active-loans/{loan}/view', [HrDashboardController::class, 'viewActiveLoan'])
         ->middleware('role:hr')
-        ->name('hr.active-loan.view'); 
+        ->name('hr.active-loan.view');
 
+    Route::get('dashboards/HR/completed-loans/{loan}/view', [HrDashboardController::class, 'viewActiveLoan'])
+        ->middleware('role:hr')
+        ->name('hr.completed-loan.view');
 
     // Member - Loan Routes
     Route::get('dashboards/Member/ApplyLoan', [LoanController::class, 'create'])
@@ -84,10 +90,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboards/HR/EditMember/{userId}', [MemberProfileController::class, 'editMember'])
         ->middleware('role:hr,gm,creditcom')
         ->name('hr.edit-member');
-    
+
     Route::put('dashboards/HR/EditMember/{userId}', [MemberProfileController::class, 'updateMember'])
         ->middleware('role:hr,gm,creditcom')
         ->name('hr.update-member');
+
+    Route::get('dashboards/Member/ShowActiveLoans', [MemberController::class, 'showActiveLoans'])
+        ->middleware(['role:member', 'ensure.profile.completed'])
+        ->name('member.show-active-loans');
 
     Route::get('dashboards/Member/MemberActiveLoan', [MemberController::class, 'activeLoans'])
         ->middleware(['role:member', 'ensure.profile.completed'])
@@ -96,6 +106,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboards/Member/MemberCompletedLoan', [MemberController::class, 'completedLoans'])
         ->middleware(['role:member', 'ensure.profile.completed'])
         ->name('member.completed-loan');
+
+    // Member - Completed loan details (reuse ViewActiveLoan UI)
+    Route::get('dashboards/Member/completed-loans/{loan}/view', [MemberController::class, 'viewActiveLoan'])
+        ->middleware(['role:member', 'ensure.profile.completed'])
+        ->name('member.completed-loan.view');
 
     Route::get('dashboards/Member/CoMaker', [LoanController::class, 'comakerRequests'])
         ->middleware(['role:member', 'ensure.profile.completed'])
@@ -121,21 +136,27 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware('role:member')
         ->name('dashboards.member.notifications.mark-read');
 
-
-
     // GM
     Route::get('dashboards/Gm/ValidateLoan', [GmController::class, 'index'])
         ->middleware('role:gm')
         ->name('gm.validate-loan');
 
     // API Routes (since no api.php)
+    Route::get('/api/salary-deductions/export', [\App\Http\Controllers\Payroll\PayrollDeductionController::class, 'exportSalaryDeductions'])
+        ->middleware(['auth', 'role:gm'])
+        ->name('api.salary-deductions.export');
+
     Route::get('/api/members/search', [MemberController::class, 'search'])
         ->middleware('auth')
         ->name('api.members.search');
-    
+
     Route::get('/api/members/{memberId}/eligible', [MemberController::class, 'checkEligibility'])
         ->middleware('auth')
         ->name('api.members.eligible');
+
+    Route::get('/api/admin/activity-logs', [AdminActivityLogController::class, 'index'])
+        ->middleware('role:gm,hr')
+        ->name('api.admin.activity-logs.index');
 
     Route::post('/api/admin/loan-applications', [GmController::class, 'storeApplicationApi'])
         ->middleware(['auth', 'role:gm'])
@@ -173,13 +194,43 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware('role:gm')
         ->name('gm.active-loan.view');
 
+    // GM - Completed loan details (reuse ViewActiveLoan UI)
+    Route::get('dashboards/Gm/completed-loans/{loan}/view', [GmDashboardController::class, 'viewActiveLoan'])
+        ->middleware('role:gm')
+        ->name('gm.completed-loan.view');
+
     Route::get('dashboards/Gm/ApprovedLoan', [GmDashboardController::class, 'approvedLoans'])
         ->middleware('role:gm')
         ->name('gm.approved-loan');
 
-    Route::get('dashboards/Gm/ActivityLog', \App\Http\Controllers\GmController\ActivityLogController::class)
+    Route::get('dashboards/Gm/ActivityLog', [AdminActivityLogController::class, 'gm'])
         ->middleware('role:gm')
         ->name('gm.activity-log');
+
+    Route::get('dashboards/Gm/UploadSalaryDeduct', [PayrollDeductionController::class, 'index'])
+        ->middleware('role:gm')
+        ->name('gm.payroll-deductions');
+
+    Route::post('dashboards/Gm/UploadSalaryDeduct', [PayrollDeductionController::class, 'store'])
+        ->middleware('role:gm')
+        ->name('gm.payroll-deductions.store');
+
+    Route::post('dashboards/Gm/UploadSalaryDeduct/start-maintenance', [PayrollDeductionController::class, 'startPayrollMaintenance'])
+        ->middleware('role:gm')
+        ->name('gm.payroll-deductions.start-maintenance');
+
+    Route::post('dashboards/Gm/UploadSalaryDeduct/stop-maintenance', [PayrollDeductionController::class, 'stopPayrollMaintenance'])
+        ->middleware('role:gm')
+        ->name('gm.payroll-deductions.stop-maintenance');
+
+    Route::post('dashboards/Gm/UploadSalaryDeduct/manual-payment', [PayrollDeductionController::class, 'manualPayment'])
+
+        ->middleware('role:gm')
+        ->name('gm.payroll-deductions.manual-payment');
+
+    Route::get('dashboards/Gm/UploadSalaryDeduct/template', [PayrollDeductionController::class, 'template'])
+        ->middleware('role:gm')
+        ->name('gm.payroll-deductions.template');
 
     // GM - Create Application (NEW)
     Route::get('dashboards/Gm/CreateApplication', [GmController::class, 'createApplication'])
@@ -189,6 +240,36 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('dashboards/Gm/CreateApplication', [GmController::class, 'storeApplication'])
         ->middleware('role:gm')
         ->name('gm.create-application.store');
+
+    // GM - Member Validation
+    Route::get('dashboards/Gm/MemberValidate', [GmController::class, 'pendingMembers'])
+        ->middleware('role:gm')
+        ->name('gm.pending-members');
+
+    Route::post('dashboards/Gm/Member/{user}/approve', [GmController::class, 'approveMember'])
+        ->middleware('role:gm')
+        ->name('gm.member.approve');
+
+    Route::post('dashboards/Gm/Member/{user}/reject', [GmController::class, 'rejectMember'])
+        ->middleware('role:gm')
+        ->name('gm.member.reject');
+
+    // GM - Bulk Member Upload
+    Route::get('dashboards/Gm/BulkUploadMembers', [BulkMemberUploadController::class, 'index'])
+        ->middleware('role:gm')
+        ->name('gm.bulk-upload-members');
+
+    Route::post('dashboards/Gm/BulkUploadMembers', [BulkMemberUploadController::class, 'store'])
+        ->middleware('role:gm')
+        ->name('gm.bulk-upload-members.store');
+
+    Route::get('dashboards/Gm/BulkUploadMembers/template', [BulkMemberUploadController::class, 'template'])
+        ->middleware('role:gm')
+        ->name('gm.bulk-upload-members.template');
+
+    Route::get('dashboards/HR/SecActivityLog', [AdminActivityLogController::class, 'hr'])
+        ->middleware('role:hr')
+        ->name('hr.activity-log');
 
     // Credit Coordinator
     Route::get('dashboards/CreditCom/ValidateLoan', [CreditComController::class, 'index'])
@@ -223,6 +304,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboards/Gm/Loan/{loan}/viewDecision', [GmDashboardController::class, 'viewDecision'])
         ->middleware('role:gm')
         ->name('gm.loan.viewDecision');
+
+    // GM - Activate loan (approved -> active)
+    Route::post('dashboards/Gm/Loan/{loan}/activate', [GmDashboardController::class, 'activateLoan'])
+        ->middleware('role:gm')
+        ->name('gm.loan.activate');
 
     // CreditCom - View Loan Decision History
     Route::get('dashboards/CreditCom/Loan/{loan}/viewDecision', [CreditComDashboardController::class, 'viewDecision'])

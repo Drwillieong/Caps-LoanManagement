@@ -32,6 +32,7 @@ class Loan extends Model
         'rejected_by',
         'rejected_at',
         'notifications_read_at',
+        'has_edited',
     ];
 
     /**
@@ -127,9 +128,18 @@ class Loan extends Model
             'user.memberProfile',
             'loanType',
             'coMakers.user',
-            'amortizations' => fn($q) => $q->orderBy('due_date'),
-            'payments'
+            'amortizations' => fn ($q) => $q->orderBy('due_date'),
+            'payments',
         ]);
     }
-}
 
+    public function deductionRecords(): HasMany
+    {
+        return $this->hasMany(DeductionRecord::class);
+    }
+
+    public function transactions(): HasMany
+    {
+        return $this->hasMany(LoanTransaction::class);
+    }
+}

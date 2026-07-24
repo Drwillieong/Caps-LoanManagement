@@ -3,17 +3,18 @@
 namespace App\Http\Controllers\Member;
 
 use App\Http\Controllers\Controller;
-use App\Models\Beneficiary;
 use App\Models\MemberProfile;
 use App\Models\User;
+use App\Services\ActivityLogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redirect;
-use Inertia\Inertia;
 use Illuminate\Support\Facades\Storage;
+use Inertia\Inertia;
 
 class MemberProfileController extends Controller
 {
     use \App\Traits\HasNotificationCount;
+
     /**
      * Display the user's profile form.
      */
@@ -21,15 +22,15 @@ class MemberProfileController extends Controller
     {
         $user = $request->user();
         $memberProfile = $user->memberProfile;
-        
+
         // Check if user is an admin (hr, gm, creditcom roles)
         $adminRoles = ['hr', 'gm', 'creditcom'];
         $isAdmin = in_array($user->role, $adminRoles);
-        
+
         return Inertia::render('dashboards/Member/UserProfile', [
             'memberProfile' => $memberProfile,
             'beneficiaries' => $memberProfile?->beneficiaries ?? [],
-            'isNewUser' => !$user->hasCompletedProfile(),
+            'isNewUser' => ! $user->hasCompletedProfile(),
             'isAdmin' => $isAdmin,
             'profileCompleted' => $user->hasCompletedProfile(),
             'unread_notifications_count' => $this->getMemberUnreadNotificationCount($request),
@@ -43,15 +44,15 @@ class MemberProfileController extends Controller
     {
         $targetUser = User::with(['memberProfile', 'memberProfile.beneficiaries'])->findOrFail($userId);
         $memberProfile = $targetUser->memberProfile;
-        
+
         // Check if current user is HR
         $adminRoles = ['hr', 'gm', 'creditcom'];
         $isAdmin = in_array($request->user()->role, $adminRoles);
-        
-        if (!$isAdmin) {
+
+        if (! $isAdmin) {
             abort(403, 'Unauthorized');
         }
-        
+
         return Inertia::render('dashboards/Member/UserProfile', [
             'memberProfile' => $memberProfile,
             'beneficiaries' => $memberProfile?->beneficiaries ?? [],
@@ -59,7 +60,7 @@ class MemberProfileController extends Controller
             'isAdmin' => true,
             'profileCompleted' => $targetUser->hasCompletedProfile(),
             'targetUserId' => $targetUser->id,
-            'targetUserName' => $targetUser->first_name . ' ' . $targetUser->last_name,
+            'targetUserName' => $targetUser->first_name.' '.$targetUser->last_name,
             'unread_notifications_count' => $this->getMemberUnreadNotificationCount($request),
         ]);
     }
@@ -71,7 +72,8 @@ class MemberProfileController extends Controller
     {
         $validated = $request->validate([
             // Identity
-            'employee_id' => 'required|string|max:255|unique:member_profiles,employee_id,' . ($request->user()->memberProfile?->id ?? 'NULL'),
+            'employee_id' => 'required|string|max:255|unique:member_profiles,employee_id,'.($request->user()->memberProfile?->id ?? 'NULL'),
+            'payroll_id' => 'nullable|string|max:255|unique:member_profiles,payroll_id,'.($request->user()->memberProfile?->id ?? 'NULL'),
             'profile_picture' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'first_name' => 'required|string|max:255',
             'middle_name' => 'nullable|string|max:255',
@@ -80,22 +82,22 @@ class MemberProfileController extends Controller
             'sex' => 'required|in:male,female',
             'civil_status' => 'required|in:single,married,widowed,separated',
             'spouse_name' => 'nullable|string|max:255',
-            
+
             // Contact & Address
             'mobile_number' => 'required|string|max:20',
             'present_address' => 'required|string',
             'permanent_address' => 'nullable|string',
-            
+
             // Employment
             'position' => 'required|string|max:255',
             'date_hired' => 'required|date',
-            'basic_salary' => 'required|numeric|min:0',
-            
+            'basic_salary' => 'required|numeric|min:10000',
+
             // Financials
-            'share_capital_balance' => 'nullable|numeric|min:0',
+            'share_capital_balance' => 'nullable|numeric|min:10000',
             'bank_account_number' => 'nullable|string|max:50',
             'tin_number' => 'nullable|string|max:50',
-            
+
             // Beneficiaries - now optional
             'beneficiaries' => 'nullable|array',
             'beneficiaries.*.full_name' => 'nullable|string|max:255',
@@ -108,9 +110,9 @@ class MemberProfileController extends Controller
         if ($request->hasFile('profile_picture')) {
             $memberProfile = MemberProfile::firstOrNew(['user_id' => $user->id]);
             if ($memberProfile->profile_picture) {
-                Storage::disk('public')->delete('profiles/' . $memberProfile->profile_picture);
+                Storage::disk('public')->delete('profiles/'.$memberProfile->profile_picture);
             }
-            $filename = $user->id . '_' . time() . '.' . $request->file('profile_picture')->getClientOriginalExtension();
+            $filename = $user->id.'_'.time().'.'.$request->file('profile_picture')->getClientOriginalExtension();
             $request->file('profile_picture')->storeAs('profiles', $filename, 'public');
             $validated['profile_picture'] = $filename;
         }
@@ -125,12 +127,12 @@ class MemberProfileController extends Controller
         if (isset($validated['beneficiaries']) && is_array($validated['beneficiaries'])) {
             // Delete existing beneficiaries
             $memberProfile->beneficiaries()->delete();
-            
+
             // Filter out empty beneficiaries (no full_name)
-            $validBeneficiaries = array_filter($validated['beneficiaries'], function($beneficiary) {
-                return !empty($beneficiary['full_name']);
+            $validBeneficiaries = array_filter($validated['beneficiaries'], function ($beneficiary) {
+                return ! empty($beneficiary['full_name']);
             });
-            
+
             // Create only valid beneficiaries
             foreach ($validBeneficiaries as $beneficiaryData) {
                 $memberProfile->beneficiaries()->create($beneficiaryData);
@@ -146,18 +148,19 @@ class MemberProfileController extends Controller
     public function updateMember(Request $request, $userId)
     {
         $targetUser = User::with('memberProfile')->findOrFail($userId);
-        
+
         // Check if current user is HR
         $adminRoles = ['hr', 'gm', 'creditcom'];
         $isAdmin = in_array($request->user()->role, $adminRoles);
-        
-        if (!$isAdmin) {
+
+        if (! $isAdmin) {
             abort(403, 'Unauthorized');
         }
 
         $validated = $request->validate([
             // Identity
-            'employee_id' => 'required|string|max:255|unique:member_profiles,employee_id,' . ($targetUser->memberProfile?->id ?? 'NULL') . ',id',
+            'employee_id' => 'required|string|max:255|unique:member_profiles,employee_id,'.($targetUser->memberProfile?->id ?? 'NULL').',id',
+            'payroll_id' => 'nullable|string|max:255|unique:member_profiles,payroll_id,'.($targetUser->memberProfile?->id ?? 'NULL').',id',
             'profile_picture' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'first_name' => 'required|string|max:255',
             'middle_name' => 'nullable|string|max:255',
@@ -166,22 +169,22 @@ class MemberProfileController extends Controller
             'sex' => 'required|in:male,female',
             'civil_status' => 'required|in:single,married,widowed,separated',
             'spouse_name' => 'nullable|string|max:255',
-            
+
             // Contact & Address
             'mobile_number' => 'required|string|max:20',
             'present_address' => 'required|string',
             'permanent_address' => 'nullable|string',
-            
+
             // Employment
             'position' => 'required|string|max:255',
             'date_hired' => 'required|date',
-            'basic_salary' => 'required|numeric|min:0',
-            
+            'basic_salary' => 'required|numeric|min:10000',
+
             // Financials
-            'share_capital_balance' => 'nullable|numeric|min:0',
+            'share_capital_balance' => 'nullable|numeric|min:10000',
             'bank_account_number' => 'nullable|string|max:50',
             'tin_number' => 'nullable|string|max:50',
-            
+
             // Beneficiaries - now optional
             'beneficiaries' => 'nullable|array',
             'beneficiaries.*.full_name' => 'nullable|string|max:255',
@@ -192,9 +195,9 @@ class MemberProfileController extends Controller
         if ($request->hasFile('profile_picture')) {
             $memberProfile = MemberProfile::firstOrNew(['user_id' => $targetUser->id]);
             if ($memberProfile->profile_picture) {
-                Storage::disk('public')->delete('profiles/' . $memberProfile->profile_picture);
+                Storage::disk('public')->delete('profiles/'.$memberProfile->profile_picture);
             }
-            $filename = $targetUser->id . '_' . time() . '.' . $request->file('profile_picture')->getClientOriginalExtension();
+            $filename = $targetUser->id.'_'.time().'.'.$request->file('profile_picture')->getClientOriginalExtension();
             $request->file('profile_picture')->storeAs('profiles', $filename, 'public');
             $validated['profile_picture'] = $filename;
         }
@@ -209,16 +212,24 @@ class MemberProfileController extends Controller
         if (isset($validated['beneficiaries']) && is_array($validated['beneficiaries'])) {
             // Delete existing beneficiaries
             $memberProfile->beneficiaries()->delete();
-            
+
             // Filter out empty beneficiaries (no full_name)
-            $validBeneficiaries = array_filter($validated['beneficiaries'], function($beneficiary) {
-                return !empty($beneficiary['full_name']);
+            $validBeneficiaries = array_filter($validated['beneficiaries'], function ($beneficiary) {
+                return ! empty($beneficiary['full_name']);
             });
-            
+
             // Create only valid beneficiaries
             foreach ($validBeneficiaries as $beneficiaryData) {
                 $memberProfile->beneficiaries()->create($beneficiaryData);
             }
+        }
+
+        if (in_array($request->user()->role, ['gm', 'hr'], true)) {
+            app(ActivityLogService::class)->logActivity(
+                'member_profile_updated',
+                null,
+                'Updated member profile for '.$targetUser->name.' (ID #'.$targetUser->id.').'
+            );
         }
 
         return Redirect::route('users')->with('success', 'Member profile updated successfully!');

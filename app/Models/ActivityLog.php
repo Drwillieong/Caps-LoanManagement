@@ -16,8 +16,11 @@ class ActivityLog extends Model
     ];
 
     protected $casts = [
+        'user_id' => 'integer',
         'loan_id' => 'integer',
-        'reject_reason' => 'string|null',
+        'reject_reason' => 'string',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
     public function user()
@@ -29,5 +32,11 @@ class ActivityLog extends Model
     {
         return $this->belongsTo(Loan::class);
     }
-}
 
+    public function scopeForAdministrativeActors($query, ?array $roles = null)
+    {
+        return $query->whereHas('user', function ($query) use ($roles) {
+            $query->whereIn('role', $roles ?? ['gm', 'hr']);
+        });
+    }
+}

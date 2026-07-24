@@ -4,11 +4,9 @@ namespace App\Http\Controllers\CreditComController;
 
 use App\Http\Controllers\Controller;
 use App\Models\Loan;
-use App\Models\LoanCoMaker;
 use App\Models\LoanAmortization;
 use App\Models\LoanPayment;
-use App\Models\MemberProfile;
-use App\Models\User;
+use App\Models\LoanTransaction;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -24,14 +22,14 @@ class CreditComController extends Controller
             ->with([
                 'user.memberProfile',
                 'loanType',
-                'coMakers.user'
+                'coMakers.user',
             ])
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($loan) {
                 $user = $loan->user;
                 $memberProfile = $user->memberProfile;
-                
+
                 // Get past loans for this member (exclude rejected)
                 $pastLoans = Loan::where('user_id', $user->id)
                     ->where('id', '!=', $loan->id)
@@ -44,9 +42,9 @@ class CreditComController extends Controller
                         // Calculate balance for past loans
                         $totalPaid = LoanPayment::where('loan_id', $pastLoan->id)
                             ->sum('amount');
-                        
+
                         $balance = $pastLoan->total_amount_due - $totalPaid;
-                        
+
                         return [
                             'id' => $pastLoan->id,
                             'loan_type_name' => $pastLoan->loanType->name ?? 'N/A',
@@ -76,18 +74,19 @@ class CreditComController extends Controller
                     'created_at' => $loan->created_at->format('Y-m-d H:i:s'),
                     'member' => [
                         'id' => $user->id,
-                        'name' => trim($user->first_name . ($user->middle_name ? ' ' . $user->middle_name : '') . ' ' . $user->last_name),
+                        'name' => trim($user->first_name.($user->middle_name ? ' '.$user->middle_name : '').' '.$user->last_name),
                         'email' => $user->email,
-                        'member_id' => 'MEM-' . str_pad($user->id, 4, '0', STR_PAD_LEFT),
+                        'member_id' => 'MEM-'.str_pad($user->id, 4, '0', STR_PAD_LEFT),
                         'date_hired' => $memberProfile?->date_hired?->format('Y-m-d'),
                         'basic_salary' => $memberProfile?->basic_salary ?? 0,
                         'share_capital_balance' => $memberProfile?->share_capital_balance ?? 0,
                     ],
                     'co_makers' => $loan->coMakers->map(function ($coMaker) {
                         $coMakerUser = $coMaker->user;
+
                         return [
                             'id' => $coMakerUser->id,
-                            'name' => trim($coMakerUser->first_name . ($coMakerUser->middle_name ? ' ' . $coMakerUser->middle_name : '') . ' ' . $coMakerUser->last_name),
+                            'name' => trim($coMakerUser->first_name.($coMakerUser->middle_name ? ' '.$coMakerUser->middle_name : '').' '.$coMakerUser->last_name),
                             'email' => $coMakerUser->email,
                             'status' => $coMaker->status,
                         ];
@@ -114,7 +113,7 @@ class CreditComController extends Controller
         $loan = Loan::findOrFail($loanId);
 
         // Verify the loan is in pending_cc_review or endorsed_by_gm status
-        if (!in_array($loan->status, ['pending_cc_review', 'endorsed_by_gm'])) {
+        if (! in_array($loan->status, ['pending_cc_review', 'endorsed_by_gm'])) {
             return back()->with('error', 'This loan is not pending Credit Coordinator review.');
         }
 
@@ -124,7 +123,7 @@ class CreditComController extends Controller
         $notificationService->createNotification(
             $borrower,
             'Loan Approved by Credit Coordinator',
-            'Your loan application has been fully approved' . ($validated['remarks'] ? ': ' . $validated['remarks'] : '.'),
+            'Your loan application has been fully approved'.($validated['remarks'] ? ': '.$validated['remarks'] : '.'),
             'loan_status',
             $loan->id,
             Loan::class
@@ -138,6 +137,24 @@ class CreditComController extends Controller
 
         // Generate amortization schedule now that CC has approved
         $this->generateAmortizationSchedule($loan);
+
+        LoanTransaction::firstOrCreate(
+            [
+                'loan_id' => $loan->id,
+                'transaction_type' => 'loan_release',
+            ],
+            [
+                'processed_by' => $request->user()->id,
+                'amount' => $loan->principal_amount,
+                'transaction_date' => now()->toDateString(),
+                'balance_after' => $loan->total_amount_due,
+                'remarks' => $validated['remarks'] ?? 'Loan approved and released for collection scheduling.',
+                'meta' => [
+                    'status' => $loan->status,
+                    'total_amount_due' => $loan->total_amount_due,
+                ],
+            ],
+        );
 
         return redirect()
             ->route('creditcom.validate-loan')
@@ -156,7 +173,7 @@ class CreditComController extends Controller
         $loan = Loan::findOrFail($loanId);
 
         // Verify the loan is in pending_cc_review or endorsed_by_gm status
-        if (!in_array($loan->status, ['pending_cc_review', 'endorsed_by_gm'])) {
+        if (! in_array($loan->status, ['pending_cc_review', 'endorsed_by_gm'])) {
             return back()->with('error', 'This loan is not pending Credit Coordinator review.');
         }
 
@@ -166,7 +183,7 @@ class CreditComController extends Controller
         $notificationService->createNotification(
             $borrower,
             'Loan Rejected by Credit Coordinator',
-            'Your loan application has been rejected by Credit Coordinator: ' . $validated['remarks'],
+            'Your loan application has been rejected by Credit Coordinator: '.$validated['remarks'],
             'loan_status',
             $loan->id,
             Loan::class
@@ -194,13 +211,13 @@ class CreditComController extends Controller
         $monthlyPayment = $loan->monthly_amortization;
         $terms = $loan->terms_months;
         $startDate = now()->addMonth();
-        
+
         // Calculate bi-monthly payment (half of monthly payment)
         $biMonthlyPayment = $monthlyPayment / 2;
-        
+
         // Generate two installments per month (10th and 25th)
         $installmentNumber = 1;
-        
+
         for ($month = 0; $month < $terms; $month++) {
             // First payment: 10th of each month
             $dueDate10 = $startDate->copy()->addMonths($month)->day(10);
@@ -211,7 +228,7 @@ class CreditComController extends Controller
                 'due_date' => $dueDate10,
                 'status' => 'pending',
             ]);
-            
+
             // Second payment: 25th of each month
             $dueDate25 = $startDate->copy()->addMonths($month)->day(25);
             LoanAmortization::create([
@@ -244,7 +261,7 @@ class CreditComController extends Controller
             ->with([
                 'user.memberProfile',
                 'loanType',
-                'coMakers.user'
+                'coMakers.user',
             ])
             ->orderBy('created_at', 'desc')
             ->get()
@@ -264,18 +281,19 @@ class CreditComController extends Controller
                     'created_at' => $loan->created_at->format('Y-m-d H:i:s'),
                     'member' => [
                         'id' => $user->id,
-                        'name' => trim($user->first_name . ($user->middle_name ? ' ' . $user->middle_name : '') . ' ' . $user->last_name),
+                        'name' => trim($user->first_name.($user->middle_name ? ' '.$user->middle_name : '').' '.$user->last_name),
                         'email' => $user->email,
-                        'member_id' => 'MEM-' . str_pad($user->id, 4, '0', STR_PAD_LEFT),
+                        'member_id' => 'MEM-'.str_pad($user->id, 4, '0', STR_PAD_LEFT),
                         'date_hired' => $memberProfile?->date_hired?->format('Y-m-d'),
                         'basic_salary' => $memberProfile?->basic_salary ?? 0,
                         'share_capital_balance' => $memberProfile?->share_capital_balance ?? 0,
                     ],
                     'co_makers' => $loan->coMakers->map(function ($coMaker) {
                         $coMakerUser = $coMaker->user;
+
                         return [
                             'id' => $coMakerUser->id,
-                            'name' => trim($coMakerUser->first_name . ($coMakerUser->middle_name ? ' ' . $coMakerUser->middle_name : '') . ' ' . $coMakerUser->last_name),
+                            'name' => trim($coMakerUser->first_name.($coMakerUser->middle_name ? ' '.$coMakerUser->middle_name : '').' '.$coMakerUser->last_name),
                             'email' => $coMakerUser->email,
                             'status' => $coMaker->status,
                         ];
@@ -298,7 +316,7 @@ class CreditComController extends Controller
             ->with([
                 'user.memberProfile',
                 'loanType',
-                'coMakers.user'
+                'coMakers.user',
             ])
             ->firstOrFail();
 
@@ -349,18 +367,19 @@ class CreditComController extends Controller
             'created_at' => $loan->created_at->format('Y-m-d H:i:s'),
             'member' => [
                 'id' => $user->id,
-                'name' => trim($user->first_name . ($user->middle_name ? ' ' . $user->middle_name : '') . ' ' . $user->last_name),
+                'name' => trim($user->first_name.($user->middle_name ? ' '.$user->middle_name : '').' '.$user->last_name),
                 'email' => $user->email,
-                'member_id' => 'MEM-' . str_pad($user->id, 4, '0', STR_PAD_LEFT),
+                'member_id' => 'MEM-'.str_pad($user->id, 4, '0', STR_PAD_LEFT),
                 'date_hired' => $memberProfile?->date_hired?->format('Y-m-d'),
                 'basic_salary' => $memberProfile?->basic_salary ?? 0,
                 'share_capital_balance' => $memberProfile?->share_capital_balance ?? 0,
             ],
             'co_makers' => $loan->coMakers->map(function ($coMaker) {
                 $coMakerUser = $coMaker->user;
+
                 return [
                     'id' => $coMakerUser->id,
-                    'name' => trim($coMakerUser->first_name . ($coMakerUser->middle_name ? ' ' . $coMakerUser->middle_name : '') . ' ' . $coMakerUser->last_name),
+                    'name' => trim($coMakerUser->first_name.($coMakerUser->middle_name ? ' '.$coMakerUser->middle_name : '').' '.$coMakerUser->last_name),
                     'email' => $coMakerUser->email,
                     'status' => $coMaker->status,
                 ];
@@ -374,4 +393,3 @@ class CreditComController extends Controller
         ]);
     }
 }
-

@@ -37,7 +37,6 @@ interface Beneficiary {
 }
 
 interface MemberProfileData {
-    id?: number;
     user_id: number;
     employee_id: string;
     payroll_id?: string | null;
@@ -92,11 +91,11 @@ interface Props {
     isAdmin: boolean;
     isNewUser: boolean;
     profileCompleted: boolean;
-    targetUserId: number;
+    targetEmployeeId: string;
     targetUserName: string;
 }
 
-export default function MembersProfile({ user, memberProfile, beneficiaries, isAdmin, isNewUser, profileCompleted, targetUserId, targetUserName }: Props) {
+export default function MembersProfile({ user, memberProfile, beneficiaries, isAdmin, isNewUser, profileCompleted, targetEmployeeId, targetUserName }: Props) {
     const isRejected = user.status === 'rejected'
     const [isEditing, setIsEditing] = useState(!isRejected);
     
@@ -325,7 +324,7 @@ export default function MembersProfile({ user, memberProfile, beneficiaries, isA
         doc.save(fileName);
     };
 
-    const formActionUrl = `/dashboards/HR/EditMember/${targetUserId}`;
+    const formActionUrl = `/dashboards/HR/EditMember/${targetEmployeeId}`;
     const formMethod = 'put';
 
     return (

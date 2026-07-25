@@ -39,6 +39,6 @@ class Beneficiary extends Model
      */
     public function memberProfile(): BelongsTo
     {
-        return $this->belongsTo(MemberProfile::class);
+        return $this->belongsTo(MemberProfile::class, 'member_profile_id', 'employee_id');
     }
 }

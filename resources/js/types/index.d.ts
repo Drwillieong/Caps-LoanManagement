@@ -56,7 +56,6 @@ export interface LoanType {
 }
 
 export interface MemberProfile {
-    id?: number;
     user_id: number;
     employee_id: string;
     payroll_id?: string | null;

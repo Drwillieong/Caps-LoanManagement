@@ -76,8 +76,8 @@ export default function SeeUsers({ users, filters }: Props) {
     const [filter, setFilter] = useState(filters.filter || 'all')
     const [status, setStatus] = useState('all')
 
-    // 1. Filter out users who do not have a member profile
-    const membersOnly = users.data.filter((user) => user.member_profile !== null)
+    // 1. Filter out users who do not have a member profile or valid employee_id
+    const membersOnly = users.data.filter((user) => user.member_profile !== null && user.member_profile?.employee_id)
 
     // 2. Filter by account status
     const filteredMembers = membersOnly.filter((user) => {
@@ -146,10 +146,9 @@ export default function SeeUsers({ users, filters }: Props) {
             doc.text(`Total Members: ${allUsers.length}`, 14, 34)
 
             const tableData = allUsers.map((user: User) => [
-                user.id,
+                user.member_profile?.employee_id || 'N/A',
                 getFullName(user),
                 user.email,
-                user.member_profile?.employee_id || 'N/A',
                 user.member_profile?.position || 'N/A',
                 user.member_profile ? formatCurrency(user.member_profile.basic_salary) : 'N/A',
                 user.member_profile ? formatCurrency(user.member_profile.share_capital_balance) : 'N/A',
@@ -159,13 +158,13 @@ export default function SeeUsers({ users, filters }: Props) {
 
             autoTable(doc, {
                 startY: 40,
-                head: [['ID', 'Name', 'Email', 'Employee ID', 'Position', 'Salary', 'Share Capital', 'Role', 'Status']],
+                head: [['Employee ID', 'Name', 'Email', 'Position', 'Salary', 'Share Capital', 'Role', 'Status']],
                 body: tableData,
                 theme: 'striped',
                 headStyles: { fillColor: [59, 130, 246] },
                 styles: { fontSize: 8 },
                 columnStyles: {
-                    0: { cellWidth: 10 },
+                    0: { cellWidth: 20 },
                     1: { cellWidth: 30 },
                     2: { cellWidth: 35 },
                     3: { cellWidth: 20 },
@@ -173,7 +172,6 @@ export default function SeeUsers({ users, filters }: Props) {
                     5: { cellWidth: 20 },
                     6: { cellWidth: 20 },
                     7: { cellWidth: 15 },
-                    8: { cellWidth: 15 },
                 },
             })
 
@@ -187,7 +185,7 @@ export default function SeeUsers({ users, filters }: Props) {
 
                 doc.setFontSize(12)
                 doc.setFont('helvetica', 'bold')
-                doc.text(`#${user.id} - ${getFullName(user)}`, 14, currentY)
+                doc.text(`${user.member_profile?.employee_id || user.id} - ${getFullName(user)}`, 14, currentY)
                 currentY += 7
 
                 doc.setFontSize(10)
@@ -253,7 +251,7 @@ export default function SeeUsers({ users, filters }: Props) {
                         <Button asChild>
                             <Link href="/dashboards/HR/create">
                                 <Plus className="mr-2 h-4 w-4" />
-                                Create Member
+                                Create Member Account
                             </Link>
                         </Button>
                     </div>
@@ -319,16 +317,16 @@ export default function SeeUsers({ users, filters }: Props) {
                             {filteredMembers.length ? (
                                 filteredMembers.map((user) => (
                                     <tr
-                                        key={user.id}
+                                        key={user.member_profile?.employee_id || user.id}
                                         className="border-b transition-colors hover:bg-muted/30"
                                     >
                                         <td className="px-6 py-4 font-medium">
-                                            #{user.id}
+                                            #{user.member_profile?.employee_id}
                                         </td>
 
                                         <td className="px-6 py-4">
                                             <Link 
-                                                href={`/dashboards/HR/MembersProfile/${user.id}`}
+                                                href={`/dashboards/HR/MembersProfile/${user.member_profile?.employee_id}`}
                                                 className="text-primary hover:underline cursor-pointer font-medium"
                                             >
                                                 {getFullName(user)}
@@ -381,7 +379,7 @@ export default function SeeUsers({ users, filters }: Props) {
                                                 </TooltipProvider>
                                             ) : (
                                                 <Button variant="ghost" size="sm" asChild>
-                                                    <Link href={`/dashboards/HR/MembersProfile/${user.id}`}>
+                                                    <Link href={`/dashboards/HR/MembersProfile/${user.member_profile?.employee_id}`}>
                                                         Edit
                                                     </Link>
                                                 </Button>

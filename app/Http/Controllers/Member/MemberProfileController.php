@@ -40,10 +40,10 @@ class MemberProfileController extends Controller
     /**
      * Display a specific member's profile form (for HR).
      */
-    public function editMember(Request $request, $userId)
+    public function editMember(Request $request, $employeeId)
     {
-        $targetUser = User::with(['memberProfile', 'memberProfile.beneficiaries'])->findOrFail($userId);
-        $memberProfile = $targetUser->memberProfile;
+        $memberProfile = MemberProfile::with(['user', 'beneficiaries'])->findOrFail($employeeId);
+        $targetUser = $memberProfile->user;
 
         // Check if current user is HR
         $adminRoles = ['hr', 'gm', 'creditcom'];
@@ -59,7 +59,7 @@ class MemberProfileController extends Controller
             'isNewUser' => false,
             'isAdmin' => true,
             'profileCompleted' => $targetUser->hasCompletedProfile(),
-            'targetUserId' => $targetUser->id,
+            'targetEmployeeId' => $memberProfile->employee_id,
             'targetUserName' => $targetUser->first_name.' '.$targetUser->last_name,
             'unread_notifications_count' => $this->getMemberUnreadNotificationCount($request),
         ]);
@@ -72,8 +72,8 @@ class MemberProfileController extends Controller
     {
         $validated = $request->validate([
             // Identity
-            'employee_id' => 'required|string|max:255|unique:member_profiles,employee_id,'.($request->user()->memberProfile?->id ?? 'NULL'),
-            'payroll_id' => 'nullable|string|max:255|unique:member_profiles,payroll_id,'.($request->user()->memberProfile?->id ?? 'NULL'),
+            'employee_id' => 'required|string|max:255|unique:member_profiles,employee_id,'.($request->user()->memberProfile?->employee_id ?? 'NULL').',employee_id',
+            'payroll_id' => 'nullable|string|max:255|unique:member_profiles,payroll_id,'.($request->user()->memberProfile?->employee_id ?? 'NULL').',employee_id',
             'profile_picture' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'first_name' => 'required|string|max:255',
             'middle_name' => 'nullable|string|max:255',
@@ -145,9 +145,10 @@ class MemberProfileController extends Controller
     /**
      * Update a specific member's profile (for HR).
      */
-    public function updateMember(Request $request, $userId)
+    public function updateMember(Request $request, $employeeId)
     {
-        $targetUser = User::with('memberProfile')->findOrFail($userId);
+        $memberProfile = MemberProfile::with('user')->findOrFail($employeeId);
+        $targetUser = $memberProfile->user;
 
         // Check if current user is HR
         $adminRoles = ['hr', 'gm', 'creditcom'];
@@ -159,8 +160,8 @@ class MemberProfileController extends Controller
 
         $validated = $request->validate([
             // Identity
-            'employee_id' => 'required|string|max:255|unique:member_profiles,employee_id,'.($targetUser->memberProfile?->id ?? 'NULL').',id',
-            'payroll_id' => 'nullable|string|max:255|unique:member_profiles,payroll_id,'.($targetUser->memberProfile?->id ?? 'NULL').',id',
+            'employee_id' => 'required|string|max:255|unique:member_profiles,employee_id,'.$employeeId.',employee_id',
+            'payroll_id' => 'nullable|string|max:255|unique:member_profiles,payroll_id,'.$employeeId.',employee_id',
             'profile_picture' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'first_name' => 'required|string|max:255',
             'middle_name' => 'nullable|string|max:255',
@@ -193,18 +194,18 @@ class MemberProfileController extends Controller
         ]);
 
         if ($request->hasFile('profile_picture')) {
-            $memberProfile = MemberProfile::firstOrNew(['user_id' => $targetUser->id]);
+            $memberProfile = MemberProfile::firstOrNew(['employee_id' => $employeeId]);
             if ($memberProfile->profile_picture) {
                 Storage::disk('public')->delete('profiles/'.$memberProfile->profile_picture);
             }
-            $filename = $targetUser->id.'_'.time().'.'.$request->file('profile_picture')->getClientOriginalExtension();
+            $filename = $employeeId.'_'.time().'.'.$request->file('profile_picture')->getClientOriginalExtension();
             $request->file('profile_picture')->storeAs('profiles', $filename, 'public');
             $validated['profile_picture'] = $filename;
         }
 
         // Update member profile
         $memberProfile = MemberProfile::updateOrCreate(
-            ['user_id' => $targetUser->id],
+            ['employee_id' => $employeeId],
             $validated
         );
 

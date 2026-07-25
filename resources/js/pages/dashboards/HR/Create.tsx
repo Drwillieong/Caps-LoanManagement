@@ -1,8 +1,19 @@
 import { Transition } from '@headlessui/react';
-import { Head, useForm } from '@inertiajs/react';
-import { type FormEvent } from 'react';
-import { toast } from 'react-hot-toast';
-import { z } from 'zod';
+import { Form, Head, Link } from '@inertiajs/react';
+import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
+import { 
+    ArrowLeft,
+    User, 
+    MapPin, 
+    Briefcase, 
+    Heart, 
+    Camera, 
+    Download,
+    Users,
+} from 'lucide-react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 import HeadingSmall from '@/components/heading-small';
 import InputError from '@/components/input-error';
@@ -10,796 +21,1250 @@ import { LiveClock } from '@/components/live-clock';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
-import { Spinner } from '@/components/ui/spinner';
-import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
-import { store } from '@/routes/users';
 import { type BreadcrumbItem } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Members', href: '/dashboards/HR/SeeUsers' },
-    { title: 'Create', href: '/dashboards/HR/create' },
+    { title: 'User Profile', href: '' },
 ];
 
-const MIN_FINANCIAL_AMOUNT = 10000;
-
-const inputClass =
-    'h-10 rounded-lg border-emerald-100 focus:ring-emerald-500/40';
-const selectClass =
-    'h-10 rounded-lg border-emerald-100 focus:ring-emerald-500/40';
-const sectionClass =
-    'rounded-xl border border-emerald-100 bg-white/50 p-6 dark:bg-emerald-950/10';
-
-const requiredText = (label: string, max = 255) =>
-    z
-        .string()
-        .trim()
-        .min(1, `${label} is required.`)
-        .max(max, `${label} must not exceed ${max} characters.`);
-
-const optionalText = (label: string, max = 255) =>
-    z.string().trim().max(max, `${label} must not exceed ${max} characters.`);
-
-const requiredAmount = (label: string, minimum = 0) =>
-    z
-        .string()
-        .trim()
-        .min(1, `${label} is required.`)
-        .refine(
-            (value) => Number.isFinite(Number(value)),
-            `${label} must be a valid amount.`,
-        )
-        .refine(
-            (value) => Number(value) >= minimum,
-            `${label} must be at least ${minimum.toLocaleString()}.`,
-        );
-
-const optionalAmount = (label: string) =>
-    z
-        .string()
-        .trim()
-        .refine(
-            (value) => value === '' || Number.isFinite(Number(value)),
-            `${label} must be a valid amount.`,
-        )
-        .refine(
-            (value) => value === '' || Number(value) >= 0,
-            `${label} must not be negative.`,
-        );
-
-const requiredPastDate = (label: string) =>
-    z
-        .string()
-        .trim()
-        .min(1, `${label} is required.`)
-        .refine((value) => {
-            const date = new Date(`${value}T00:00:00`);
-            const today = new Date();
-
-            today.setHours(0, 0, 0, 0);
-
-            return !Number.isNaN(date.getTime()) && date < today;
-        }, `${label} must be before today.`);
-
-export const createMemberSchema = z.object({
-    first_name: requiredText('First name'),
-    middle_name: optionalText('Middle name'),
-    last_name: requiredText('Family name'),
-    email: z
-        .string()
-        .trim()
-        .min(1, 'Email address is required.')
-        .email('Enter a valid email address.'),
-    role: z.literal('member'),
-    employee_id: requiredText('Member ID'),
-    payroll_id: optionalText('Payroll ID'),
-    place_of_birth: requiredText('Place of birth'),
-    date_of_birth: requiredPastDate('Date of birth'),
-    civil_status: z.enum(['single', 'married', 'widowed']),
-    sex: z.enum(['male', 'female']),
-    educational_attainment: requiredText('Educational attainment'),
-    permanent_address: requiredText('Permanent address', 1000),
-    permanent_zip_code: requiredText('Permanent address zip code', 20),
-    permanent_mobile_number: requiredText('Permanent mobile number', 20),
-    present_address: requiredText('Present address', 1000),
-    present_zip_code: requiredText('Present address zip code', 20),
-    mobile_number: requiredText('Present cellphone number', 20),
-    position: requiredText('Position'),
-    date_hired: z.string().trim().min(1, 'Date hired is required.'),
-    basic_salary: requiredAmount('Income (Gross)', MIN_FINANCIAL_AMOUNT),
-    income_type: z.enum(['monthly', 'daily', 'yearly']),
-    net_income: requiredAmount('Income (Net)'),
-    share_capital_balance: requiredAmount(
-        'Share capital balance',
-        MIN_FINANCIAL_AMOUNT,
-    ),
-    other_source_of_income: optionalText('Other source of income'),
-    facebook_account_name: optionalText('Facebook account name'),
-    spouse_occupation: optionalText('Occupation of spouse'),
-    spouse_gross_income: optionalAmount('Spouse income (gross)'),
-    spouse_income_type: z.enum(['monthly', 'daily', 'yearly']),
-    spouse_net_income: optionalAmount('Spouse income (net)'),
-    legal_beneficiaries: z.array(
-        z.object({
-            full_name: optionalText('Legal beneficiary name', 255),
-            relationship: optionalText('Relationship', 255),
-        }),
-    ),
-    real_properties_owned: optionalText('Real properties owned', 2000),
-});
-
-type CreateMemberForm = z.infer<typeof createMemberSchema>;
-type CreateMemberField = keyof CreateMemberForm;
-
-const initialFormData: CreateMemberForm = {
-    first_name: '',
-    middle_name: '',
-    last_name: '',
-    email: '',
-    role: 'member',
-    employee_id: '',
-    payroll_id: '',
-    place_of_birth: '',
-    date_of_birth: '',
-    civil_status: 'single',
-    sex: 'male',
-    educational_attainment: '',
-    permanent_address: '',
-    permanent_zip_code: '',
-    permanent_mobile_number: '',
-    present_address: '',
-    present_zip_code: '',
-    mobile_number: '',
-    position: '',
-    date_hired: '',
-    basic_salary: '',
-    income_type: 'monthly',
-    net_income: '',
-    share_capital_balance: '',
-    other_source_of_income: '',
-    facebook_account_name: '',
-    spouse_occupation: '',
-    spouse_gross_income: '',
-    spouse_income_type: 'monthly',
-    spouse_net_income: '',
-    legal_beneficiaries: [{ full_name: '', relationship: '' }],
-    real_properties_owned: '',
-};
-
-const civilStatusOptions = [
-    { label: 'Single', value: 'single' },
-    { label: 'Married', value: 'married' },
-    { label: 'Widower/Widow', value: 'widowed' },
-] as const;
-
-const sexOptions = [
-    { label: 'Male', value: 'male' },
-    { label: 'Female', value: 'female' },
-] as const;
-
-const incomeTypeOptions = [
-    { label: 'Monthly', value: 'monthly' },
-    { label: 'Daily', value: 'daily' },
-    { label: 'Yearly', value: 'yearly' },
-] as const;
-
-const educationalAttainmentOptions = [
-    'Elementary',
-    'High School',
-    'Vocational',
-    'College',
-    'Postgraduate',
-    'Other',
-];
-
-function getZodErrors(error: z.ZodError<CreateMemberForm>) {
-    const errors: Partial<Record<CreateMemberField, string>> = {};
-
-    for (const issue of error.issues) {
-        const field = issue.path[0];
-
-        if (typeof field === 'string' && !errors[field as CreateMemberField]) {
-            errors[field as CreateMemberField] = issue.message;
-        }
-    }
-
-    return errors;
+interface Beneficiary {
+    id?: number;
+    full_name: string;
+    relationship: string;
 }
 
-export default function Create() {
-    const form = useForm<CreateMemberForm>(initialFormData);
-    const { data, setData, post, processing, errors, recentlySuccessful } =
-        form;
+interface MemberProfileData {
+    id?: number;
+    user_id: number;
+    employee_id: string;
+    payroll_id?: string | null;
+    first_name: string;
+    middle_name?: string;
+    last_name: string;
+    place_of_birth?: string | null;
+    date_of_birth: string;
+    sex: string;
+    civil_status: string;
+    educational_attainment?: string | null;
+    mobile_number: string;
+    permanent_mobile_number?: string | null;
+    present_address: string;
+    present_zip_code?: string | null;
+    permanent_address?: string;
+    permanent_zip_code?: string | null;
+    position: string;
+    date_hired: string;
+    basic_salary: number;
+    income_type?: string | null;
+    net_income?: number | null;
+    share_capital_balance?: number;
+    other_source_of_income?: string | null;
+    facebook_account_name?: string | null;
+    spouse_occupation?: string | null;
+    spouse_gross_income?: number | null;
+    spouse_income_type?: string | null;
+    spouse_net_income?: number | null;
+    real_properties_owned?: string | null;
+    bank_account_number?: string;
+    tin_number?: string;
+    profile_picture?: string;
+}
 
-    const submit = (event: FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
-        form.clearErrors();
+interface UserData {
+    id: number;
+    name: string;
+    email: string;
+    role: string;
+    is_active: boolean;
+    status: string;
+    rejection_reason: string | null;
+    created_at: string;
+    updated_at: string;
+}
 
-        const result = createMemberSchema.safeParse(data);
+interface Props {
+    user: UserData;
+    memberProfile?: MemberProfileData | null;
+    beneficiaries: Beneficiary[];
+    isAdmin: boolean;
+    isNewUser: boolean;
+    profileCompleted: boolean;
+    targetUserId: number;
+    targetUserName: string;
+}
 
-        if (!result.success) {
-            const clientErrors = getZodErrors(result.error);
+export default function MembersProfile({ user, memberProfile, beneficiaries, isAdmin, isNewUser, profileCompleted, targetUserId, targetUserName }: Props) {
+    const isRejected = user.status === 'rejected'
+    const [isEditing, setIsEditing] = useState(!isRejected);
+    
+    const [previewUrl, setPreviewUrl] = useState('');
+    
+    useEffect(() => {
+      if (memberProfile?.profile_picture) {
+        setPreviewUrl(`/storage/profiles/${memberProfile.profile_picture}`);
+      } else {
+        setPreviewUrl('');
+      }
+    }, [memberProfile]);
 
-            for (const [field, message] of Object.entries(clientErrors)) {
-                form.setError(field as CreateMemberField, message);
-            }
-
-            toast.error('Please review the highlighted fields.');
-
-            return;
-        }
-
-        form.transform(() => result.data);
-
-        post(store.url(), {
-            preserveScroll: true,
-            onError: () => toast.error('Please review the highlighted fields.'),
+    const formatDate = (date?: string) => {
+        if (!date) return '';
+        return new Date(date).toLocaleDateString('en-US', {
+            month: 'short',
+            day: '2-digit',
+            year: 'numeric',
         });
     };
 
+    const formatCurrency = (amount: number) =>
+        new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'PHP',
+        }).format(amount);
+
+    // Initialize form data from existing profile or defaults
+    const [formData, setFormData] = useState({
+        employee_id: memberProfile?.employee_id || '',
+        payroll_id: memberProfile?.payroll_id || '',
+        first_name: memberProfile?.first_name || '',
+        middle_name: memberProfile?.middle_name || '',
+        last_name: memberProfile?.last_name || '',
+        place_of_birth: memberProfile?.place_of_birth || '',
+        date_of_birth: memberProfile?.date_of_birth || '',
+        sex: memberProfile?.sex || '',
+        civil_status: memberProfile?.civil_status || '',
+        educational_attainment: memberProfile?.educational_attainment || '',
+        mobile_number: memberProfile?.mobile_number || '',
+        permanent_mobile_number: memberProfile?.permanent_mobile_number || '',
+        present_zip_code: memberProfile?.present_zip_code || '',
+        present_address: memberProfile?.present_address || '',
+        permanent_address: memberProfile?.permanent_address || '',
+        permanent_zip_code: memberProfile?.permanent_zip_code || '',
+        position: memberProfile?.position || '',
+        date_hired: memberProfile?.date_hired || '',
+        basic_salary: memberProfile?.basic_salary || '',
+        income_type: memberProfile?.income_type || 'monthly',
+        net_income: memberProfile?.net_income || '',
+        share_capital_balance: memberProfile?.share_capital_balance || '',
+        other_source_of_income: memberProfile?.other_source_of_income || '',
+        facebook_account_name: memberProfile?.facebook_account_name || '',
+        spouse_occupation: memberProfile?.spouse_occupation || '',
+        spouse_gross_income: memberProfile?.spouse_gross_income || '',
+        spouse_income_type: memberProfile?.spouse_income_type || 'monthly',
+        spouse_net_income: memberProfile?.spouse_net_income || '',
+        real_properties_owned: memberProfile?.real_properties_owned || '',
+        bank_account_number: memberProfile?.bank_account_number || '',
+        tin_number: memberProfile?.tin_number || '',
+        profile_picture: memberProfile?.profile_picture || '',
+        beneficiaries: beneficiaries.length > 0 ? beneficiaries : [{ full_name: '', relationship: '' }],
+    });
+
     const addBeneficiary = () => {
-        const current = data.legal_beneficiaries ?? [];
-        form.setData('legal_beneficiaries', [
-            ...current,
-            { full_name: '', relationship: '' },
-        ]);
+        setFormData({
+            ...formData,
+            beneficiaries: [...formData.beneficiaries, { full_name: '', relationship: '' }],
+        });
     };
 
     const removeBeneficiary = (index: number) => {
-        const current = data.legal_beneficiaries ?? [];
-        if (current.length <= 1) return;
-        const updated = current.filter((_, i) => i !== index);
-        form.setData('legal_beneficiaries', updated);
+        const updatedBeneficiaries = formData.beneficiaries.filter((_, i) => i !== index);
+        setFormData({
+            ...formData,
+            beneficiaries: updatedBeneficiaries.length > 0 ? updatedBeneficiaries : [{ full_name: '', relationship: '' }],
+        });
     };
 
-    const updateBeneficiary = (
-        index: number,
-        field: 'full_name' | 'relationship',
-        value: string,
-    ) => {
-        const current = [...(data.legal_beneficiaries ?? [])];
-        current[index] = { ...current[index], [field]: value };
-        form.setData('legal_beneficiaries', current);
+    const updateBeneficiary = (index: number, field: keyof Beneficiary, value: string) => {
+        const updatedBeneficiaries = [...formData.beneficiaries];
+        updatedBeneficiaries[index] = { ...updatedBeneficiaries[index], [field]: value };
+        setFormData({
+            ...formData,
+            beneficiaries: updatedBeneficiaries,
+        });
     };
 
-    const renderTextInput = (
-    name: CreateMemberField,
-    label: string,
-    options: {
-        type?: string;
-        required?: boolean;
-        placeholder?: string;
-        min?: number;
-        max?: string | number;
-        step?: string;
-    } = {},
-) => (
-    <div className="space-y-2">
-        <Label htmlFor={name}>
-            {label}
-            {options.required && <span className="text-red-500"> *</span>}
-        </Label>
-        <Input
-            id={name}
-            name={name}
-            type={options.type ?? 'text'}
-            required={options.required}
-            min={options.min}
-            max={options.max}
-            step={options.step}
-            placeholder={options.placeholder}
-            value={String(data[name])}
-            onChange={(event) => setData(name, event.target.value)}
-            className={inputClass}
-        />
-        <InputError message={errors[name]} />
-    </div>
-);
-const yesterday = new Date();
-yesterday.setDate(yesterday.getDate() - 1);
+    // Can edit employment fields (HR can always edit)
+    const canEditEmployment = true;
 
-const maxHireDate = `${yesterday.getFullYear()}-${String(
-    yesterday.getMonth() + 1,
-).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+    const exportPDF = () => {
+        if (!memberProfile) return;
 
+        const doc = new jsPDF();
+        
+        // Title
+        doc.setFontSize(18);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Member Profile Report', 14, 20);
+        
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Generated: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`, 14, 28);
 
-    const renderSelect = <TValue extends string>(
-        name: CreateMemberField,
-        label: string,
-        value: TValue,
-        onValueChange: (value: TValue) => void,
-        options: ReadonlyArray<{ label: string; value: TValue }>,
-        required = true,
-    ) => (
-        <div className="space-y-2">
-            <Label htmlFor={name}>
-                {label}
-                {required && <span className="text-red-500"> *</span>}
-            </Label>
-            <Select value={value} onValueChange={onValueChange}>
-                <SelectTrigger id={name} className={selectClass}>
-                    <SelectValue
-                        placeholder={`Select ${label.toLowerCase()}`}
-                    />
-                </SelectTrigger>
-                <SelectContent>
-                    {options.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                        </SelectItem>
-                    ))}
-                </SelectContent>
-            </Select>
-            <InputError message={errors[name]} />
-        </div>
-    );
+        // User Account Information
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('User Account Information', 14, 40);
+        
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        
+        const userInfo = [
+            ['Email:', user.email],
+            ['Role:', user.role],
+            ['Status:', user.is_active ? 'Active' : 'Inactive'],
+            ['Created At:', formatDate(user.created_at)],
+        ];
+        
+        autoTable(doc, {
+            startY: 45,
+            head: [['Field', 'Value']],
+            body: userInfo,
+            theme: 'striped',
+            headStyles: { fillColor: [59, 130, 246] },
+            margin: { left: 14, right: 100 },
+            tableWidth: 'wrap',
+        });
+
+        // Personal Information
+        const personalInfo = [
+            ['Employee ID:', memberProfile.employee_id],
+            ['First Name:', memberProfile.first_name],
+            ['Middle Name:', memberProfile.middle_name || 'N/A'],
+            ['Last Name:', memberProfile.last_name],
+            ['Date of Birth:', formatDate(memberProfile.date_of_birth)],
+            ['Sex:', memberProfile.sex],
+            ['Civil Status:', memberProfile.civil_status],
+        ];
+        
+        autoTable(doc, {
+            startY: (doc as any).lastAutoTable.finalY + 15,
+            head: [['Field', 'Value']],
+            body: personalInfo,
+            theme: 'striped',
+            headStyles: { fillColor: [59, 130, 246] },
+            margin: { left: 14, right: 100 },
+            tableWidth: 'wrap',
+        });
+
+        // Contact Information
+        const contactInfo = [
+            ['Mobile Number:', memberProfile.mobile_number],
+            ['Present Address:', memberProfile.present_address],
+            ['Permanent Address:', memberProfile.permanent_address || 'N/A'],
+        ];
+        
+        autoTable(doc, {
+            startY: (doc as any).lastAutoTable.finalY + 15,
+            head: [['Field', 'Value']],
+            body: contactInfo,
+            theme: 'striped',
+            headStyles: { fillColor: [59, 130, 246] },
+            margin: { left: 14, right: 100 },
+            tableWidth: 'wrap',
+        });
+
+        // Employment Information
+        const employmentInfo = [
+            ['Position:', memberProfile.position],
+            ['Date Hired:', formatDate(memberProfile.date_hired)],
+            ['Basic Salary:', formatCurrency(memberProfile.basic_salary)],
+        ];
+        
+        autoTable(doc, {
+            startY: (doc as any).lastAutoTable.finalY + 15,
+            head: [['Field', 'Value']],
+            body: employmentInfo,
+            theme: 'striped',
+            headStyles: { fillColor: [59, 130, 246] },
+            margin: { left: 14, right: 100 },
+            tableWidth: 'wrap',
+        });
+
+        // Financial Information
+        const financialInfo = [
+            ['Share Capital Balance:', formatCurrency(memberProfile.share_capital_balance || 0)],
+            ['Bank Account Number:', memberProfile.bank_account_number || 'N/A'],
+            ['TIN Number:', memberProfile.tin_number || 'N/A'],
+        ];
+        
+        autoTable(doc, {
+            startY: (doc as any).lastAutoTable.finalY + 15,
+            head: [['Field', 'Value']],
+            body: financialInfo,
+            theme: 'striped',
+            headStyles: { fillColor: [59, 130, 246] },
+            margin: { left: 14, right: 100 },
+            tableWidth: 'wrap',
+        });
+
+        // Beneficiaries
+        if (formData.beneficiaries && formData.beneficiaries.length > 0) {
+            const validBens = formData.beneficiaries.filter(b => b.full_name);
+            if (validBens.length > 0) {
+                const beneficiaryData = validBens.map(b => [
+                    b.full_name,
+                    b.relationship || 'N/A',
+                ]);
+                
+                autoTable(doc, {
+                    startY: (doc as any).lastAutoTable.finalY + 15,
+                    head: [['Full Name', 'Relationship']],
+                    body: beneficiaryData,
+                    theme: 'striped',
+                    headStyles: { fillColor: [59, 130, 246] },
+                    margin: { left: 14, right: 14 },
+                });
+            }
+        }
+
+        // Save the PDF
+        const fileName = `${memberProfile.last_name}_${memberProfile.first_name}_Profile.pdf`;
+        doc.save(fileName);
+    };
+
+    const formActionUrl = `/dashboards/HR/EditMember/${targetUserId}`;
+    const formMethod = 'put';
 
     return (
         <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
-            <Head title="Create Member" />
+            <Head title={`${memberProfile?.first_name || user.name}'s Profile`} />
 
             <div className="flex flex-1 flex-col gap-6 p-6">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <HeadingSmall
-                        title="Create New Member"
-                        description="Add a new member to your organization"
-                    />
-                    <p className="text-sm text-muted-foreground">
-                        Fields marked * are required
-                    </p>
+                {/* Header Section */}
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <Button variant="outline" size="icon" asChild>
+                            <Link href="/dashboards/HR/SeeUsers">
+                                <ArrowLeft className="h-4 w-4" />
+                            </Link>
+                        </Button>
+                        <div>
+                            <HeadingSmall
+                                title={targetUserName || `${memberProfile?.first_name || ''} ${memberProfile?.last_name || ''}`}
+                                description={
+                                    isEditing
+                                        ? 'Editing member profile details'
+                                        : 'View member profile information'
+                                }
+                            />
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${
+                            user.status === 'active'
+                                ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                                : user.status === 'pending'
+                                ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                                : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                        }`}>
+                            {user.status === 'pending' ? 'Pending' : user.status === 'active' ? 'Active' : 'Rejected'}
+                        </span>
+                        <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary capitalize">
+                            {user.role}
+                        </span>
+                        <Button variant="outline" size="sm" onClick={() => exportPDF()}>
+                            <Download className="mr-2 h-4 w-4" />
+                            Export PDF
+                        </Button>
+                        {!isEditing ? (
+                            <Button onClick={() => setIsEditing(true)} disabled={isRejected}>
+                                Edit Profile
+                            </Button>
+                        ) : (
+                            <Button
+                                variant="outline"
+                                onClick={() => setIsEditing(false)}
+                            >
+                                Cancel
+                            </Button>
+                        )}
+                    </div>
                 </div>
 
-                <form onSubmit={submit} className="space-y-6">
-                    <Transition
-                        show={recentlySuccessful}
-                        enter="transition ease-out duration-300"
-                        enterFrom="opacity-0 translate-y-2"
-                        enterTo="opacity-100 translate-y-0"
-                    >
-                        <div className="flex items-start gap-4 rounded-xl border border-emerald-100 bg-emerald-50 px-6 py-5 shadow-sm">
-                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 text-sm font-bold text-white">
-                                OK
+                {/* Rejection Reason Alert */}
+                {user.status === 'rejected' && user.rejection_reason && (
+                    <Card className="border-l-4 border-l-red-500 bg-red-50">
+                        <CardContent className="flex items-center justify-between py-4">
+                            <div className="flex items-start gap-3">
+                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-red-100 dark:bg-red-900">
+                                    <span className="text-sm font-bold text-red-600 dark:text-red-400">!</span>
+                                </div>
+                                <div>
+                                    <h3 className="font-semibold text-red-800 dark:text-red-300">Membership Rejected</h3>
+                                    <p className="mt-1 text-sm text-red-700 dark:text-red-400">
+                                        <strong>Reason:</strong> {user.rejection_reason}
+                                    </p>
+                                    <p className="mt-1 text-xs text-red-500">
+                                        Please review the rejection reason and contact the General Manager if you need further clarification.
+                                    </p>
+                                </div>
                             </div>
-                            <div>
-                                <p className="font-semibold text-emerald-800">
-                                    Profile Submitted for Validation
-                                </p>
-                                <p className="text-sm text-emerald-700">
-                                    The member profile has been created and is now pending GM approval. The welcome email with credentials will be sent once the General Manager validates and accepts the member.
-                                </p>
+                        </CardContent>
+                    </Card>
+                )}
+
+                {/* Pending Validation Alert */}
+                {user.status === 'pending' && (
+                    <Card className="border-l-4 border-l-yellow-500 bg-yellow-50">
+                        <CardContent className="flex items-center justify-between py-4">
+                            <div className="flex items-start gap-3">
+                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-yellow-100 dark:bg-yellow-900">
+                                    <span className="text-sm font-bold text-yellow-600 dark:text-yellow-400">⏳</span>
+                                </div>
+                                <div>
+                                    <h3 className="font-semibold text-yellow-800 dark:text-yellow-300">Pending GM Validation</h3>
+                                    <p className="mt-1 text-sm text-yellow-700 dark:text-yellow-400">
+                                        This member account is currently awaiting approval from the General Manager. The welcome email with credentials will be sent once the account is approved.
+                                    </p>
+                                </div>
                             </div>
-                        </div>
-                    </Transition>
+                        </CardContent>
+                    </Card>
+                )}
 
-                    <section className={`${sectionClass} space-y-6`}>
-                        <div>
-                            <h3 className="text-base font-semibold tracking-tight text-emerald-900 dark:text-emerald-100">
-                                Account Information
-                            </h3>
-                            <p className="text-sm text-muted-foreground">
-                                The member role is fixed and the temporary
-                                password is generated automatically.
-                            </p>
-                        </div>
-
-                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-                            {renderTextInput(
-                                'last_name',
-                                'Name - Family Name',
-                                {
-                                    required: true,
-                                    placeholder: 'Enter family name',
-                                },
-                            )}
-                            {renderTextInput(
-                                'first_name',
-                                'Name - First Name',
-                                {
-                                    required: true,
-                                    placeholder: 'Enter first name',
-                                },
-                            )}
-                            {renderTextInput(
-                                'middle_name',
-                                'Name - Middle Name',
-                                {
-                                    placeholder: 'Enter middle name',
-                                },
-                            )}
-                            {renderTextInput('email', 'Email Address', {
-                                type: 'email',
-                                required: true,
-                                placeholder: 'member@gmail.com',
-                            })}
-                            {renderTextInput('employee_id', 'Member ID', {
-                                required: true,
-                                placeholder: 'Enter member ID',
-                            })}
-                            {renderTextInput('payroll_id', 'Payroll ID', {
-                                placeholder: 'Optional payroll identifier',
-                            })}
-
-                            <div className="space-y-2">
-                                <Label>
-                                    Role <span className="text-red-500">*</span>
-                                </Label>
-                                <Input
-                                    type="hidden"
-                                    name="role"
-                                    value={data.role}
-                                />
-                                <p className="flex h-10 items-center rounded-lg border border-emerald-100 bg-gray-50 px-3 text-sm font-medium text-muted-foreground">
-                                    MEMBER
-                                </p>
-                                <InputError message={errors.role} />
-                            </div>
-                        </div>
-                    </section>
-
-                    <section className={`${sectionClass} space-y-6`}>
-                        <div>
-                            <h3 className="text-base font-semibold tracking-tight text-emerald-900 dark:text-emerald-100">
-                                Personal Information
-                            </h3>
-                            <p className="text-sm text-muted-foreground">
-                                Identity, birth, education, and family details.
-                            </p>
-                        </div>
-
-                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-                            {renderSelect(
-                                'civil_status',
-                                'Civil Status',
-                                data.civil_status,
-                                (value) => setData('civil_status', value),
-                                civilStatusOptions,
-                            )}
-                            {renderSelect(
-                                'sex',
-                                'Sex',
-                                data.sex,
-                                (value) => setData('sex', value),
-                                sexOptions,
-                            )}
-                            {renderTextInput(
-                                'place_of_birth',
-                                'Place of Birth',
-                                {
-                                    required: true,
-                                    placeholder: 'Enter place of birth',
-                                },
-                            )}
-                            {renderTextInput('date_of_birth', 'Date of Birth', {
-                                type: 'date',
-                                required: true,
-                            })}
-
-                            <div className="space-y-2">
-                                <Label htmlFor="educational_attainment">
-                                    Educational Attainment{' '}
-                                    <span className="text-red-500">*</span>
-                                </Label>
-                                <Select
-                                    value={data.educational_attainment}
-                                    onValueChange={(value) =>
-                                        setData('educational_attainment', value)
-                                    }
-                                >
-                                    <SelectTrigger
-                                        id="educational_attainment"
-                                        className={selectClass}
-                                    >
-                                        <SelectValue placeholder="Select educational attainment" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {educationalAttainmentOptions.map(
-                                            (option) => (
-                                                <SelectItem
-                                                    key={option}
-                                                    value={option}
-                                                >
-                                                    {option}
-                                                </SelectItem>
-                                            ),
-                                        )}
-                                    </SelectContent>
-                                </Select>
-                                <InputError
-                                    message={errors.educational_attainment}
-                                />
-                            </div>
-
-                            {renderTextInput(
-                                'facebook_account_name',
-                                'Facebook Account (Name)',
-                                {
-                                    placeholder: 'Enter Facebook account name',
-                                },
-                            )}
-                        </div>
-                    </section>
-
-                    <section className={`${sectionClass} space-y-6`}>
-                        <div>
-                            <h3 className="text-base font-semibold tracking-tight text-emerald-900 dark:text-emerald-100">
-                                Contact and Address
-                            </h3>
-                            <p className="text-sm text-muted-foreground">
-                                Permanent and present address details.
-                            </p>
-                        </div>
-
-                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-                            {renderTextInput(
-                                'permanent_address',
-                                'Permanent (Provincial) Address',
-                                {
-                                    required: true,
-                                    placeholder: 'Enter permanent address',
-                                },
-                            )}
-                            {renderTextInput(
-                                'permanent_zip_code',
-                                'Permanent Address Zip Code',
-                                {
-                                    required: true,
-                                    placeholder: 'Enter zip code',
-                                },
-                            )}
-                            {renderTextInput(
-                                'permanent_mobile_number',
-                                'Permanent Mobile Number',
-                                {
-                                    type: 'tel',
-                                    required: true,
-                                    placeholder: 'Enter mobile number',
-                                },
-                            )}
-                            {renderTextInput(
-                                'present_address',
-                                'Present Address',
-                                {
-                                    required: true,
-                                    placeholder: 'Enter present address',
-                                },
-                            )}
-                            {renderTextInput(
-                                'present_zip_code',
-                                'Present Address Zip Code',
-                                {
-                                    required: true,
-                                    placeholder: 'Enter zip code',
-                                },
-                            )}
-                            {renderTextInput(
-                                'mobile_number',
-                                'Present Cellphone Number',
-                                {
-                                    type: 'tel',
-                                    required: true,
-                                    placeholder: 'Enter cellphone number',
-                                },
-                            )}
-                        </div>
-                    </section>
-
-                    <section className={`${sectionClass} space-y-6`}>
-                        <div>
-                            <h3 className="text-base font-semibold tracking-tight text-emerald-900 dark:text-emerald-100">
-                                Employment and Income
-                            </h3>
-                            <p className="text-sm text-muted-foreground">
-                                Income values are used for loan eligibility
-                                checks.
-                            </p>
-                        </div>
-
-                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-                            {renderTextInput('position', 'Position', {
-                                required: true,
-                                placeholder: 'Enter position',
-                            })}
-                            {renderTextInput('date_hired', 'Date Hired', {
-    type: 'date',
-    required: true,
-    max: maxHireDate,
-})}
-                            {renderTextInput('basic_salary', 'Income (Gross)', {
-                                type: 'number',
-                                required: true,
-                                min: MIN_FINANCIAL_AMOUNT,
-                                step: '0.01',
-                                placeholder: '10000.00',
-                            })}
-                            {renderSelect(
-                                'income_type',
-                                'Income Type',
-                                data.income_type,
-                                (value) => setData('income_type', value),
-                                incomeTypeOptions,
-                            )}
-                            {renderTextInput('net_income', 'Income (Net)', {
-                                type: 'number',
-                                required: true,
-                                min: 0,
-                                step: '0.01',
-                                placeholder: '0.00',
-                            })}
-                            {renderTextInput(
-                                'share_capital_balance',
-                                'Share Capital Balance',
-                                {
-                                    type: 'number',
-                                    required: true,
-                                    min: MIN_FINANCIAL_AMOUNT,
-                                    step: '0.01',
-                                    placeholder: '10000.00',
-                                },
-                            )}
-                            {renderTextInput(
-                                'other_source_of_income',
-                                'Other Source of Income (Specify)',
-                                {
-                                    placeholder: 'Specify other income source',
-                                },
-                            )}
-                        </div>
-                    </section>
-
-                    <section className={`${sectionClass} space-y-6`}>
-                        <div>
-                            <h3 className="text-base font-semibold tracking-tight text-emerald-900 dark:text-emerald-100">
-                                Spouse, Beneficiary, and Assets
-                            </h3>
-                            <p className="text-sm text-muted-foreground">
-                                Optional household and property information.
-                            </p>
-                        </div>
-
-                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-                            {renderTextInput(
-                                'spouse_occupation',
-                                'Occupation of Spouse',
-                                {
-                                    placeholder: 'Enter spouse occupation',
-                                },
-                            )}
-                            {renderTextInput(
-                                'spouse_gross_income',
-                                'Spouse Income (Gross)',
-                                {
-                                    type: 'number',
-                                    min: 0,
-                                    step: '0.01',
-                                    placeholder: '0.00',
-                                },
-                            )}
-                            {renderSelect(
-                                'spouse_income_type',
-                                'Spouse Income Type',
-                                data.spouse_income_type,
-                                (value) => setData('spouse_income_type', value),
-                                incomeTypeOptions,
-                                false,
-                            )}
-                            {renderTextInput(
-                                'spouse_net_income',
-                                'Spouse Income (Net)',
-                                {
-                                    type: 'number',
-                                    min: 0,
-                                    step: '0.01',
-                                    placeholder: '0.00',
-                                },
-                            )}
-                            <div className="md:col-span-2 lg:col-span-3 space-y-4">
-                                <Label>Legal Beneficiaries</Label>
-                                {(data.legal_beneficiaries ?? [{ full_name: '', relationship: '' }]).map((beneficiary, index) => (
-                                    <div key={index} className="rounded-lg border border-emerald-100 p-4 bg-emerald-50/50">
-                                        <div className="mb-2 flex items-center justify-between">
-                                            <span className="text-sm font-medium text-emerald-800">
-                                                Legal Beneficiary {index + 1}
-                                            </span>
-                                            {(data.legal_beneficiaries?.length ?? 1) > 1 && (
-                                                <Button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => removeBeneficiary(index)}
-                                                    className="text-red-600 hover:text-red-700"
-                                                >
-                                                    Remove
-                                                </Button>
+                <Form
+                    method={formMethod}
+                    action={formActionUrl}
+                    transform={() => formData as any}
+                    className="space-y-6"
+                    onSuccess={() => {
+                        toast.success('Member profile updated successfully!');
+                    }}
+                    onError={() => {
+                        toast.error('Failed to update member profile. Please check the form for errors.');
+                    }}
+                >
+                    {({ processing, recentlySuccessful, errors }) => (
+                        <>
+                            {/* Identity Section */}
+                            <Card className="border-emerald-100">
+                                <CardHeader className="flex flex-row items-center justify-between pb-3">
+                                    <div className="flex items-center gap-2">
+                                        <User className="h-5 w-5 text-emerald-600" />
+                                        <CardTitle className="text-emerald-900 dark:text-emerald-100 text-lg">
+                                            Identity
+                                        </CardTitle>
+                                    </div>
+                                </CardHeader>
+                                <CardContent>
+                                    {/* Profile Picture */}
+                                    <div className="mb-6 p-6 bg-emerald-50 rounded-2xl border-2 border-dashed border-emerald-200">
+                                      <div className="flex flex-col md:flex-row items-center gap-6">
+                                        <div className="flex-shrink-0">
+                                          <div className="relative w-32 h-32 rounded-full overflow-hidden border-4 border-emerald-200 shadow-lg bg-gradient-to-br from-emerald-50 to-emerald-100">
+                                            {previewUrl ? (
+                                              <img 
+                                                src={previewUrl} 
+                                                alt="Profile Picture" 
+                                                className="w-full h-full object-cover"
+                                                onError={(e) => {
+                                                  e.currentTarget.style.display = 'none';
+                                                }}
+                                              />
+                                            ) : (
+                                              <div className="w-full h-full flex items-center justify-center text-emerald-600 font-bold text-xl bg-gradient-to-br from-emerald-400/20 to-emerald-500/20 backdrop-blur-sm">
+                                                {formData.first_name?.charAt(0)?.toUpperCase()}
+                                                {formData.last_name?.charAt(0)?.toUpperCase()}
+                                              </div>
                                             )}
+                                            {isEditing && (
+                                              <label
+                                                htmlFor="profile_picture"
+                                                className="absolute -bottom-2 -right-2 bg-emerald-500 hover:bg-emerald-600 p-3 rounded-full shadow-2xl border-4 border-white cursor-pointer transition-all duration-200"
+                                              >
+                                                <Camera className="h-6 w-6 text-white" />
+                                              </label>
+                                            )}
+                                          </div>
                                         </div>
-                                        <div className="grid gap-4 md:grid-cols-2">
-                                            <div className="space-y-2">
-                                                <Label htmlFor={`legal-beneficiary-${index}-name`}>
-                                                    Full Name
-                                                </Label>
+                                        {isEditing ? (
+                                          <div className="flex flex-col items-center gap-2">
+                                            <input
+                                              id="profile_picture"
+                                              name="profile_picture"
+                                              type="file"
+                                              accept="image/*"
+                                              className="hidden"
+                                              onChange={(e) => {
+                                                const file = e.target.files?.[0];
+                                                if (file) {
+                                                  if (file.size > 2 * 1024 * 1024) {
+                                                    alert('Image size must be less than 2MB.');
+                                                    (e.target as HTMLInputElement).value = '';
+                                                    return;
+                                                  }
+                                                  const reader = new FileReader();
+                                                  reader.onloadend = () => {
+                                                    setPreviewUrl(reader.result as string);
+                                                  };
+                                                  reader.readAsDataURL(file);
+                                                  setFormData({
+                                                    ...formData,
+                                                    profile_picture: file as any,
+                                                  });
+                                                }
+                                              }}
+                                            />
+                                            <label htmlFor="profile_picture" className="px-6 py-2 bg-emerald-500 text-white rounded-xl font-medium hover:bg-emerald-600 transition cursor-pointer shadow-md">
+                                              Change Profile Picture
+                                            </label>
+                                            <p className="text-xs text-muted-foreground text-center mt-1">
+                                              JPG, PNG, GIF • Max 2MB
+                                            </p>
+                                          </div>
+                                        ) : (
+                                          <div className="text-center">
+                                            <p className="text-sm font-medium text-emerald-800">Profile Picture</p>
+                                            <p className="text-xs text-muted-foreground">Click Edit to change</p>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="employee_id">
+                                                Employee ID <span className="text-red-500">*</span>
+                                            </Label>
+                                            <Input
+                                                id="employee_id"
+                                                name="employee_id"
+                                                value={formData.employee_id}
+                                                onChange={(e) => setFormData({ ...formData, employee_id: e.target.value })}
+                                                placeholder="e.g., EMP-001"
+                                                disabled={!isEditing}
+                                            />
+                                            <InputError message={errors.employee_id} />
+                                        </div>
+
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="payroll_id">Payroll ID</Label>
+                                            <Input
+                                                id="payroll_id"
+                                                name="payroll_id"
+                                                value={formData.payroll_id}
+                                                onChange={(e) => setFormData({ ...formData, payroll_id: e.target.value })}
+                                                placeholder="Optional payroll identifier"
+                                                disabled={!isEditing}
+                                            />
+                                            <InputError message={errors.payroll_id} />
+                                        </div>
+
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="first_name">
+                                                First Name <span className="text-red-500">*</span>
+                                            </Label>
+                                            <Input
+                                                id="first_name"
+                                                name="first_name"
+                                                value={formData.first_name}
+                                                onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                                                placeholder="First name"
+                                                disabled={!isEditing}
+                                            />
+                                            <InputError message={errors.first_name} />
+                                        </div>
+
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="middle_name">Middle Name</Label>
+                                            <Input
+                                                id="middle_name"
+                                                name="middle_name"
+                                                value={formData.middle_name}
+                                                onChange={(e) => setFormData({ ...formData, middle_name: e.target.value })}
+                                                placeholder="Middle name"
+                                                disabled={!isEditing}
+                                            />
+                                            <InputError message={errors.middle_name} />
+                                        </div>
+
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="last_name">
+                                                Last Name <span className="text-red-500">*</span>
+                                            </Label>
+                                            <Input
+                                                id="last_name"
+                                                name="last_name"
+                                                value={formData.last_name}
+                                                onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                                                placeholder="Last name"
+                                                disabled={!isEditing}
+                                            />
+                                            <InputError message={errors.last_name} />
+                                        </div>
+
+                                        <div className="grid gap-2">
+                                            <Label>Date of Birth</Label>
+                                            {!isEditing ? (
+                                                <div className="rounded-md border bg-muted px-3 py-2 text-sm">
+                                                    {formatDate(formData.date_of_birth)}
+                                                </div>
+                                            ) : (
                                                 <Input
-                                                    id={`legal-beneficiary-${index}-name`}
-                                                    value={beneficiary.full_name}
-                                                    onChange={(e) => updateBeneficiary(index, 'full_name', e.target.value)}
-                                                    placeholder="Enter beneficiary name"
-                                                    className={inputClass}
+                                                    type="date"
+                                                    name="date_of_birth"
+                                                    value={formData.date_of_birth}
+                                                    onChange={(e) =>
+                                                        setFormData({ ...formData, date_of_birth: e.target.value })
+                                                    }
                                                 />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor={`legal-beneficiary-${index}-relationship`}>
-                                                    Relationship
-                                                </Label>
+                                            )}
+                                            <InputError message={errors.date_of_birth} />
+                                        </div>
+
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="sex">
+                                                Sex <span className="text-red-500">*</span>
+                                            </Label>
+                                            <select
+                                                id="sex"
+                                                name="sex"
+                                                value={formData.sex}
+                                                onChange={(e) => setFormData({ ...formData, sex: e.target.value })}
+                                                disabled={!isEditing}
+                                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                            >
+                                                <option value="">Select sex</option>
+                                                <option value="male">Male</option>
+                                                <option value="female">Female</option>
+                                            </select>
+                                            <InputError message={errors.sex} />
+                                        </div>
+
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="civil_status">
+                                                Civil Status <span className="text-red-500">*</span>
+                                            </Label>
+                                            <select
+                                                id="civil_status"
+                                                name="civil_status"
+                                                value={formData.civil_status}
+                                                onChange={(e) => setFormData({ ...formData, civil_status: e.target.value })}
+                                                disabled={!isEditing}
+                                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                            >
+                                                <option value="">Select civil status</option>
+                                                <option value="single">Single</option>
+                                                <option value="married">Married</option>
+                                                <option value="widowed">Widower/Widow</option>
+                                            </select>
+                                            <InputError message={errors.civil_status} />
+                                        </div>
+
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="place_of_birth">
+                                                Place of Birth <span className="text-red-500">*</span>
+                                            </Label>
+                                            {!isEditing ? (
+                                                <div className="rounded-md border bg-muted px-3 py-2 text-sm">
+                                                    {formData.place_of_birth || 'Not provided'}
+                                                </div>
+                                            ) : (
                                                 <Input
-                                                    id={`legal-beneficiary-${index}-relationship`}
-                                                    value={beneficiary.relationship}
-                                                    onChange={(e) => updateBeneficiary(index, 'relationship', e.target.value)}
-                                                    placeholder="e.g., Wife, Daughter, Parent"
-                                                    className={inputClass}
+                                                    id="place_of_birth"
+                                                    name="place_of_birth"
+                                                    value={formData.place_of_birth}
+                                                    onChange={(e) => setFormData({ ...formData, place_of_birth: e.target.value })}
+                                                    placeholder="Enter place of birth"
+                                                    disabled={!isEditing}
                                                 />
-                                            </div>
+                                            )}
+                                            <InputError message={errors.place_of_birth} />
+                                        </div>
+
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="educational_attainment">
+                                                Educational Attainment <span className="text-red-500">*</span>
+                                            </Label>
+                                            {!isEditing ? (
+                                                <div className="rounded-md border bg-muted px-3 py-2 text-sm">
+                                                    {formData.educational_attainment || 'Not provided'}
+                                                </div>
+                                            ) : (
+                                                <select
+                                                    id="educational_attainment"
+                                                    name="educational_attainment"
+                                                    value={formData.educational_attainment}
+                                                    onChange={(e) => setFormData({ ...formData, educational_attainment: e.target.value })}
+                                                    disabled={!isEditing}
+                                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                                >
+                                                    <option value="">Select educational attainment</option>
+                                                    <option value="Elementary">Elementary</option>
+                                                    <option value="High School">High School</option>
+                                                    <option value="Vocational">Vocational</option>
+                                                    <option value="College">College</option>
+                                                    <option value="Postgraduate">Postgraduate</option>
+                                                    <option value="Other">Other</option>
+                                                </select>
+                                            )}
+                                            <InputError message={errors.educational_attainment} />
+                                        </div>
+
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="facebook_account_name">Facebook Account (Name)</Label>
+                                            {!isEditing ? (
+                                                <div className="rounded-md border bg-muted px-3 py-2 text-sm">
+                                                    {formData.facebook_account_name || 'Not provided'}
+                                                </div>
+                                            ) : (
+                                                <Input
+                                                    id="facebook_account_name"
+                                                    name="facebook_account_name"
+                                                    value={formData.facebook_account_name}
+                                                    onChange={(e) => setFormData({ ...formData, facebook_account_name: e.target.value })}
+                                                    placeholder="Enter Facebook account name"
+                                                    disabled={!isEditing}
+                                                />
+                                            )}
+                                            <InputError message={errors.facebook_account_name} />
                                         </div>
                                     </div>
-                                ))}
-                                {(errors.legal_beneficiaries as string | undefined) && (
-                                    <p className="text-sm text-red-600">{errors.legal_beneficiaries as string}</p>
+                                </CardContent>
+                            </Card>
+
+                            {/* Contact & Address Section */}
+                            <Card className="border-emerald-100">
+                                <CardHeader className="flex flex-row items-center justify-between pb-3">
+                                    <div className="flex items-center gap-2">
+                                        <MapPin className="h-5 w-5 text-emerald-600" />
+                                        <CardTitle className="text-emerald-900 dark:text-emerald-100 text-lg">
+                                            Contact & Address
+                                        </CardTitle>
+                                    </div>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="mobile_number">
+                                                Present Cellphone Number <span className="text-red-500">*</span>
+                                            </Label>
+                                            <Input
+                                                id="mobile_number"
+                                                name="mobile_number"
+                                                type="tel"
+                                                inputMode="numeric"
+                                                pattern="[0-9]{11}"
+                                                maxLength={11}
+                                                minLength={11}
+                                                value={formData.mobile_number}
+                                                onChange={(e) => {
+                                                    const value = e.target.value.replace(/[^0-9]/g, '').slice(0, 11);
+                                                    setFormData({ ...formData, mobile_number: value });
+                                                }}
+                                                placeholder="e.g., 09123456789"
+                                                disabled={!isEditing}
+                                            />
+                                            <InputError message={errors.mobile_number} />
+                                        </div>
+
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="permanent_mobile_number">Permanent Mobile Number</Label>
+                                            {!isEditing ? (
+                                                <div className="rounded-md border bg-muted px-3 py-2 text-sm">
+                                                    {formData.permanent_mobile_number || 'Not provided'}
+                                                </div>
+                                            ) : (
+                                                <Input
+                                                    id="permanent_mobile_number"
+                                                    name="permanent_mobile_number"
+                                                    type="tel"
+                                                    inputMode="numeric"
+                                                    pattern="[0-9]{11}"
+                                                    maxLength={11}
+                                                    value={formData.permanent_mobile_number}
+                                                    onChange={(e) => {
+                                                        const value = e.target.value.replace(/[^0-9]/g, '').slice(0, 11);
+                                                        setFormData({ ...formData, permanent_mobile_number: value });
+                                                    }}
+                                                    placeholder="e.g., 09123456789"
+                                                    disabled={!isEditing}
+                                                />
+                                            )}
+                                            <InputError message={errors.permanent_mobile_number} />
+                                        </div>
+
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="tin_number">TIN Number</Label>
+                                            {!isEditing ? (
+                                                <div className="rounded-md border bg-muted px-3 py-2 text-sm">
+                                                    {formData.tin_number || 'Not provided'}
+                                                </div>
+                                            ) : (
+                                                <Input
+                                                    id="tin_number"
+                                                    name="tin_number"
+                                                    value={formData.tin_number}
+                                                    onChange={(e) => setFormData({ ...formData, tin_number: e.target.value })}
+                                                    placeholder="e.g., 123-456-789"
+                                                    disabled={!isEditing}
+                                                />
+                                            )}
+                                            <InputError message={errors.tin_number} />
+                                        </div>
+
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="present_address">
+                                                Present Address <span className="text-red-500">*</span>
+                                            </Label>
+                                            <textarea
+                                                id="present_address"
+                                                name="present_address"
+                                                value={formData.present_address}
+                                                onChange={(e) => setFormData({ ...formData, present_address: e.target.value })}
+                                                disabled={!isEditing}
+                                                placeholder="Present address"
+                                                rows={3}
+                                                className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                            />
+                                            <InputError message={errors.present_address} />
+                                        </div>
+
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="present_zip_code">Present Address Zip Code</Label>
+                                            {!isEditing ? (
+                                                <div className="rounded-md border bg-muted px-3 py-2 text-sm">
+                                                    {formData.present_zip_code || 'Not provided'}
+                                                </div>
+                                            ) : (
+                                                <Input
+                                                    id="present_zip_code"
+                                                    name="present_zip_code"
+                                                    value={formData.present_zip_code}
+                                                    onChange={(e) => setFormData({ ...formData, present_zip_code: e.target.value })}
+                                                    placeholder="Enter zip code"
+                                                    disabled={!isEditing}
+                                                />
+                                            )}
+                                            <InputError message={errors.present_zip_code} />
+                                        </div>
+
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="permanent_address">Permanent (Provincial) Address</Label>
+                                            <textarea
+                                                id="permanent_address"
+                                                name="permanent_address"
+                                                value={formData.permanent_address}
+                                                onChange={(e) => setFormData({ ...formData, permanent_address: e.target.value })}
+                                                placeholder="Permanent address (optional)"
+                                                rows={3}
+                                                disabled={!isEditing}
+                                                className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                            />
+                                            <InputError message={errors.permanent_address} />
+                                        </div>
+
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="permanent_zip_code">Permanent Address Zip Code</Label>
+                                            {!isEditing ? (
+                                                <div className="rounded-md border bg-muted px-3 py-2 text-sm">
+                                                    {formData.permanent_zip_code || 'Not provided'}
+                                                </div>
+                                            ) : (
+                                                <Input
+                                                    id="permanent_zip_code"
+                                                    name="permanent_zip_code"
+                                                    value={formData.permanent_zip_code}
+                                                    onChange={(e) => setFormData({ ...formData, permanent_zip_code: e.target.value })}
+                                                    placeholder="Enter zip code"
+                                                    disabled={!isEditing}
+                                                />
+                                            )}
+                                            <InputError message={errors.permanent_zip_code} />
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            {/* Employment Section */}
+                            <Card className="border-emerald-100">
+                                <CardHeader className="flex flex-row items-center justify-between pb-3">
+                                    <div className="flex items-center gap-2">
+                                        <Briefcase className="h-5 w-5 text-emerald-600" />
+                                        <CardTitle className="text-emerald-900 dark:text-emerald-100 text-lg">
+                                            Employment Information
+                                        </CardTitle>
+                                    </div>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="position">
+                                                Position <span className="text-red-500">*</span>
+                                            </Label>
+                                            <Input
+                                                id="position"
+                                                name="position"
+                                                value={formData.position}
+                                                onChange={(e) => setFormData({ ...formData, position: e.target.value })}
+                                                placeholder="e.g., Software Engineer"
+                                                disabled={!canEditEmployment}
+                                            />
+                                            <InputError message={errors.position} />
+                                        </div>
+
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="date_hired">
+                                                Date Hired <span className="text-red-500">*</span>
+                                            </Label>
+                                            {!canEditEmployment ? (
+                                                <div className="rounded-md border bg-muted px-3 py-2 text-sm">
+                                                    {formatDate(formData.date_hired)}
+                                                </div>
+                                            ) : (
+                                                <Input
+                                                    id="date_hired"
+                                                    type="date"
+                                                    name="date_hired"
+                                                    value={formData.date_hired}
+                                                    onChange={(e) => setFormData({ ...formData, date_hired: e.target.value })}
+                                                    disabled={!canEditEmployment}
+                                                />
+                                            )}
+                                            <InputError message={errors.date_hired} />
+                                        </div>
+
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="basic_salary">
+                                                Basic Salary <span className="text-red-500">*</span>
+                                            </Label>
+                                            <Input
+                                                id="basic_salary"
+                                                name="basic_salary"
+                                                type="number"
+                                                step="0.01"
+                                                value={formData.basic_salary}
+                                                onChange={(e) => setFormData({ ...formData, basic_salary: e.target.value })}
+                                                placeholder="e.g., 50000.00"
+                                                disabled={!canEditEmployment}
+                                            />
+                                            <InputError message={errors.basic_salary} />
+                                        </div>
+
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="share_capital_balance">Share Capital Balance</Label>
+                                            <Input
+                                                id="share_capital_balance"
+                                                name="share_capital_balance"
+                                                type="number"
+                                                step="0.01"
+                                                value={formData.share_capital_balance}
+                                                onChange={(e) => setFormData({ ...formData, share_capital_balance: e.target.value })}
+                                                placeholder="e.g., 10000.00"
+                                                disabled={!canEditEmployment}
+                                            />
+                                            <InputError message={errors.share_capital_balance} />
+                                        </div>
+
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="income_type">
+                                                Income Type <span className="text-red-500">*</span>
+                                            </Label>
+                                            {!isEditing ? (
+                                                <div className="rounded-md border bg-muted px-3 py-2 text-sm capitalize">
+                                                    {formData.income_type || 'Not provided'}
+                                                </div>
+                                            ) : (
+                                                <select
+                                                    id="income_type"
+                                                    name="income_type"
+                                                    value={formData.income_type}
+                                                    onChange={(e) => setFormData({ ...formData, income_type: e.target.value })}
+                                                    disabled={!canEditEmployment}
+                                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                                >
+                                                    <option value="monthly">Monthly</option>
+                                                    <option value="daily">Daily</option>
+                                                    <option value="yearly">Yearly</option>
+                                                </select>
+                                            )}
+                                            <InputError message={errors.income_type} />
+                                        </div>
+
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="net_income">
+                                                Income (Net) <span className="text-red-500">*</span>
+                                            </Label>
+                                            {!isEditing ? (
+                                                <div className="rounded-md border bg-muted px-3 py-2 text-sm">
+                                                    {formData.net_income ? parseFloat(String(formData.net_income)).toLocaleString('en-US', { style: 'currency', currency: 'PHP' }) : 'Not provided'}
+                                                </div>
+                                            ) : (
+                                                <Input
+                                                    id="net_income"
+                                                    name="net_income"
+                                                    type="number"
+                                                    step="0.01"
+                                                    min="0"
+                                                    value={formData.net_income}
+                                                    onChange={(e) => setFormData({ ...formData, net_income: e.target.value })}
+                                                    placeholder="0.00"
+                                                    disabled={!canEditEmployment}
+                                                />
+                                            )}
+                                            <InputError message={errors.net_income} />
+                                        </div>
+
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="bank_account_number">Bank Account Number (RCBC)</Label>
+                                            {!isEditing ? (
+                                                <div className="rounded-md border bg-muted px-3 py-2 text-sm">
+                                                    {formData.bank_account_number || 'Not provided'}
+                                                </div>
+                                            ) : (
+                                                <Input
+                                                    id="bank_account_number"
+                                                    name="bank_account_number"
+                                                    value={formData.bank_account_number}
+                                                    onChange={(e) => setFormData({ ...formData, bank_account_number: e.target.value })}
+                                                    placeholder="e.g., 1234567890"
+                                                    disabled={!canEditEmployment}
+                                                />
+                                            )}
+                                            <InputError message={errors.bank_account_number} />
+                                        </div>
+
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="other_source_of_income">Other Source of Income (Specify)</Label>
+                                            {!isEditing ? (
+                                                <div className="rounded-md border bg-muted px-3 py-2 text-sm">
+                                                    {formData.other_source_of_income || 'Not provided'}
+                                                </div>
+                                            ) : (
+                                                <Input
+                                                    id="other_source_of_income"
+                                                    name="other_source_of_income"
+                                                    value={formData.other_source_of_income}
+                                                    onChange={(e) => setFormData({ ...formData, other_source_of_income: e.target.value })}
+                                                    placeholder="Specify other income source"
+                                                    disabled={!canEditEmployment}
+                                                />
+                                            )}
+                                            <InputError message={errors.other_source_of_income} />
+                                        </div>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground p-2">
+                                        Note: If you want to add your share capital balance, you should go to the main office.
+                                    </p>
+                                </CardContent>
+                            </Card>
+
+                            {/* Spouse, Beneficiary, and Assets Section */}
+                            <Card className="border-emerald-100">
+                                <CardHeader className="flex flex-row items-center justify-between pb-3">
+                                    <div className="flex items-center gap-2">
+                                        <Heart className="h-5 w-5 text-emerald-600" />
+                                        <CardTitle className="text-emerald-900 dark:text-emerald-100 text-lg">
+                                            Spouse, Beneficiary, and Assets
+                                        </CardTitle>
+                                    </div>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="spouse_occupation">Occupation of Spouse</Label>
+                                            {!isEditing ? (
+                                                <div className="rounded-md border bg-muted px-3 py-2 text-sm">
+                                                    {formData.spouse_occupation || 'Not provided'}
+                                                </div>
+                                            ) : (
+                                                <Input
+                                                    id="spouse_occupation"
+                                                    name="spouse_occupation"
+                                                    value={formData.spouse_occupation}
+                                                    onChange={(e) => setFormData({ ...formData, spouse_occupation: e.target.value })}
+                                                    placeholder="Enter spouse occupation"
+                                                    disabled={!isEditing}
+                                                />
+                                            )}
+                                            <InputError message={errors.spouse_occupation} />
+                                        </div>
+
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="spouse_gross_income">Spouse Income (Gross)</Label>
+                                            {!isEditing ? (
+                                                <div className="rounded-md border bg-muted px-3 py-2 text-sm">
+                                                    {formData.spouse_gross_income ? parseFloat(String(formData.spouse_gross_income)).toLocaleString('en-US', { style: 'currency', currency: 'PHP' }) : 'Not provided'}
+                                                </div>
+                                            ) : (
+                                                <Input
+                                                    id="spouse_gross_income"
+                                                    name="spouse_gross_income"
+                                                    type="number"
+                                                    step="0.01"
+                                                    min="0"
+                                                    value={formData.spouse_gross_income}
+                                                    onChange={(e) => setFormData({ ...formData, spouse_gross_income: e.target.value })}
+                                                    placeholder="0.00"
+                                                    disabled={!isEditing}
+                                                />
+                                            )}
+                                            <InputError message={errors.spouse_gross_income} />
+                                        </div>
+
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="spouse_income_type">Spouse Income Type</Label>
+                                            {!isEditing ? (
+                                                <div className="rounded-md border bg-muted px-3 py-2 text-sm capitalize">
+                                                    {formData.spouse_income_type || 'Not provided'}
+                                                </div>
+                                            ) : (
+                                                <select
+                                                    id="spouse_income_type"
+                                                    name="spouse_income_type"
+                                                    value={formData.spouse_income_type}
+                                                    onChange={(e) => setFormData({ ...formData, spouse_income_type: e.target.value })}
+                                                    disabled={!isEditing}
+                                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                                >
+                                                    <option value="monthly">Monthly</option>
+                                                    <option value="daily">Daily</option>
+                                                    <option value="yearly">Yearly</option>
+                                                </select>
+                                            )}
+                                            <InputError message={errors.spouse_income_type} />
+                                        </div>
+
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="spouse_net_income">Spouse Income (Net)</Label>
+                                            {!isEditing ? (
+                                                <div className="rounded-md border bg-muted px-3 py-2 text-sm">
+                                                    {formData.spouse_net_income ? parseFloat(String(formData.spouse_net_income)).toLocaleString('en-US', { style: 'currency', currency: 'PHP' }) : 'Not provided'}
+                                                </div>
+                                            ) : (
+                                                <Input
+                                                    id="spouse_net_income"
+                                                    name="spouse_net_income"
+                                                    type="number"
+                                                    step="0.01"
+                                                    min="0"
+                                                    value={formData.spouse_net_income}
+                                                    onChange={(e) => setFormData({ ...formData, spouse_net_income: e.target.value })}
+                                                    placeholder="0.00"
+                                                    disabled={!isEditing}
+                                                />
+                                            )}
+                                            <InputError message={errors.spouse_net_income} />
+                                        </div>
+
+                                        <div className="grid gap-2 md:col-span-2 lg:col-span-3">
+                                            <Label htmlFor="real_properties_owned">Real Properties Owned (Specify)</Label>
+                                            {!isEditing ? (
+                                                <div className="rounded-md border bg-muted px-3 py-2 text-sm min-h-20">
+                                                    {formData.real_properties_owned || 'Not provided'}
+                                                </div>
+                                            ) : (
+                                                <textarea
+                                                    id="real_properties_owned"
+                                                    name="real_properties_owned"
+                                                    value={formData.real_properties_owned}
+                                                    onChange={(e) => setFormData({ ...formData, real_properties_owned: e.target.value })}
+                                                    placeholder="Specify real properties owned"
+                                                    rows={3}
+                                                    disabled={!isEditing}
+                                                    className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                                />
+                                            )}
+                                            <InputError message={errors.real_properties_owned} />
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            {/* Beneficiaries Section */}
+                            <Card className="border-emerald-100">
+                                <CardHeader className="flex flex-row items-center justify-between pb-3">
+                                    <div className="flex items-center gap-2">
+                                        <Users className="h-5 w-5 text-emerald-600" />
+                                        <CardTitle className="text-emerald-900 dark:text-emerald-100 text-lg">
+                                            Beneficiaries
+                                        </CardTitle>
+                                    </div>
+                                    {isEditing && (
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={addBeneficiary}
+                                        >
+                                            Add Beneficiary
+                                        </Button>
+                                    )}
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="space-y-4">
+                                        {formData.beneficiaries.map((beneficiary, index) => (
+                                            <div key={index} className="rounded-lg border border-emerald-100 p-4 bg-emerald-50/50">
+                                                <div className="mb-2 flex items-center justify-between">
+                                                    <span className="text-sm font-medium text-emerald-800">Beneficiary {index + 1}</span>
+                                                    {formData.beneficiaries.length > 1 && (
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => removeBeneficiary(index)}
+                                                            className="text-red-600 hover:text-red-700"
+                                                        >
+                                                            Remove
+                                                        </Button>
+                                                    )}
+                                                </div>
+                                                <div className="grid gap-4 md:grid-cols-3">
+                                                    <div className="grid gap-2">
+                                                        <Label htmlFor={`beneficiaries[${index}][full_name]`}>
+                                                            Full Name
+                                                        </Label>
+                                                        <Input
+                                                            id={`beneficiaries[${index}][full_name]`}
+                                                            name={`beneficiaries[${index}][full_name]`}
+                                                            value={beneficiary.full_name}
+                                                            onChange={(e) => updateBeneficiary(index, 'full_name', e.target.value)}
+                                                            placeholder="Full name"
+                                                            disabled={!isEditing}
+                                                        />
+                                                    </div>
+                                                    <div className="grid gap-2">
+                                                        <Label htmlFor={`beneficiaries[${index}][relationship]`}>
+                                                            Relationship
+                                                        </Label>
+                                                        <Input
+                                                            id={`beneficiaries[${index}][relationship]`}
+                                                            name={`beneficiaries[${index}][relationship]`}
+                                                            value={beneficiary.relationship}
+                                                            onChange={(e) => updateBeneficiary(index, 'relationship', e.target.value)}
+                                                            placeholder="e.g., Wife, Daughter"
+                                                            disabled={!isEditing}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            {/* Submit Button */}
+                            <div className="flex items-center gap-4 pb-8">
+                                {isEditing && (
+                                    <div className="flex items-center gap-4">
+                                        <Button disabled={processing} type="submit">
+                                            Save Changes
+                                        </Button>
+
+                                        <Transition show={recentlySuccessful}>
+                                            <p className="text-sm text-green-600">
+                                                Saved successfully!
+                                            </p>
+                                        </Transition>
+                                    </div>
                                 )}
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={addBeneficiary}
-                                    className="mt-1"
-                                >
-                                    Add Beneficiary
-                                </Button>
                             </div>
-
-                            <div className="space-y-2 md:col-span-2 lg:col-span-3">
-                                <Label htmlFor="real_properties_owned">
-                                    Real Properties Owned (Specify)
-                                </Label>
-                                <Textarea
-                                    id="real_properties_owned"
-                                    name="real_properties_owned"
-                                    value={data.real_properties_owned}
-                                    onChange={(event) =>
-                                        setData(
-                                            'real_properties_owned',
-                                            event.target.value,
-                                        )
-                                    }
-                                    placeholder="Specify real properties owned"
-                                    className="min-h-28 rounded-lg border-emerald-100 focus-visible:ring-emerald-500/40"
-                                />
-                                <InputError
-                                    message={errors.real_properties_owned}
-                                />
-                            </div>
-                        </div>
-                    </section>
-
-                    <div className="flex flex-col gap-4 border-t border-emerald-100 pt-6 sm:flex-row sm:items-center sm:justify-between">
-                        <p className="text-sm text-muted-foreground">
-                            Double-check all information before submitting. The member profile will be submitted for GM validation, and the welcome email with credentials will be sent upon approval.
-                        </p>
-
-                        <Button
-                            type="submit"
-                            disabled={processing}
-                            className="h-10 min-w-[180px] bg-emerald-600 font-medium hover:bg-emerald-700"
-                        >
-                            {processing && <Spinner className="mr-2 h-4 w-4" />}
-                            Create Member
-                        </Button>
-                    </div>
-                </form>
+                        </>
+                    )}
+                </Form>
             </div>
         </AppLayout>
     );

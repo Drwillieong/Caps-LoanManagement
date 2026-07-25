@@ -52,7 +52,7 @@ class PayrollUploadRow extends Model
 
     public function memberProfile(): BelongsTo
     {
-        return $this->belongsTo(MemberProfile::class, 'matched_member_profile_id');
+        return $this->belongsTo(MemberProfile::class, 'matched_member_profile_id', 'employee_id');
     }
 
     public function user(): BelongsTo

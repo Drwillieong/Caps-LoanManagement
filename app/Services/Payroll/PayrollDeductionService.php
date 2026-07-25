@@ -285,7 +285,7 @@ class PayrollDeductionService
 
                 $uploadRow->update([
                     'matched_user_id' => $memberProfile->user_id,
-                    'matched_member_profile_id' => $memberProfile->id,
+                    'matched_member_profile_id' => $memberProfile->employee_id,
                 ]);
 
                 try {
@@ -297,7 +297,7 @@ class PayrollDeductionService
                         [
                             'payroll_upload_id' => $upload->id,
                             'payroll_upload_row_id' => $uploadRow->id,
-                            'member_profile_id' => $memberProfile->id,
+                            'member_profile_id' => $memberProfile->employee_id,
                             'cutoff_date' => $cutoffDate,
                             'reference_number' => 'PAYROLL-'.$upload->id.'-'.$rowNumber,
                             'remarks' => $payload['remarks'] ?? 'Payroll deduction upload.',

@@ -40,7 +40,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // HR
     Route::get('dashboards/HR/SeeUsers', [CreateMemberController::class, 'index'])->middleware('role:hr')->name('users');
 
-    Route::get('dashboards/HR/MembersProfile/{userId}', [MemberProfileViewController::class, 'show'])->middleware('role:hr')->name('users.profile');
+    Route::get('dashboards/HR/MembersProfile/{employeeId}', [MemberProfileViewController::class, 'show'])->middleware('role:hr')->name('users.profile');
 
     Route::get('dashboards/HR/create', [CreateMemberController::class, 'create'])->middleware('role:hr')->name('users.create');
     Route::post('dashboards/HR/SeeUsers', [CreateMemberController::class, 'store'])->middleware('role:hr')->name('users.store');
@@ -87,11 +87,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('dashboards/Member/UserProfile', [MemberProfileController::class, 'store'])->middleware('role:member')->name('member.user-profile.store');
 
     // HR - Edit Member Profile
-    Route::get('dashboards/HR/EditMember/{userId}', [MemberProfileController::class, 'editMember'])
+    Route::get('dashboards/HR/EditMember/{employeeId}', [MemberProfileController::class, 'editMember'])
         ->middleware('role:hr,gm,creditcom')
         ->name('hr.edit-member');
 
-    Route::put('dashboards/HR/EditMember/{userId}', [MemberProfileController::class, 'updateMember'])
+    Route::put('dashboards/HR/EditMember/{employeeId}', [MemberProfileController::class, 'updateMember'])
         ->middleware('role:hr,gm,creditcom')
         ->name('hr.update-member');
 

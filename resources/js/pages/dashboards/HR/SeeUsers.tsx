@@ -6,6 +6,14 @@ import autoTable from 'jspdf-autotable'
 
 import AppLayout from '@/layouts/app-layout'
 import { Button } from '@/components/ui/button'
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { LiveClock } from '@/components/live-clock'
 import { type BreadcrumbItem } from '@/types'
 
@@ -45,7 +53,6 @@ interface User {
 interface Filters {
     search: string | null
     filter: string
-    role: string
 }
 
 interface Props {
@@ -58,37 +65,33 @@ interface Props {
         links: any[]
     }
     filters: Filters
-    roles: string[]
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Members', href: '/dashboards/HR/SeeUsers' },
 ]
 
-export default function SeeUsers({ users, filters, roles }: Props) {
+export default function SeeUsers({ users, filters }: Props) {
     const [search, setSearch] = useState(filters.search || '')
     const [filter, setFilter] = useState(filters.filter || 'all')
-    const [role, setRole] = useState(filters.role || 'all')
+    const [status, setStatus] = useState('all')
 
     // 1. Filter out users who do not have a member profile
     const membersOnly = users.data.filter((user) => user.member_profile !== null)
 
-    // 2. Extract only the roles that belong to users with active member profiles
-    const activeMemberRoles = Array.from(
-        new Set(
-            users.data
-                .filter((user) => user.member_profile !== null)
-                .map((user) => user.role)
-        )
-    )
+    // 2. Filter by account status
+    const filteredMembers = membersOnly.filter((user) => {
+        if (status === 'all') return true
+        return user.status === status
+    })
 
     useEffect(() => {
         const timeout = setTimeout(() => {
-            router.reload({ data: { search, filter, role } })
+            router.reload({ data: { search, filter } })
         }, 300)
 
         return () => clearTimeout(timeout)
-    }, [search, filter, role])
+    }, [search, filter])
 
     const formatDate = (date: string) =>
         new Date(date).toLocaleDateString('en-US', {
@@ -238,7 +241,7 @@ export default function SeeUsers({ users, filters, roles }: Props) {
                             Members
                         </h1>
                         <p className="text-sm text-muted-foreground">
-                            Manage your team members ({membersOnly.length})
+                            Manage your team members ({filteredMembers.length})
                         </p>
                     </div>
 
@@ -282,19 +285,18 @@ export default function SeeUsers({ users, filters, roles }: Props) {
                             <option value="old">Old</option>
                         </select>
 
-                        {/* Role Dropdown - dynamically filtered to only show roles belonging to active members */}
-                        <select
-                            value={role}
-                            onChange={(e) => setRole(e.target.value)}
-                            className="rounded-lg border px-3 py-2 text-sm bg-background"
-                        >
-                            <option value="all">All Roles</option>
-                            {activeMemberRoles.map((r) => (
-                                <option key={r} value={r}>
-                                    {r.toUpperCase()}
-                                </option>
-                            ))}
-                        </select>
+                        {/* Status Filter */}
+                        <Select value={status} onValueChange={setStatus}>
+                            <SelectTrigger className="w-[180px]">
+                                <SelectValue placeholder="All Statuses" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Statuses</SelectItem>
+                                <SelectItem value="active">Active</SelectItem>
+                                <SelectItem value="pending">Pending</SelectItem>
+                                <SelectItem value="rejected">Rejected</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
                 </div>
 
@@ -314,8 +316,8 @@ export default function SeeUsers({ users, filters, roles }: Props) {
                         </thead>
 
                         <tbody>
-                            {membersOnly.length ? (
-                                membersOnly.map((user) => (
+                            {filteredMembers.length ? (
+                                filteredMembers.map((user) => (
                                     <tr
                                         key={user.id}
                                         className="border-b transition-colors hover:bg-muted/30"
@@ -362,11 +364,28 @@ export default function SeeUsers({ users, filters, roles }: Props) {
                                         </td>
 
                                         <td className="px-6 py-4 text-right">
-                                            <Button variant="ghost" size="sm" asChild>
-                                                <Link href={`/dashboards/HR/MembersProfile/${user.id}`}>
-                                                    Edit
-                                                </Link>
-                                            </Button>
+                                            {user.status === 'rejected' ? (
+                                                <TooltipProvider>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <span>
+                                                                <Button variant="ghost" size="sm" disabled>
+                                                                    Edit
+                                                                </Button>
+                                                            </span>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>
+                                                            <p>Rejected accounts cannot be edited</p>
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
+                                            ) : (
+                                                <Button variant="ghost" size="sm" asChild>
+                                                    <Link href={`/dashboards/HR/MembersProfile/${user.id}`}>
+                                                        Edit
+                                                    </Link>
+                                                </Button>
+                                            )}
                                         </td>
                                     </tr>
                                 ))

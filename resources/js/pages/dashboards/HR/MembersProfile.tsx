@@ -97,8 +97,8 @@ interface Props {
 }
 
 export default function MembersProfile({ user, memberProfile, beneficiaries, isAdmin, isNewUser, profileCompleted, targetUserId, targetUserName }: Props) {
-    // For HR editing, always enable editing
-    const [isEditing, setIsEditing] = useState(true);
+    const isRejected = user.status === 'rejected'
+    const [isEditing, setIsEditing] = useState(!isRejected);
     
     const [previewUrl, setPreviewUrl] = useState('');
     
@@ -371,7 +371,7 @@ export default function MembersProfile({ user, memberProfile, beneficiaries, isA
                             Export PDF
                         </Button>
                         {!isEditing ? (
-                            <Button onClick={() => setIsEditing(true)}>
+                            <Button onClick={() => setIsEditing(true)} disabled={isRejected}>
                                 Edit Profile
                             </Button>
                         ) : (

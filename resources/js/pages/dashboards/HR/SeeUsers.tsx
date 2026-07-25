@@ -288,7 +288,7 @@ export default function SeeUsers({ users, filters, roles }: Props) {
                     <table className="min-w-full text-sm">
                         <thead className="border-b bg-muted/40 text-muted-foreground">
                             <tr>
-                                <th className="px-6 py-3 text-left font-medium">ID</th>
+                                <th className="px-6 py-3 text-left font-medium">Member ID</th>
                                 <th className="px-6 py-3 text-left font-medium">Name</th>
                                 <th className="px-6 py-3 text-left font-medium">Email</th>
                                 <th className="px-6 py-3 text-left font-medium">Status</th>

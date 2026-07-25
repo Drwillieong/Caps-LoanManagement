@@ -439,16 +439,12 @@ const maxHireDate = `${yesterday.getFullYear()}-${String(
                             <h3 className="text-base font-semibold tracking-tight text-emerald-900 dark:text-emerald-100">
                                 Account Information
                             </h3>
-                            <p className="text-sm text-muted-foreground">
-                                The member role is fixed and the temporary
-                                password is generated automatically.
-                            </p>
                         </div>
 
                         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                             {renderTextInput(
                                 'last_name',
-                                'Name - Family Name',
+                                'Family Name',
                                 {
                                     required: true,
                                     placeholder: 'Enter family name',
@@ -456,7 +452,7 @@ const maxHireDate = `${yesterday.getFullYear()}-${String(
                             )}
                             {renderTextInput(
                                 'first_name',
-                                'Name - First Name',
+                                'First Name',
                                 {
                                     required: true,
                                     placeholder: 'Enter first name',
@@ -464,7 +460,7 @@ const maxHireDate = `${yesterday.getFullYear()}-${String(
                             )}
                             {renderTextInput(
                                 'middle_name',
-                                'Name - Middle Name',
+                                'Middle Name',
                                 {
                                     placeholder: 'Enter middle name',
                                 },
@@ -474,28 +470,7 @@ const maxHireDate = `${yesterday.getFullYear()}-${String(
                                 required: true,
                                 placeholder: 'member@gmail.com',
                             })}
-                            {renderTextInput('employee_id', 'Member ID', {
-                                required: true,
-                                placeholder: 'Enter member ID',
-                            })}
-                            {renderTextInput('payroll_id', 'Payroll ID', {
-                                placeholder: 'Optional payroll identifier',
-                            })}
-
-                            <div className="space-y-2">
-                                <Label>
-                                    Role <span className="text-red-500">*</span>
-                                </Label>
-                                <Input
-                                    type="hidden"
-                                    name="role"
-                                    value={data.role}
-                                />
-                                <p className="flex h-10 items-center rounded-lg border border-emerald-100 bg-gray-50 px-3 text-sm font-medium text-muted-foreground">
-                                    MEMBER
-                                </p>
-                                <InputError message={errors.role} />
-                            </div>
+            
                         </div>
                     </section>
 
@@ -670,7 +645,7 @@ const maxHireDate = `${yesterday.getFullYear()}-${String(
                             {renderAmountInput('basic_salary', 'Income (Gross)', {
                                 required: true,
                                 min: MIN_FINANCIAL_AMOUNT,
-                                placeholder: '10,000.00',
+                                placeholder: '0.00',
                             })}
                             {renderSelect(
                                 'income_type',
@@ -686,7 +661,7 @@ const maxHireDate = `${yesterday.getFullYear()}-${String(
                             {renderAmountInput('share_capital_balance', 'Share Capital Balance', {
                                 required: true,
                                 min: MIN_FINANCIAL_AMOUNT,
-                                placeholder: '10,000.00',
+                                placeholder: '0.00',
                             })}
                             {renderTextInput(
                                 'other_source_of_income',
@@ -818,7 +793,7 @@ const maxHireDate = `${yesterday.getFullYear()}-${String(
 
                     <div className="flex flex-col gap-4 border-t border-emerald-100 pt-6 sm:flex-row sm:items-center sm:justify-between">
                         <p className="text-sm text-muted-foreground">
-                            Double-check all information before submitting. The member profile will be submitted for GM validation, and the welcome email with credentials will be sent upon approval.
+                            Double-check all information before submitting. The member profile will be submitted for General Maniger validation, and the welcome email with credentials will be sent upon approval.
                         </p>
 
                         <Button
@@ -827,7 +802,7 @@ const maxHireDate = `${yesterday.getFullYear()}-${String(
                             className="h-10 min-w-[180px] bg-emerald-600 font-medium hover:bg-emerald-700"
                         >
                             {processing && <Spinner className="mr-2 h-4 w-4" />}
-                            Create Member
+                            Submit for Validation
                         </Button>
                     </div>
                 </form>

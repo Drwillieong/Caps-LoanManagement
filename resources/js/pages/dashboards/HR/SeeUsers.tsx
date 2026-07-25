@@ -150,13 +150,12 @@ export default function SeeUsers({ users, filters, roles }: Props) {
                 user.member_profile?.position || 'N/A',
                 user.member_profile ? formatCurrency(user.member_profile.basic_salary) : 'N/A',
                 user.member_profile ? formatCurrency(user.member_profile.share_capital_balance) : 'N/A',
-                user.role,
                 user.is_active ? 'Active' : 'Inactive',
             ])
 
             autoTable(doc, {
                 startY: 40,
-                head: [['ID', 'Name', 'Email', 'Employee ID', 'Position', 'Salary', 'Share Capital', 'Role', 'Status']],
+                head: [['ID', 'Name', 'Email', 'Employee ID', 'Position', 'Salary', 'Share Capital', 'Status']],
                 body: tableData,
                 theme: 'striped',
                 headStyles: { fillColor: [59, 130, 246] },
@@ -170,7 +169,6 @@ export default function SeeUsers({ users, filters, roles }: Props) {
                     5: { cellWidth: 20 },
                     6: { cellWidth: 20 },
                     7: { cellWidth: 15 },
-                    8: { cellWidth: 15 },
                 },
             })
 
@@ -275,26 +273,13 @@ export default function SeeUsers({ users, filters, roles }: Props) {
                         <select
                             value={filter}
                             onChange={(e) => setFilter(e.target.value)}
-                            className="rounded-lg border px-3 py-2 text-sm bg-background"
-                        >
+                            className="rounded-lg border px-3 py-2 text-sm bg-background" 
+                            >
                             <option value="all">All Members</option>
                             <option value="new">New (30 days)</option>
                             <option value="old">Old</option>
                         </select>
 
-                        {/* Role Dropdown - dynamically filtered to only show roles belonging to active members */}
-                        <select
-                            value={role}
-                            onChange={(e) => setRole(e.target.value)}
-                            className="rounded-lg border px-3 py-2 text-sm bg-background"
-                        >
-                            <option value="all">All Roles</option>
-                            {activeMemberRoles.map((r) => (
-                                <option key={r} value={r}>
-                                    {r.toUpperCase()}
-                                </option>
-                            ))}
-                        </select>
                     </div>
                 </div>
 
@@ -306,7 +291,6 @@ export default function SeeUsers({ users, filters, roles }: Props) {
                                 <th className="px-6 py-3 text-left font-medium">ID</th>
                                 <th className="px-6 py-3 text-left font-medium">Name</th>
                                 <th className="px-6 py-3 text-left font-medium">Email</th>
-                                <th className="px-6 py-3 text-left font-medium">Role</th>
                                 <th className="px-6 py-3 text-left font-medium">Status</th>
                                 <th className="px-6 py-3 text-left font-medium">Joined</th>
                                 <th className="px-6 py-3 text-right font-medium">Actions</th>
@@ -335,12 +319,6 @@ export default function SeeUsers({ users, filters, roles }: Props) {
 
                                         <td className="px-6 py-4 text-muted-foreground">
                                             {user.email}
-                                        </td>
-
-                                        <td className="px-6 py-4">
-                                            <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary capitalize">
-                                                {user.role}
-                                            </span>
                                         </td>
 
                                         <td className="px-6 py-4">
@@ -373,7 +351,7 @@ export default function SeeUsers({ users, filters, roles }: Props) {
                             ) : (
                                 <tr>
                                     <td
-                                        colSpan={7}
+                                        colSpan={6}
                                         className="py-12 text-center text-muted-foreground"
                                     >
                                         <div className="flex flex-col items-center gap-2">

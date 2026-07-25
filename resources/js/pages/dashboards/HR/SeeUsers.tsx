@@ -363,7 +363,7 @@ export default function SeeUsers({ users, filters, roles }: Props) {
 
                                         <td className="px-6 py-4 text-right">
                                             <Button variant="ghost" size="sm" asChild>
-                                                <Link href={`/dashboards/HR/EditMember/${user.id}`}>
+                                                <Link href={`/dashboards/HR/MembersProfile/${user.id}`}>
                                                     Edit
                                                 </Link>
                                             </Button>

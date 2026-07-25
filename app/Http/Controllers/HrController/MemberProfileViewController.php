@@ -18,6 +18,11 @@ class MemberProfileViewController extends Controller
             'user' => $user,
             'memberProfile' => $user->memberProfile,
             'beneficiaries' => $user->memberProfile ? $user->memberProfile->beneficiaries : [],
+            'isAdmin' => true,
+            'isNewUser' => false,
+            'profileCompleted' => $user->hasCompletedProfile(),
+            'targetUserId' => $user->id,
+            'targetUserName' => $user->first_name.' '.$user->last_name,
         ]);
     }
 }

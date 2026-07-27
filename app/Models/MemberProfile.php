@@ -11,6 +11,10 @@ class MemberProfile extends Model
 {
     use HasFactory;
 
+    protected $primaryKey = 'employee_id';
+    protected $keyType = 'string';
+    public $incrementing = false;
+
     /**
      * The attributes that are mass assignable.
      *
@@ -85,12 +89,12 @@ class MemberProfile extends Model
      */
     public function beneficiaries(): HasMany
     {
-        return $this->hasMany(Beneficiary::class);
+        return $this->hasMany(Beneficiary::class, 'member_profile_id', 'employee_id');
     }
 
     public function deductionRecords(): HasMany
     {
-        return $this->hasMany(DeductionRecord::class);
+        return $this->hasMany(DeductionRecord::class, 'member_profile_id', 'employee_id');
     }
 
     /**

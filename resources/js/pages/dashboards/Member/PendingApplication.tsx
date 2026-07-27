@@ -122,9 +122,9 @@ export default function PendingApplication({ loan, hasPendingLoan, loanHistory }
             case 'awaiting_comaker':
                 return <Badge className="bg-yellow-500">Awaiting Co-Maker</Badge>;
             case 'pending_gm_review':
-                return <Badge className="bg-blue-500">Pending GM Review</Badge>;
+                return <Badge className="bg-gray-500">Pending General Manager Review</Badge>;
             case 'pending_cc_review':
-                return <Badge className="bg-purple-500">Pending CC Review</Badge>;
+                return <Badge className="bg-gray-500">Pending Credit Committee Review</Badge>;
             default:
                 return <Badge>{status}</Badge>;
         }
@@ -173,14 +173,14 @@ export default function PendingApplication({ loan, hasPendingLoan, loanHistory }
                 };
             case 'pending_gm_review':
                 return {
-                    icon: <Clock className="h-12 w-12 text-blue-500" />,
+                    icon: <Clock className="h-12 w-12 text-gray-500" />,
                     title: 'Pending GM Review',
                     description: 'Your loan application is under review.',
                     color: 'bg-blue-50 border-blue-200'
                 };
             case 'pending_cc_review':
                 return {
-                    icon: <Clock className="h-12 w-12 text-purple-500" />,
+                    icon: <Clock className="h-12 w-12 text-gray-500" />,
                     title: 'Pending Credit Coordinator Review',
                     description: 'Your loan application is under final review.',
                     color: 'bg-purple-50 border-purple-200'
@@ -476,7 +476,7 @@ export default function PendingApplication({ loan, hasPendingLoan, loanHistory }
                                             ) : coMaker.status === 'rejected' ? (
                                                 <Badge className="bg-red-500">Rejected</Badge>
                                             ) : (
-                                                <Badge className="bg-yellow-500">Pending</Badge>
+                                                <Badge className="bg-gray-500">Pending</Badge>
                                             )}
                                         </div>
                                     </div>

@@ -56,7 +56,6 @@ export interface LoanType {
 }
 
 export interface MemberProfile {
-    id?: number;
     user_id: number;
     employee_id: string;
     payroll_id?: string | null;
@@ -412,4 +411,30 @@ export interface MemberCompletedLoanProps {
     totalPrincipalRepaid: number;
     totalInterestPaid: number;
     avgLoanAmount: number;
+}
+
+// ======================================================================
+// Profile Update Request (Maker-Checker) Types
+// ======================================================================
+
+export interface ProfileUpdateRequest {
+    id: number;
+    member_id: string;
+    member_name: string;
+    member_email: string;
+    requested_by_name: string;
+    requested_by_email: string;
+    original_data: Record<string, any>;
+    pending_data: Record<string, any>;
+    status: 'pending' | 'approved' | 'rejected';
+    rejection_reason?: string | null;
+    created_at: string;
+}
+
+export interface PendingEditsApiResponse {
+    data: ProfileUpdateRequest[];
+}
+
+export interface PendingEditsProps {
+    pendingEdits: ProfileUpdateRequest[];
 }

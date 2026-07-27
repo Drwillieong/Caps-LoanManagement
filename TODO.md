@@ -1,11 +1,18 @@
-# FEATURE: GM Bulk Member Creation via Excel Upload — COMPLETE ✅
+# TODO: Maker-Checker Profile Edit & GM Approval Workflow
 
-## Implementation Steps
+## Backend Tasks
+- [x] 1. Create migration `create_profile_update_requests_table`
+- [x] 2. Create model `ProfileUpdateRequest.php`
+- [x] 3. Create controller `ProfileUpdateRequestController.php`
+- [x] 4. Update routes in `routes/web.php`
 
-- [x] **Step 1:** Create `App\Imports\BulkMemberImport.php` — Laravel Excel import class with heading row parsing, validation, and error tracking
-- [x] **Step 2:** Create `App\Http\Controllers\GmController\BulkMemberUploadController.php` — Controller with index(), store(), template() methods
-- [x] **Step 3:** Register routes in `web.php` — GET/POST for BulkUploadMembers + template download
-- [x] **Step 4:** Rewrite `resources/js/pages/dashboards/Gm/BulkUploadMembers.tsx` — Full UI with drag-drop file upload, template download, progress bar, results summary, error details table
-- [x] **Step 5:** Update `app-sidebar.tsx` — Add "Bulk Upload Members" nav item under GM Application section
-- [x] **Step 6:** Create `resources/js/components/ui/progress.tsx` — shadcn-styled Progress component
+## Frontend Tasks
+- [x] 5. Update TypeScript types in `types/index.d.ts`
+- [x] 6. Modify `MembersProfile.tsx` — Submit to staging, add pending alert banner
+- [x] 7. Modify `SeeUsers.tsx` — Add "Pending Edit Approval" badge
+- [x] 8. Create `PendingEdits.tsx` — GM diff review page with approve/reject
+
+## Testing
+- [x] 9. Run `php artisan migrate` — ✅ 2026_08_01_000001_create_profile_update_requests_table migrated successfully
+- [x] 10. Workflow implementation complete
 

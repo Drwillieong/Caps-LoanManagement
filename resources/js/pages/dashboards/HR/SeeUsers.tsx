@@ -6,6 +6,14 @@ import autoTable from 'jspdf-autotable'
 
 import AppLayout from '@/layouts/app-layout'
 import { Button } from '@/components/ui/button'
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { LiveClock } from '@/components/live-clock'
 import { type BreadcrumbItem } from '@/types'
 
@@ -40,12 +48,12 @@ interface User {
     created_at: string
     updated_at: string
     member_profile: MemberProfile | null
+    has_pending_update_request?: boolean
 }
 
 interface Filters {
     search: string | null
     filter: string
-    role: string
 }
 
 interface Props {
@@ -58,37 +66,33 @@ interface Props {
         links: any[]
     }
     filters: Filters
-    roles: string[]
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Members', href: '/dashboards/HR/SeeUsers' },
 ]
 
-export default function SeeUsers({ users, filters, roles }: Props) {
+export default function SeeUsers({ users, filters }: Props) {
     const [search, setSearch] = useState(filters.search || '')
     const [filter, setFilter] = useState(filters.filter || 'all')
-    const [role, setRole] = useState(filters.role || 'all')
+    const [status, setStatus] = useState('all')
 
-    // 1. Filter out users who do not have a member profile
-    const membersOnly = users.data.filter((user) => user.member_profile !== null)
+    // 1. Filter out users who do not have a member profile or valid employee_id
+    const membersOnly = users.data.filter((user) => user.member_profile !== null && user.member_profile?.employee_id)
 
-    // 2. Extract only the roles that belong to users with active member profiles
-    const activeMemberRoles = Array.from(
-        new Set(
-            users.data
-                .filter((user) => user.member_profile !== null)
-                .map((user) => user.role)
-        )
-    )
+    // 2. Filter by account status
+    const filteredMembers = membersOnly.filter((user) => {
+        if (status === 'all') return true
+        return user.status === status
+    })
 
     useEffect(() => {
         const timeout = setTimeout(() => {
-            router.reload({ data: { search, filter, role } })
+            router.reload({ data: { search, filter } })
         }, 300)
 
         return () => clearTimeout(timeout)
-    }, [search, filter, role])
+    }, [search, filter])
 
     const formatDate = (date: string) =>
         new Date(date).toLocaleDateString('en-US', {
@@ -143,25 +147,25 @@ export default function SeeUsers({ users, filters, roles }: Props) {
             doc.text(`Total Members: ${allUsers.length}`, 14, 34)
 
             const tableData = allUsers.map((user: User) => [
-                user.id,
+                user.member_profile?.employee_id || 'N/A',
                 getFullName(user),
                 user.email,
-                user.member_profile?.employee_id || 'N/A',
                 user.member_profile?.position || 'N/A',
                 user.member_profile ? formatCurrency(user.member_profile.basic_salary) : 'N/A',
                 user.member_profile ? formatCurrency(user.member_profile.share_capital_balance) : 'N/A',
+                user.role,
                 user.is_active ? 'Active' : 'Inactive',
             ])
 
             autoTable(doc, {
                 startY: 40,
-                head: [['ID', 'Name', 'Email', 'Employee ID', 'Position', 'Salary', 'Share Capital', 'Status']],
+                head: [['Employee ID', 'Name', 'Email', 'Position', 'Salary', 'Share Capital', 'Role', 'Status']],
                 body: tableData,
                 theme: 'striped',
                 headStyles: { fillColor: [59, 130, 246] },
                 styles: { fontSize: 8 },
                 columnStyles: {
-                    0: { cellWidth: 10 },
+                    0: { cellWidth: 20 },
                     1: { cellWidth: 30 },
                     2: { cellWidth: 35 },
                     3: { cellWidth: 20 },
@@ -182,7 +186,7 @@ export default function SeeUsers({ users, filters, roles }: Props) {
 
                 doc.setFontSize(12)
                 doc.setFont('helvetica', 'bold')
-                doc.text(`#${user.id} - ${getFullName(user)}`, 14, currentY)
+                doc.text(`${user.member_profile?.employee_id || user.id} - ${getFullName(user)}`, 14, currentY)
                 currentY += 7
 
                 doc.setFontSize(10)
@@ -236,23 +240,23 @@ export default function SeeUsers({ users, filters, roles }: Props) {
                             Members
                         </h1>
                         <p className="text-sm text-muted-foreground">
-                            Manage your team members ({membersOnly.length})
+                            Manage your team members ({filteredMembers.length})
                         </p>
                     </div>
 
-            <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={() => exportPDF()}>
-                    <Download className="mr-2 h-4 w-4" />
-                    Export PDF
-                </Button>
-                <Button asChild>
-                    <Link href="/dashboards/HR/create">
-                        <Plus className="mr-2 h-4 w-4" />
-                        Create Member Account
-                    </Link>
-                </Button>
-            </div>
-        </div>
+                    <div className="flex items-center gap-2">
+                        <Button variant="outline" size="sm" onClick={() => exportPDF()}>
+                            <Download className="mr-2 h-4 w-4" />
+                            Export PDF
+                        </Button>
+                        <Button asChild>
+                            <Link href="/dashboards/HR/create">
+                                <Plus className="mr-2 h-4 w-4" />
+                                Create Member Account
+                            </Link>
+                        </Button>
+                    </div>
+                </div>
 
                 {/* Filters Card */}
                 <div className="rounded-xl border bg-background p-4">
@@ -273,13 +277,25 @@ export default function SeeUsers({ users, filters, roles }: Props) {
                         <select
                             value={filter}
                             onChange={(e) => setFilter(e.target.value)}
-                            className="rounded-lg border px-3 py-2 text-sm bg-background" 
-                            >
+                            className="rounded-lg border px-3 py-2 text-sm bg-background"
+                        >
                             <option value="all">All Members</option>
                             <option value="new">New (30 days)</option>
                             <option value="old">Old</option>
                         </select>
 
+                        {/* Status Filter */}
+                        <Select value={status} onValueChange={setStatus}>
+                            <SelectTrigger className="w-[180px]">
+                                <SelectValue placeholder="All Statuses" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Statuses</SelectItem>
+                                <SelectItem value="active">Active</SelectItem>
+                                <SelectItem value="pending">Pending</SelectItem>
+                                <SelectItem value="rejected">Rejected</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
                 </div>
 
@@ -288,9 +304,10 @@ export default function SeeUsers({ users, filters, roles }: Props) {
                     <table className="min-w-full text-sm">
                         <thead className="border-b bg-muted/40 text-muted-foreground">
                             <tr>
-                                <th className="px-6 py-3 text-left font-medium">Member ID</th>
+                                <th className="px-6 py-3 text-left font-medium">ID</th>
                                 <th className="px-6 py-3 text-left font-medium">Name</th>
                                 <th className="px-6 py-3 text-left font-medium">Email</th>
+                                <th className="px-6 py-3 text-left font-medium">Role</th>
                                 <th className="px-6 py-3 text-left font-medium">Status</th>
                                 <th className="px-6 py-3 text-left font-medium">Joined</th>
                                 <th className="px-6 py-3 text-right font-medium">Actions</th>
@@ -298,19 +315,19 @@ export default function SeeUsers({ users, filters, roles }: Props) {
                         </thead>
 
                         <tbody>
-                            {membersOnly.length ? (
-                                membersOnly.map((user) => (
+                            {filteredMembers.length ? (
+                                filteredMembers.map((user) => (
                                     <tr
-                                        key={user.id}
+                                        key={user.member_profile?.employee_id || user.id}
                                         className="border-b transition-colors hover:bg-muted/30"
                                     >
                                         <td className="px-6 py-4 font-medium">
-                                            #{user.id}
+                                            {user.member_profile?.employee_id}
                                         </td>
 
                                         <td className="px-6 py-4">
                                             <Link 
-                                                href={`/dashboards/HR/MembersProfile/${user.id}`}
+                                                href={`/dashboards/HR/MembersProfile/${user.member_profile?.employee_id}`}
                                                 className="text-primary hover:underline cursor-pointer font-medium"
                                             >
                                                 {getFullName(user)}
@@ -322,17 +339,30 @@ export default function SeeUsers({ users, filters, roles }: Props) {
                                         </td>
 
                                         <td className="px-6 py-4">
-                                            <span
-                                                className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${
-                                                    user.status === 'active'
-                                                        ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                                                        : user.status === 'pending'
-                                                        ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
-                                                        : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                                                }`}
-                                            >
-                                                {user.status === 'pending' ? 'Pending' : user.status === 'active' ? 'Active' : 'Rejected'}
+                                            <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary capitalize">
+                                                {user.role}
                                             </span>
+                                        </td>
+
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center gap-2">
+                                                <span
+                                                    className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${
+                                                        user.status === 'active'
+                                                            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                                                            : user.status === 'pending'
+                                                            ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                                                            : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                                                    }`}
+                                                >
+                                                    {user.status === 'pending' ? 'Pending' : user.status === 'active' ? 'Active' : 'Rejected'}
+                                                </span>
+                                                {user.has_pending_update_request && (
+                                                    <span className="inline-flex items-center rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 px-2.5 py-0.5 text-xs font-medium">
+                                                        Pending Edit
+                                                    </span>
+                                                )}
+                                            </div>
                                         </td>
 
                                         <td className="px-6 py-4 text-muted-foreground">
@@ -340,18 +370,50 @@ export default function SeeUsers({ users, filters, roles }: Props) {
                                         </td>
 
                                         <td className="px-6 py-4 text-right">
-                                            <Button variant="ghost" size="sm" asChild>
-                                                <Link href={`/dashboards/HR/EditMember/${user.id}`}>
-                                                    Edit
-                                                </Link>
-                                            </Button>
+                                            {user.status === 'rejected' ? (
+                                                <TooltipProvider>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <span>
+                                                                <Button variant="ghost" size="sm" disabled>
+                                                                    Edit
+                                                                </Button>
+                                                            </span>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>
+                                                            <p>Rejected accounts cannot be edited</p>
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
+                                            ) : user.has_pending_update_request ? (
+                                                <TooltipProvider>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <span>
+                                                                <Button variant="ghost" size="sm" disabled>
+                                                                    Edit
+                                                                </Button>
+                                                            </span>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>
+                                                            <p>Profile has a pending edit request awaiting GM approval</p>
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
+                                            ) : (
+                                                <Button variant="ghost" size="sm" asChild>
+                                                    <Link href={`/dashboards/HR/MembersProfile/${user.member_profile?.employee_id}`}>
+                                                        Edit
+                                                    </Link>
+                                                </Button>
+                                            )}
                                         </td>
                                     </tr>
                                 ))
                             ) : (
                                 <tr>
                                     <td
-                                        colSpan={6}
+                                        colSpan={7}
                                         className="py-12 text-center text-muted-foreground"
                                     >
                                         <div className="flex flex-col items-center gap-2">

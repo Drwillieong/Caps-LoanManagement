@@ -167,19 +167,13 @@ export default function HrDashboard({
                         <CardContent>
                             <div className="grid gap-4 md:grid-cols-5">
                                 {Object.entries(loan_status_breakdown).map(
-                                    ([key, value]) => {
-                                        const labelMap: Record<string, string> = {
-                                            rejected_by_credit_com: 'Rejected by Credit Committee',
-                                            rejected_by_gm: 'Rejected by General Manager',
-                                        };
-                                        const label = labelMap[key] || key.replace(/_/g, ' ');
-                                        return (
+                                    ([key, value]) => (
                                         <div
                                             key={key}
                                             className="rounded-lg p-4 border bg-emerald-50/60 dark:bg-emerald-950/10 border-emerald-100"
                                         >
                                             <p className="text-xs text-muted-foreground capitalize">
-                                                {label}
+                                                {key.replace('_', ' ')}
                                             </p>
                                             <p className="text-xl font-bold text-emerald-700 dark:text-emerald-300">
                                                 {value as number}
@@ -195,8 +189,7 @@ export default function HrDashboard({
                                                 % of total
                                             </p>
                                         </div>
-                                        );
-                                    }
+                                    )
                                 )}
                             </div>
                         </CardContent>
@@ -281,7 +274,7 @@ export default function HrDashboard({
                             >
                                 <div>
                                     <p className="font-medium">
-                                        Create Member Account
+                                        Create Member
                                     </p>
                                     <p className="text-xs text-muted-foreground">
                                         Add new cooperative member

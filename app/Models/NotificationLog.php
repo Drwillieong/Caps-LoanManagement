@@ -32,9 +32,9 @@ class NotificationLog extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function scopeUnread(Builder $query): void
+    public function scopeUnread(Builder $query): Builder
     {
-        $query->where('is_read', false);
+        return $query->where('is_read', false);
     }
 
     public function scopeForUser(Builder $query, User $user): Builder
@@ -42,9 +42,9 @@ class NotificationLog extends Model
         return $query->where('user_id', $user->id);
     }
 
-    public function scopeRecent(Builder $query): void
+    public function scopeRecent(Builder $query): Builder
     {
-        $query->orderBy('created_at', 'desc');
+        return $query->orderBy('created_at', 'desc');
     }
 }
 

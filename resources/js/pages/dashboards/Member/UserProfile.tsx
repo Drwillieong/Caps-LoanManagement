@@ -18,16 +18,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
-import member from '@/routes/member';
 import { type BreadcrumbItem, type SharedData } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
-  
     {
         title: 'User Profile',
-        href: member.userProfile.url(),
+        href: '/dashboards/Member/UserProfile',
     },
-    
 ];
 
 interface Beneficiary {
@@ -37,7 +34,6 @@ interface Beneficiary {
 }
 
 interface MemberProfile {
-    id?: number;
     user_id: number;
     employee_id: string;
     payroll_id?: string | null;
@@ -79,15 +75,12 @@ interface Props {
     isNewUser: boolean;
     isAdmin?: boolean;
     profileCompleted: boolean;
-    targetUserId?: number;
+    targetEmployeeId?: string;
     targetUserName?: string;
 }
 
-export default function UserProfile({ memberProfile, beneficiaries, isNewUser, isAdmin = false, profileCompleted, targetUserId, targetUserName }: Props) {
-    const { auth } = usePage<SharedData>().props;
-    
-    // Determine if this is HR editing another member
-    const isHREditingMember = isAdmin && targetUserId;
+export default function UserProfile({ memberProfile, beneficiaries, isNewUser, isAdmin = false, profileCompleted, targetEmployeeId, targetUserName }: Props) {
+    const isHREditingMember = isAdmin && targetEmployeeId;
     
     // For HR editing, always enable editing
 const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
@@ -175,8 +168,8 @@ const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
 
     // Get the appropriate URL for form action
     const formActionUrl = isHREditingMember 
-        ? `/dashboards/HR/EditMember/${targetUserId}` 
-        : member.userProfile.store.url();
+        ? `/dashboards/HR/EditMember/${targetEmployeeId}` 
+        : '/dashboards/Member/UserProfile';
 
     const formMethod = isHREditingMember ? 'put' : 'post';
 

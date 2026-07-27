@@ -40,7 +40,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // HR
     Route::get('dashboards/HR/SeeUsers', [CreateMemberController::class, 'index'])->middleware('role:hr')->name('users');
 
-    Route::get('dashboards/HR/MembersProfile/{userId}', [MemberProfileViewController::class, 'show'])->middleware('role:hr')->name('users.profile');
+    Route::get('dashboards/HR/MembersProfile/{employeeId}', [MemberProfileViewController::class, 'show'])->middleware('role:hr')->name('users.profile');
 
     Route::get('dashboards/HR/create', [CreateMemberController::class, 'create'])->middleware('role:hr')->name('users.create');
     Route::post('dashboards/HR/SeeUsers', [CreateMemberController::class, 'store'])->middleware('role:hr')->name('users.store');
@@ -87,11 +87,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('dashboards/Member/UserProfile', [MemberProfileController::class, 'store'])->middleware('role:member')->name('member.user-profile.store');
 
     // HR - Edit Member Profile
-    Route::get('dashboards/HR/EditMember/{userId}', [MemberProfileController::class, 'editMember'])
+    Route::get('dashboards/HR/EditMember/{employeeId}', [MemberProfileController::class, 'editMember'])
         ->middleware('role:hr,gm,creditcom')
         ->name('hr.edit-member');
 
-    Route::put('dashboards/HR/EditMember/{userId}', [MemberProfileController::class, 'updateMember'])
+    Route::put('dashboards/HR/EditMember/{employeeId}', [MemberProfileController::class, 'updateMember'])
         ->middleware('role:hr,gm,creditcom')
         ->name('hr.update-member');
 
@@ -231,6 +231,25 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboards/Gm/UploadSalaryDeduct/template', [PayrollDeductionController::class, 'template'])
         ->middleware('role:gm')
         ->name('gm.payroll-deductions.template');
+
+    // GM - Profile Update Requests (Maker-Checker)
+    Route::get('dashboards/Gm/PendingEdits', [\App\Http\Controllers\GmController\ProfileUpdateRequestController::class, 'index'])
+        ->middleware('role:gm')
+        ->name('gm.pending-edits');
+
+    // HR - Submit Profile Update Request
+    Route::post('dashboards/HR/EditMember/{employeeId}/update-request', [\App\Http\Controllers\GmController\ProfileUpdateRequestController::class, 'store'])
+        ->middleware('role:hr')
+        ->name('hr.profile-update-request.store');
+
+    // API-like routes for GM actions on pending edits
+    Route::post('dashboards/Gm/PendingEdits/{id}/approve', [\App\Http\Controllers\GmController\ProfileUpdateRequestController::class, 'approve'])
+        ->middleware('role:gm')
+        ->name('gm.pending-edits.approve');
+
+    Route::post('dashboards/Gm/PendingEdits/{id}/reject', [\App\Http\Controllers\GmController\ProfileUpdateRequestController::class, 'reject'])
+        ->middleware('role:gm')
+        ->name('gm.pending-edits.reject');
 
     // GM - Create Application (NEW)
     Route::get('dashboards/Gm/CreateApplication', [GmController::class, 'createApplication'])

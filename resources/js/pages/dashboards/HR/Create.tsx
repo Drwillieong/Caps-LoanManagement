@@ -354,6 +354,52 @@ export default function Create() {
                     }}
                     className={inputClass}
                 />
+<InputError message={errors[name]} />
+            </div>
+        );
+    };
+
+    // ===== PHONE FORMATTING =====
+    const formatPhone = (digits: string): string => {
+        const cleaned = digits.replace(/\D/g, '');
+        if (cleaned.length <= 3) return cleaned;
+        if (cleaned.length <= 6) return `${cleaned.slice(0, 3)}-${cleaned.slice(3)}`;
+        return `${cleaned.slice(0, 3)}-${cleaned.slice(3, 6)}-${cleaned.slice(6, 10)}`;
+    };
+
+    const renderPhoneInput = (
+        name: CreateMemberField,
+        label: string,
+        options: {
+            required?: boolean;
+            placeholder?: string;
+        } = {},
+    ) => {
+        const rawValue = String(data[name] ?? '');
+        const displayValue = rawValue ? formatPhone(rawValue) : '';
+
+        return (
+            <div className="space-y-2">
+                <Label htmlFor={name}>
+                    {label}
+                    {options.required && <span className="text-red-500"> *</span>}
+                </Label>
+                <Input
+                    id={name}
+                    name={name}
+                    type="text"
+                    inputMode="numeric"
+                    required={options.required}
+                    placeholder={options.placeholder}
+                    value={displayValue}
+                    onChange={(event) => {
+                        const raw = event.target.value.replace(/\D/g, '');
+                        if (raw.length <= 11) {
+                            setData(name, raw);
+                        }
+                    }}
+                    className={inputClass}
+                />
                 <InputError message={errors[name]} />
             </div>
         );
@@ -479,9 +525,6 @@ const maxHireDate = `${yesterday.getFullYear()}-${String(
                             <h3 className="text-base font-semibold tracking-tight text-emerald-900 dark:text-emerald-100">
                                 Personal Information
                             </h3>
-                            <p className="text-sm text-muted-foreground">
-                                Identity, birth, education, and family details.
-                            </p>
                         </div>
 
                         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -584,16 +627,16 @@ const maxHireDate = `${yesterday.getFullYear()}-${String(
                                     placeholder: 'Enter zip code',
                                 },
                             )}
-                            {renderTextInput(
+                            {renderPhoneInput(
                                 'permanent_mobile_number',
                                 'Permanent Mobile Number',
                                 {
-                                    type: 'tel',
+                                    
                                     required: true,
                                     placeholder: 'Enter mobile number',
                                 },
                             )}
-                            {renderTextInput(
+{renderTextInput(
                                 'present_address',
                                 'Present Address',
                                 {
@@ -609,11 +652,10 @@ const maxHireDate = `${yesterday.getFullYear()}-${String(
                                     placeholder: 'Enter zip code',
                                 },
                             )}
-                            {renderTextInput(
+{renderPhoneInput(
                                 'mobile_number',
                                 'Present Cellphone Number',
                                 {
-                                    type: 'tel',
                                     required: true,
                                     placeholder: 'Enter cellphone number',
                                 },
@@ -793,7 +835,7 @@ const maxHireDate = `${yesterday.getFullYear()}-${String(
 
                     <div className="flex flex-col gap-4 border-t border-emerald-100 pt-6 sm:flex-row sm:items-center sm:justify-between">
                         <p className="text-sm text-muted-foreground">
-                            Double-check all information before submitting. The member profile will be submitted for General Maniger validation, and the welcome email with credentials will be sent upon approval.
+                            Double-check all information before submitting. The member profile will be submitted for GM validation, and the welcome email with credentials will be sent upon approval.
                         </p>
 
                         <Button

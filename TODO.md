@@ -1,18 +1,14 @@
-# TODO: Maker-Checker Profile Edit & GM Approval Workflow
+# Bug Fix: Blank Screen on `/dashboards/HR/create`
 
-## Backend Tasks
-- [x] 1. Create migration `create_profile_update_requests_table`
-- [x] 2. Create model `ProfileUpdateRequest.php`
-- [x] 3. Create controller `ProfileUpdateRequestController.php`
-- [x] 4. Update routes in `routes/web.php`
+## Status: ✅ COMPLETED
 
-## Frontend Tasks
-- [x] 5. Update TypeScript types in `types/index.d.ts`
-- [x] 6. Modify `MembersProfile.tsx` — Submit to staging, add pending alert banner
-- [x] 7. Modify `SeeUsers.tsx` — Add "Pending Edit Approval" badge
-- [x] 8. Create `PendingEdits.tsx` — GM diff review page with approve/reject
-
-## Testing
-- [x] 9. Run `php artisan migrate` — ✅ 2026_08_01_000001_create_profile_update_requests_table migrated successfully
-- [x] 10. Workflow implementation complete
+## Summary
+1. ✅ **Diagnosed root cause** — `Create.tsx` was a copy-paste of `MembersProfile.tsx` expecting `user`, `memberProfile`, `beneficiaries` props that the controller (`CreateMemberController@create`) doesn't pass. The component crashed immediately at `user.status === 'rejected'` since `user` was `undefined`.
+2. ✅ **Rewrote `Create.tsx`** as a proper new-member creation form that:
+   - Only expects `roles: string[]` from props (matches controller)
+   - Has all fields matching the `store()` validation rules
+   - Uses proper `POST` action to `/dashboards/HR/SeeUsers`
+   - No dependency on `user`, `memberProfile`, `beneficiaries` from props
+   - Includes: Identity, Contact & Address, Employment, Spouse/Assets, and Beneficiaries sections
+3. ✅ **No backend changes needed** — controller was already correct
 

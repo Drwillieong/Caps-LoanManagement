@@ -380,7 +380,7 @@ export default function PendingEdits({ pendingEdits }: Props) {
                                         Current Active Value
                                     </div>
                                     <div className="px-6 py-3 text-sm font-semibold text-emerald-700">
-                                        Proposed HR Edit
+                                        Proposed Secretary Edit
                                     </div>
                                 </div>
 

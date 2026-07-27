@@ -15,6 +15,7 @@ import {
     Wallet,
     Building2,
     DollarSign,
+    PhilippinePeso,
     AlertTriangle,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -356,19 +357,7 @@ export default function MemberValidate({ pendingMembers }: Props) {
                                                                 <User className="mr-1.5 h-3.5 w-3.5" />
                                                                 Review
                                                             </Button>
-                                                            <Button
-                                                                size="sm"
-                                                                className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
-                                                                onClick={() => handleApprove(member.id)}
-                                                                disabled={processingId === member.id}
-                                                            >
-                                                                {processingId === member.id ? (
-                                                                    <Spinner className="mr-1.5 h-3.5 w-3.5" />
-                                                                ) : (
-                                                                    <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />
-                                                                )}
-                                                                Accept
-                                                            </Button>
+                                                          
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -596,7 +585,7 @@ export default function MemberValidate({ pendingMembers }: Props) {
                                             <Card className="bg-muted/30 border-dashed">
                                                 <CardContent className="pt-4 pb-4">
                                                     <div className="flex items-center gap-2 mb-1">
-                                                        <DollarSign className="h-4 w-4 text-muted-foreground" />
+                                                        <PhilippinePeso className="h-4 w-4 text-muted-foreground" />
                                                         <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Net Income</span>
                                                     </div>
                                                     <p className="text-lg font-bold">{formatCurrency(profile.net_income)}</p>

@@ -457,7 +457,7 @@ export default function PendingEdits({ pendingEdits }: Props) {
                                 ) : (
                                     <CheckCircle2 className="h-5 w-5 mr-2" />
                                 )}
-                                {processingId === selectedRequest.id ? 'Approving...' : 'Approve & Merge Changes'}
+                                {processingId === selectedRequest.id ? 'Approving...' : 'Approve Changes'}
                             </Button>
 
                             <Button

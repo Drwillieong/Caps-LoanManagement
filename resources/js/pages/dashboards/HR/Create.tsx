@@ -1,13 +1,16 @@
 import { Form, Head, Link } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useCallback, ReactNode } from 'react';
 import toast from 'react-hot-toast';
-import { 
+import {
     ArrowLeft,
-    User, 
-    MapPin, 
-    Briefcase, 
-    Heart, 
+    User,
+    MapPin,
+    Briefcase,
+    Heart,
     Users,
+    Phone,
+    Building,
+    UserCircle,
 } from 'lucide-react';
 
 import HeadingSmall from '@/components/heading-small';
@@ -16,7 +19,7 @@ import { LiveClock } from '@/components/live-clock';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 
@@ -24,6 +27,68 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Members', href: '/dashboards/HR/SeeUsers' },
     { title: 'Create Member', href: '' },
 ];
+
+// ──────────────────────────────────────────────────
+// Utility Helpers
+// ──────────────────────────────────────────────────
+
+function getTodayISO(): string {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+}
+
+function formatCurrency(raw: string): string {
+    const num = parseFloat(raw.replace(/,/g, ''));
+    if (isNaN(num)) return '';
+    return num.toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    });
+}
+
+function parseCurrency(formatted: string): string {
+    return formatted.replace(/,/g, '');
+}
+
+function formatPhone(raw: string): string {
+    const digits = raw.replace(/\D/g, '');
+    if (digits.length < 3) return digits;
+    if (digits.startsWith('63')) {
+        const rest = digits.slice(2);
+        if (rest.length <= 3) return `+63 ${rest}`;
+        if (rest.length <= 6) return `+63 ${rest.slice(0, 3)} ${rest.slice(3)}`;
+        return `+63 ${rest.slice(0, 3)} ${rest.slice(3, 6)} ${rest.slice(6, 10)}`;
+    }
+    if (digits.startsWith('0')) {
+        const rest = digits.slice(1);
+        if (rest.length <= 3) return digits;
+        if (rest.length <= 6) return `+63 ${rest.slice(0, 3)} ${rest.slice(3)}`;
+        return `+63 ${rest.slice(0, 3)} ${rest.slice(3, 6)} ${rest.slice(6, 10)}`;
+    }
+    return digits;
+}
+
+function parsePhone(formatted: string): string {
+    const digits = formatted.replace(/\D/g, '');
+    if (digits.startsWith('63')) return digits;
+    if (digits.startsWith('0')) return `63${digits.slice(1)}`;
+    return digits;
+}
+
+function titleCase(value: string): string {
+    return value
+        .toLowerCase()
+        .split(' ')
+        .map((w) => (w ? w[0].toUpperCase() + w.slice(1) : w))
+        .join(' ');
+}
+
+// ──────────────────────────────────────────────────
+// Types
+// ──────────────────────────────────────────────────
 
 interface Beneficiary {
     full_name: string;
@@ -34,94 +99,287 @@ interface Props {
     roles: string[];
 }
 
+interface FieldOpts {
+    required?: boolean;
+    placeholder?: string;
+    type?: string;
+    max?: string;
+    inputMode?: 'text' | 'decimal' | 'numeric' | 'tel' | 'search' | 'email' | 'url';
+    pattern?: string;
+    helperText?: string;
+    className?: string;
+}
+
+interface OptsBasic {
+    required?: boolean;
+    helperText?: string;
+}
+
+const SELECT_CLASS =
+    'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50';
+
+// ──────────────────────────────────────────────────
+// Component
+// ──────────────────────────────────────────────────
+
 export default function Create({ roles }: Props) {
     const [formData, setFormData] = useState({
-        // Identity
+        // ── Identity ──
         first_name: '',
         middle_name: '',
         last_name: '',
         email: '',
         role: 'member',
-        
-        // Employee IDs
         employee_id: '',
-        payroll_id: '',
 
-        // Personal
+        // ── Personal ──
         place_of_birth: '',
         date_of_birth: '',
         civil_status: '',
         sex: '',
         educational_attainment: '',
 
-        // Contact & Address
-        mobile_number: '',
+        // ── Contact & Address ──
         permanent_mobile_number: '',
         present_address: '',
         present_zip_code: '',
         permanent_address: '',
         permanent_zip_code: '',
 
-        // Employment
+        // ── Employment & Financial ──
         position: '',
         date_hired: '',
         basic_salary: '',
         income_type: 'monthly',
         net_income: '',
         share_capital_balance: '',
-
-        // Other income
         other_source_of_income: '',
         facebook_account_name: '',
-        
-        // Spouse
+
+        // ── Spouse ──
         spouse_occupation: '',
         spouse_gross_income: '',
         spouse_income_type: 'monthly',
         spouse_net_income: '',
 
-        // Assets
+        // ── Assets ──
         real_properties_owned: '',
 
-        // Financial
-        bank_account_number: '',
-        tin_number: '',
-
-        // Beneficiaries
+        // ── Beneficiaries ──
         legal_beneficiary_1_name: '',
         beneficiaries: [{ full_name: '', relationship: '' }] as Beneficiary[],
     });
 
-    const addBeneficiary = () => {
-        setFormData({
-            ...formData,
-            beneficiaries: [...formData.beneficiaries, { full_name: '', relationship: '' }],
+    const handleChange = useCallback((field: string, value: string) => {
+        setFormData((prev) => ({ ...prev, [field]: value }));
+    }, []);
+
+    const handlePhoneChange = useCallback((value: string) => {
+        const digits = value.replace(/\D/g, '').slice(0, 12);
+        setFormData((prev) => ({ ...prev, permanent_mobile_number: digits }));
+    }, []);
+
+    const handleCurrencyChange = useCallback((field: string, raw: string) => {
+        const cleaned = raw.replace(/,/g, '');
+        if (/^\d*\.?\d{0,2}$/.test(cleaned) || cleaned === '') {
+            setFormData((prev) => ({ ...prev, [field]: cleaned }));
+        }
+    }, []);
+
+    const handleCurrencyBlur = useCallback((field: string) => {
+        setFormData((prev) => {
+            const val = prev[field as keyof typeof prev] as string;
+            if (!val) return prev;
+            return { ...prev, [field]: formatCurrency(val) };
         });
+    }, []);
+
+    const handleCurrencyFocus = useCallback((field: string) => {
+        setFormData((prev) => {
+            const val = prev[field as keyof typeof prev] as string;
+            if (!val) return prev;
+            return { ...prev, [field]: parseCurrency(val) };
+        });
+    }, []);
+
+    const addBeneficiary = () => {
+        setFormData((prev) => ({
+            ...prev,
+            beneficiaries: [...prev.beneficiaries, { full_name: '', relationship: '' }],
+        }));
     };
 
     const removeBeneficiary = (index: number) => {
-        const updatedBeneficiaries = formData.beneficiaries.filter((_, i) => i !== index);
-        setFormData({
-            ...formData,
-            beneficiaries: updatedBeneficiaries.length > 0 ? updatedBeneficiaries : [{ full_name: '', relationship: '' }],
+        setFormData((prev) => {
+            const updated = prev.beneficiaries.filter((_, i) => i !== index);
+            return {
+                ...prev,
+                beneficiaries: updated.length > 0 ? updated : [{ full_name: '', relationship: '' }],
+            };
         });
     };
 
     const updateBeneficiary = (index: number, field: keyof Beneficiary, value: string) => {
-        const updatedBeneficiaries = [...formData.beneficiaries];
-        updatedBeneficiaries[index] = { ...updatedBeneficiaries[index], [field]: value };
-        setFormData({
-            ...formData,
-            beneficiaries: updatedBeneficiaries,
+        setFormData((prev) => {
+            const updated = [...prev.beneficiaries];
+            updated[index] = { ...updated[index], [field]: value };
+            return { ...prev, beneficiaries: updated };
         });
     };
+
+    // ── Field renderers (called inside form render prop) ──
+
+    const renderInput = (
+        field: string,
+        label: string,
+        err: Record<string, string>,
+        opts: FieldOpts = {},
+    ): ReactNode => {
+        const value = formData[field as keyof typeof formData] as string;
+        return (
+            <div className="grid gap-1.5">
+                <Label htmlFor={field}>
+                    {label}
+                    {opts.required && <span className="text-red-500 ml-0.5">*</span>}
+                </Label>
+                <Input
+                    id={field}
+                    name={field}
+                    type={opts.type || 'text'}
+                    value={value}
+                    inputMode={opts.inputMode}
+                    pattern={opts.pattern}
+                    max={opts.max}
+                    placeholder={opts.placeholder}
+                    onChange={(e) => handleChange(field, e.target.value)}
+                    className={opts.className}
+                    aria-invalid={!!err[field]}
+                />
+                {opts.helperText && (
+                    <p className="text-xs text-muted-foreground">{opts.helperText}</p>
+                )}
+                {err[field] && <InputError message={err[field]} />}
+            </div>
+        );
+    };
+
+    const renderCurrency = (
+        field: string,
+        label: string,
+        err: Record<string, string>,
+        opts: OptsBasic = {},
+    ): ReactNode => {
+        const value = formData[field as keyof typeof formData] as string;
+        return (
+            <div className="grid gap-1.5">
+                <Label htmlFor={field}>
+                    {label}
+                    {opts.required && <span className="text-red-500 ml-0.5">*</span>}
+                </Label>
+                <div className="relative">
+                    <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-sm text-muted-foreground">
+                        ₱
+                    </span>
+                    <Input
+                        id={field}
+                        name={field}
+                        type="text"
+                        inputMode="decimal"
+                        value={value}
+                        placeholder="0.00"
+                        onChange={(e) => handleCurrencyChange(field, e.target.value)}
+                        onFocus={() => handleCurrencyFocus(field)}
+                        onBlur={() => handleCurrencyBlur(field)}
+                        className="pl-7"
+                        aria-invalid={!!err[field]}
+                    />
+                </div>
+                {opts.helperText && (
+                    <p className="text-xs text-muted-foreground">{opts.helperText}</p>
+                )}
+                {err[field] && <InputError message={err[field]} />}
+            </div>
+        );
+    };
+
+    const renderSelect = (
+        field: string,
+        label: string,
+        options: { value: string; label: string }[],
+        err: Record<string, string>,
+        opts: OptsBasic & { placeholder?: string } = {},
+    ): ReactNode => {
+        const value = formData[field as keyof typeof formData] as string;
+        return (
+            <div className="grid gap-1.5">
+                <Label htmlFor={field}>
+                    {label}
+                    {opts.required && <span className="text-red-500 ml-0.5">*</span>}
+                </Label>
+                <select
+                    id={field}
+                    name={field}
+                    value={value}
+                    onChange={(e) => handleChange(field, e.target.value)}
+                    className={SELECT_CLASS}
+                    aria-invalid={!!err[field]}
+                >
+                    <option value="">
+                        {opts.placeholder || `Select ${label.toLowerCase()}`}
+                    </option>
+                    {options.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                        </option>
+                    ))}
+                </select>
+                {opts.helperText && (
+                    <p className="text-xs text-muted-foreground">{opts.helperText}</p>
+                )}
+                {err[field] && <InputError message={err[field]} />}
+            </div>
+        );
+    };
+
+    const renderTextarea = (
+        field: string,
+        label: string,
+        err: Record<string, string>,
+        opts: OptsBasic & { placeholder?: string } = {},
+    ): ReactNode => {
+        const value = formData[field as keyof typeof formData] as string;
+        return (
+            <div className="grid gap-1.5">
+                <Label htmlFor={field}>
+                    {label}
+                    {opts.required && <span className="text-red-500 ml-0.5">*</span>}
+                </Label>
+                <textarea
+                    id={field}
+                    name={field}
+                    value={value}
+                    onChange={(e) => handleChange(field, e.target.value)}
+                    placeholder={opts.placeholder}
+                    rows={3}
+                    className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    aria-invalid={!!err[field]}
+                />
+                {opts.helperText && (
+                    <p className="text-xs text-muted-foreground">{opts.helperText}</p>
+                )}
+                {err[field] && <InputError message={err[field]} />}
+            </div>
+        );
+    };
+
+    const todayISO = getTodayISO();
 
     return (
         <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
             <Head title="Create Member" />
 
             <div className="flex flex-1 flex-col gap-6 p-6">
-                {/* Header Section */}
+                {/* ── Header ── */}
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <Button variant="outline" size="icon" asChild>
@@ -142,658 +400,595 @@ export default function Create({ roles }: Props) {
                     method="post"
                     action="/dashboards/HR/SeeUsers"
                     transform={() => {
-                        // Include the first beneficiary as legal_beneficiary_1_name for the backend
-                        const firstBeneficiary = formData.beneficiaries.find(b => b.full_name);
+                        const parseNum = (val: string) => {
+                            const num = parseFloat(val.replace(/,/g, ''));
+                            return isNaN(num) ? 0 : num;
+                        };
+                        const parseNullableNum = (val: string) => {
+                            const cleaned = val.replace(/,/g, '');
+                            return cleaned ? parseFloat(cleaned) : null;
+                        };
+
+                        const cleanedPhone = parsePhone(formData.permanent_mobile_number);
+                        const tc = (v: string) => titleCase(v.trim());
+                        const firstBeneficiary = formData.beneficiaries.find((b) => b.full_name);
+
                         return {
-                            ...formData,
-                            basic_salary: formData.basic_salary ? Number(formData.basic_salary) : 0,
-                            net_income: formData.net_income ? Number(formData.net_income) : 0,
-                            share_capital_balance: formData.share_capital_balance ? Number(formData.share_capital_balance) : 0,
-                            spouse_gross_income: formData.spouse_gross_income ? Number(formData.spouse_gross_income) : null,
-                            spouse_net_income: formData.spouse_net_income ? Number(formData.spouse_net_income) : null,
-                            legal_beneficiary_1_name: firstBeneficiary?.full_name || '',
-                        } as any;
+                            first_name: tc(formData.first_name),
+                            middle_name: formData.middle_name ? tc(formData.middle_name) : null,
+                            last_name: tc(formData.last_name),
+                            email: formData.email.trim().toLowerCase(),
+                            role: 'member',
+                            employee_id: formData.employee_id.trim(),
+                            place_of_birth: tc(formData.place_of_birth),
+                            date_of_birth: formData.date_of_birth,
+                            civil_status: formData.civil_status,
+                            sex: formData.sex,
+                            educational_attainment: formData.educational_attainment,
+                            mobile_number: cleanedPhone,
+                            permanent_mobile_number: cleanedPhone,
+                            present_address: formData.present_address.trim(),
+                            present_zip_code: formData.present_zip_code.trim(),
+                            permanent_address: formData.permanent_address.trim(),
+                            permanent_zip_code: formData.permanent_zip_code.trim(),
+                            position: formData.position.trim(),
+                            date_hired: formData.date_hired,
+                            basic_salary: parseNum(formData.basic_salary),
+                            income_type: formData.income_type,
+                            net_income: parseNum(formData.net_income),
+                            share_capital_balance: parseNum(formData.share_capital_balance),
+                            other_source_of_income: formData.other_source_of_income.trim() || null,
+                            facebook_account_name: formData.facebook_account_name.trim() || null,
+                            spouse_occupation: formData.spouse_occupation.trim() || null,
+                            spouse_gross_income: parseNullableNum(formData.spouse_gross_income),
+                            spouse_income_type: formData.spouse_income_type,
+                            spouse_net_income: parseNullableNum(formData.spouse_net_income),
+                            real_properties_owned: formData.real_properties_owned.trim() || null,
+                            legal_beneficiary_1_name: firstBeneficiary?.full_name
+                                ? tc(firstBeneficiary.full_name)
+                                : null,
+                        };
                     }}
                     className="space-y-6"
                     onSuccess={() => {
-                        toast.success('Member created successfully! The application has been submitted for GM validation.');
+                        toast.success(
+                            'Member created successfully! The application has been submitted for GM validation.',
+                        );
                     }}
                     onError={() => {
-                        toast.error('Failed to create member. Please check the form for errors.');
+                        toast.error(
+                            'Failed to create member. Please check the form for errors.',
+                        );
                     }}
                 >
-                    {({ processing, recentlySuccessful, errors }) => (
-                        <>
-                            {/* Identity Section */}
-                            <Card className="border-emerald-100">
-                                <CardHeader className="flex flex-row items-center justify-between pb-3">
-                                    <div className="flex items-center gap-2">
-                                        <User className="h-5 w-5 text-emerald-600" />
-                                        <CardTitle className="text-emerald-900 dark:text-emerald-100 text-lg">
-                                            Identity & Account
-                                        </CardTitle>
-                                    </div>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="employee_id">
-                                                Employee ID <span className="text-red-500">*</span>
-                                            </Label>
-                                            <Input
-                                                id="employee_id"
-                                                name="employee_id"
-                                                value={formData.employee_id}
-                                                onChange={(e) => setFormData({ ...formData, employee_id: e.target.value })}
-                                                placeholder="e.g., EMP-001"
-                                            />
-                                            <InputError message={errors.employee_id} />
-                                        </div>
+                    {({ processing, errors }: { processing: boolean; errors: Record<string, string> }) => {
+                        const err = errors as Record<string, string>;
 
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="payroll_id">Payroll ID</Label>
-                                            <Input
-                                                id="payroll_id"
-                                                name="payroll_id"
-                                                value={formData.payroll_id}
-                                                onChange={(e) => setFormData({ ...formData, payroll_id: e.target.value })}
-                                                placeholder="Optional payroll identifier"
-                                            />
-                                            <InputError message={errors.payroll_id} />
-                                        </div>
-
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="email">
-                                                Email Address <span className="text-red-500">*</span>
-                                            </Label>
-                                            <Input
-                                                id="email"
-                                                name="email"
-                                                type="email"
-                                                value={formData.email}
-                                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                                placeholder="e.g., member@company.com"
-                                            />
-                                            <InputError message={errors.email} />
-                                        </div>
-
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="first_name">
-                                                First Name <span className="text-red-500">*</span>
-                                            </Label>
-                                            <Input
-                                                id="first_name"
-                                                name="first_name"
-                                                value={formData.first_name}
-                                                onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-                                                placeholder="First name"
-                                            />
-                                            <InputError message={errors.first_name} />
-                                        </div>
-
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="middle_name">Middle Name</Label>
-                                            <Input
-                                                id="middle_name"
-                                                name="middle_name"
-                                                value={formData.middle_name}
-                                                onChange={(e) => setFormData({ ...formData, middle_name: e.target.value })}
-                                                placeholder="Middle name"
-                                            />
-                                            <InputError message={errors.middle_name} />
-                                        </div>
-
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="last_name">
-                                                Last Name <span className="text-red-500">*</span>
-                                            </Label>
-                                            <Input
-                                                id="last_name"
-                                                name="last_name"
-                                                value={formData.last_name}
-                                                onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-                                                placeholder="Last name"
-                                            />
-                                            <InputError message={errors.last_name} />
-                                        </div>
-
-                                        <div className="grid gap-2">
-                                            <Label>Date of Birth <span className="text-red-500">*</span></Label>
-                                            <Input
-                                                type="date"
-                                                name="date_of_birth"
-                                                value={formData.date_of_birth}
-                                                onChange={(e) =>
-                                                    setFormData({ ...formData, date_of_birth: e.target.value })
-                                                }
-                                            />
-                                            <InputError message={errors.date_of_birth} />
-                                        </div>
-
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="sex">
-                                                Sex <span className="text-red-500">*</span>
-                                            </Label>
-                                            <select
-                                                id="sex"
-                                                name="sex"
-                                                value={formData.sex}
-                                                onChange={(e) => setFormData({ ...formData, sex: e.target.value })}
-                                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                            >
-                                                <option value="">Select sex</option>
-                                                <option value="male">Male</option>
-                                                <option value="female">Female</option>
-                                            </select>
-                                            <InputError message={errors.sex} />
-                                        </div>
-
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="civil_status">
-                                                Civil Status <span className="text-red-500">*</span>
-                                            </Label>
-                                            <select
-                                                id="civil_status"
-                                                name="civil_status"
-                                                value={formData.civil_status}
-                                                onChange={(e) => setFormData({ ...formData, civil_status: e.target.value })}
-                                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                            >
-                                                <option value="">Select civil status</option>
-                                                <option value="single">Single</option>
-                                                <option value="married">Married</option>
-                                                <option value="widowed">Widower/Widow</option>
-                                            </select>
-                                            <InputError message={errors.civil_status} />
-                                        </div>
-
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="place_of_birth">
-                                                Place of Birth <span className="text-red-500">*</span>
-                                            </Label>
-                                            <Input
-                                                id="place_of_birth"
-                                                name="place_of_birth"
-                                                value={formData.place_of_birth}
-                                                onChange={(e) => setFormData({ ...formData, place_of_birth: e.target.value })}
-                                                placeholder="Enter place of birth"
-                                            />
-                                            <InputError message={errors.place_of_birth} />
-                                        </div>
-
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="educational_attainment">
-                                                Educational Attainment <span className="text-red-500">*</span>
-                                            </Label>
-                                            <select
-                                                id="educational_attainment"
-                                                name="educational_attainment"
-                                                value={formData.educational_attainment}
-                                                onChange={(e) => setFormData({ ...formData, educational_attainment: e.target.value })}
-                                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                            >
-                                                <option value="">Select educational attainment</option>
-                                                <option value="Elementary">Elementary</option>
-                                                <option value="High School">High School</option>
-                                                <option value="Vocational">Vocational</option>
-                                                <option value="College">College</option>
-                                                <option value="Postgraduate">Postgraduate</option>
-                                                <option value="Other">Other</option>
-                                            </select>
-                                            <InputError message={errors.educational_attainment} />
-                                        </div>
-
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="facebook_account_name">Facebook Account (Name)</Label>
-                                            <Input
-                                                id="facebook_account_name"
-                                                name="facebook_account_name"
-                                                value={formData.facebook_account_name}
-                                                onChange={(e) => setFormData({ ...formData, facebook_account_name: e.target.value })}
-                                                placeholder="Enter Facebook account name"
-                                            />
-                                            <InputError message={errors.facebook_account_name} />
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-
-                            {/* Contact & Address Section */}
-                            <Card className="border-emerald-100">
-                                <CardHeader className="flex flex-row items-center justify-between pb-3">
-                                    <div className="flex items-center gap-2">
-                                        <MapPin className="h-5 w-5 text-emerald-600" />
-                                        <CardTitle className="text-emerald-900 dark:text-emerald-100 text-lg">
-                                            Contact & Address
-                                        </CardTitle>
-                                    </div>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="mobile_number">
-                                                Present Cellphone Number <span className="text-red-500">*</span>
-                                            </Label>
-                                            <Input
-                                                id="mobile_number"
-                                                name="mobile_number"
-                                                type="tel"
-                                                inputMode="numeric"
-                                                pattern="[0-9]{11}"
-                                                maxLength={11}
-                                                minLength={11}
-                                                value={formData.mobile_number}
-                                                onChange={(e) => {
-                                                    const value = e.target.value.replace(/[^0-9]/g, '').slice(0, 11);
-                                                    setFormData({ ...formData, mobile_number: value });
-                                                }}
-                                                placeholder="e.g., 09123456789"
-                                            />
-                                            <InputError message={errors.mobile_number} />
-                                        </div>
-
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="permanent_mobile_number">
-                                                Permanent Mobile Number <span className="text-red-500">*</span>
-                                            </Label>
-                                            <Input
-                                                id="permanent_mobile_number"
-                                                name="permanent_mobile_number"
-                                                type="tel"
-                                                inputMode="numeric"
-                                                pattern="[0-9]{11}"
-                                                maxLength={11}
-                                                value={formData.permanent_mobile_number}
-                                                onChange={(e) => {
-                                                    const value = e.target.value.replace(/[^0-9]/g, '').slice(0, 11);
-                                                    setFormData({ ...formData, permanent_mobile_number: value });
-                                                }}
-                                                placeholder="e.g., 09123456789"
-                                            />
-                                            <InputError message={errors.permanent_mobile_number} />
-                                        </div>
-
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="tin_number">TIN Number</Label>
-                                            <Input
-                                                id="tin_number"
-                                                name="tin_number"
-                                                value={formData.tin_number}
-                                                onChange={(e) => setFormData({ ...formData, tin_number: e.target.value })}
-                                                placeholder="e.g., 123-456-789"
-                                            />
-                                            <InputError message={errors.tin_number} />
-                                        </div>
-
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="present_address">
-                                                Present Address <span className="text-red-500">*</span>
-                                            </Label>
-                                            <textarea
-                                                id="present_address"
-                                                name="present_address"
-                                                value={formData.present_address}
-                                                onChange={(e) => setFormData({ ...formData, present_address: e.target.value })}
-                                                placeholder="Present address"
-                                                rows={3}
-                                                className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                            />
-                                            <InputError message={errors.present_address} />
-                                        </div>
-
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="present_zip_code">
-                                                Present Address Zip Code <span className="text-red-500">*</span>
-                                            </Label>
-                                            <Input
-                                                id="present_zip_code"
-                                                name="present_zip_code"
-                                                value={formData.present_zip_code}
-                                                onChange={(e) => setFormData({ ...formData, present_zip_code: e.target.value })}
-                                                placeholder="Enter zip code"
-                                            />
-                                            <InputError message={errors.present_zip_code} />
-                                        </div>
-
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="permanent_address">
-                                                Permanent (Provincial) Address <span className="text-red-500">*</span>
-                                            </Label>
-                                            <textarea
-                                                id="permanent_address"
-                                                name="permanent_address"
-                                                value={formData.permanent_address}
-                                                onChange={(e) => setFormData({ ...formData, permanent_address: e.target.value })}
-                                                placeholder="Permanent address"
-                                                rows={3}
-                                                className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                            />
-                                            <InputError message={errors.permanent_address} />
-                                        </div>
-
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="permanent_zip_code">
-                                                Permanent Address Zip Code <span className="text-red-500">*</span>
-                                            </Label>
-                                            <Input
-                                                id="permanent_zip_code"
-                                                name="permanent_zip_code"
-                                                value={formData.permanent_zip_code}
-                                                onChange={(e) => setFormData({ ...formData, permanent_zip_code: e.target.value })}
-                                                placeholder="Enter zip code"
-                                            />
-                                            <InputError message={errors.permanent_zip_code} />
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-
-                            {/* Employment Section */}
-                            <Card className="border-emerald-100">
-                                <CardHeader className="flex flex-row items-center justify-between pb-3">
-                                    <div className="flex items-center gap-2">
-                                        <Briefcase className="h-5 w-5 text-emerald-600" />
-                                        <CardTitle className="text-emerald-900 dark:text-emerald-100 text-lg">
-                                            Employment Information
-                                        </CardTitle>
-                                    </div>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="position">
-                                                Position <span className="text-red-500">*</span>
-                                            </Label>
-                                            <Input
-                                                id="position"
-                                                name="position"
-                                                value={formData.position}
-                                                onChange={(e) => setFormData({ ...formData, position: e.target.value })}
-                                                placeholder="e.g., Software Engineer"
-                                            />
-                                            <InputError message={errors.position} />
-                                        </div>
-
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="date_hired">
-                                                Date Hired <span className="text-red-500">*</span>
-                                            </Label>
-                                            <Input
-                                                id="date_hired"
-                                                type="date"
-                                                name="date_hired"
-                                                value={formData.date_hired}
-                                                onChange={(e) => setFormData({ ...formData, date_hired: e.target.value })}
-                                            />
-                                            <InputError message={errors.date_hired} />
-                                        </div>
-
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="basic_salary">
-                                                Income (Gross) <span className="text-red-500">*</span>
-                                            </Label>
-                                            <Input
-                                                id="basic_salary"
-                                                name="basic_salary"
-                                                type="number"
-                                                step="0.01"
-                                                min="10000"
-                                                value={formData.basic_salary}
-                                                onChange={(e) => setFormData({ ...formData, basic_salary: e.target.value })}
-                                                placeholder="e.g., 50000.00"
-                                            />
-                                            <InputError message={errors.basic_salary} />
-                                        </div>
-
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="share_capital_balance">
-                                                Share Capital Balance <span className="text-red-500">*</span>
-                                            </Label>
-                                            <Input
-                                                id="share_capital_balance"
-                                                name="share_capital_balance"
-                                                type="number"
-                                                step="0.01"
-                                                min="10000"
-                                                value={formData.share_capital_balance}
-                                                onChange={(e) => setFormData({ ...formData, share_capital_balance: e.target.value })}
-                                                placeholder="e.g., 10000.00"
-                                            />
-                                            <InputError message={errors.share_capital_balance} />
-                                        </div>
-
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="income_type">
-                                                Income Type <span className="text-red-500">*</span>
-                                            </Label>
-                                            <select
-                                                id="income_type"
-                                                name="income_type"
-                                                value={formData.income_type}
-                                                onChange={(e) => setFormData({ ...formData, income_type: e.target.value })}
-                                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                            >
-                                                <option value="monthly">Monthly</option>
-                                                <option value="daily">Daily</option>
-                                                <option value="yearly">Yearly</option>
-                                            </select>
-                                            <InputError message={errors.income_type} />
-                                        </div>
-
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="net_income">
-                                                Net Income <span className="text-red-500">*</span>
-                                            </Label>
-                                            <Input
-                                                id="net_income"
-                                                name="net_income"
-                                                type="number"
-                                                step="0.01"
-                                                min="0"
-                                                value={formData.net_income}
-                                                onChange={(e) => setFormData({ ...formData, net_income: e.target.value })}
-                                                placeholder="0.00"
-                                            />
-                                            <InputError message={errors.net_income} />
-                                        </div>
-
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="bank_account_number">Bank Account Number (RCBC)</Label>
-                                            <Input
-                                                id="bank_account_number"
-                                                name="bank_account_number"
-                                                value={formData.bank_account_number}
-                                                onChange={(e) => setFormData({ ...formData, bank_account_number: e.target.value })}
-                                                placeholder="e.g., 1234567890"
-                                            />
-                                            <InputError message={errors.bank_account_number} />
-                                        </div>
-
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="other_source_of_income">Other Source of Income (Specify)</Label>
-                                            <Input
-                                                id="other_source_of_income"
-                                                name="other_source_of_income"
-                                                value={formData.other_source_of_income}
-                                                onChange={(e) => setFormData({ ...formData, other_source_of_income: e.target.value })}
-                                                placeholder="Specify other income source"
-                                            />
-                                            <InputError message={errors.other_source_of_income} />
-                                        </div>
-                                    </div>
-                                    <p className="text-xs text-muted-foreground p-2 mt-2">
-                                        Note: Share capital balance must be at least ₱10,000.00.
-                                    </p>
-                                </CardContent>
-                            </Card>
-
-                            {/* Spouse, Beneficiary, and Assets Section */}
-                            <Card className="border-emerald-100">
-                                <CardHeader className="flex flex-row items-center justify-between pb-3">
-                                    <div className="flex items-center gap-2">
-                                        <Heart className="h-5 w-5 text-emerald-600" />
-                                        <CardTitle className="text-emerald-900 dark:text-emerald-100 text-lg">
-                                            Spouse, Beneficiary, and Assets
-                                        </CardTitle>
-                                    </div>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="spouse_occupation">Occupation of Spouse</Label>
-                                            <Input
-                                                id="spouse_occupation"
-                                                name="spouse_occupation"
-                                                value={formData.spouse_occupation}
-                                                onChange={(e) => setFormData({ ...formData, spouse_occupation: e.target.value })}
-                                                placeholder="Enter spouse occupation"
-                                            />
-                                            <InputError message={errors.spouse_occupation} />
-                                        </div>
-
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="spouse_gross_income">Spouse Income (Gross)</Label>
-                                            <Input
-                                                id="spouse_gross_income"
-                                                name="spouse_gross_income"
-                                                type="number"
-                                                step="0.01"
-                                                min="0"
-                                                value={formData.spouse_gross_income}
-                                                onChange={(e) => setFormData({ ...formData, spouse_gross_income: e.target.value })}
-                                                placeholder="0.00"
-                                            />
-                                            <InputError message={errors.spouse_gross_income} />
-                                        </div>
-
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="spouse_income_type">Spouse Income Type</Label>
-                                            <select
-                                                id="spouse_income_type"
-                                                name="spouse_income_type"
-                                                value={formData.spouse_income_type}
-                                                onChange={(e) => setFormData({ ...formData, spouse_income_type: e.target.value })}
-                                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                            >
-                                                <option value="monthly">Monthly</option>
-                                                <option value="daily">Daily</option>
-                                                <option value="yearly">Yearly</option>
-                                            </select>
-                                            <InputError message={errors.spouse_income_type} />
-                                        </div>
-
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="spouse_net_income">Spouse Income (Net)</Label>
-                                            <Input
-                                                id="spouse_net_income"
-                                                name="spouse_net_income"
-                                                type="number"
-                                                step="0.01"
-                                                min="0"
-                                                value={formData.spouse_net_income}
-                                                onChange={(e) => setFormData({ ...formData, spouse_net_income: e.target.value })}
-                                                placeholder="0.00"
-                                            />
-                                            <InputError message={errors.spouse_net_income} />
-                                        </div>
-
-                                        <div className="grid gap-2 md:col-span-2 lg:col-span-3">
-                                            <Label htmlFor="real_properties_owned">Real Properties Owned (Specify)</Label>
-                                            <textarea
-                                                id="real_properties_owned"
-                                                name="real_properties_owned"
-                                                value={formData.real_properties_owned}
-                                                onChange={(e) => setFormData({ ...formData, real_properties_owned: e.target.value })}
-                                                placeholder="Specify real properties owned"
-                                                rows={3}
-                                                className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                            />
-                                            <InputError message={errors.real_properties_owned} />
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-
-                            {/* Beneficiaries Section */}
-                            <Card className="border-emerald-100">
-                                <CardHeader className="flex flex-row items-center justify-between pb-3">
-                                    <div className="flex items-center gap-2">
-                                        <Users className="h-5 w-5 text-emerald-600" />
-                                        <CardTitle className="text-emerald-900 dark:text-emerald-100 text-lg">
-                                            Beneficiaries
-                                        </CardTitle>
-                                    </div>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={addBeneficiary}
-                                    >
-                                        Add Beneficiary
-                                    </Button>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="space-y-4">
-                                        {formData.beneficiaries.map((beneficiary, index) => (
-                                            <div key={index} className="rounded-lg border border-emerald-100 p-4 bg-emerald-50/50">
-                                                <div className="mb-2 flex items-center justify-between">
-                                                    <span className="text-sm font-medium text-emerald-800">Beneficiary {index + 1}</span>
-                                                    {formData.beneficiaries.length > 1 && (
-                                                        <Button
-                                                            type="button"
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={() => removeBeneficiary(index)}
-                                                            className="text-red-600 hover:text-red-700"
-                                                        >
-                                                            Remove
-                                                        </Button>
-                                                    )}
-                                                </div>
-                                                <div className="grid gap-4 md:grid-cols-2">
-                                                    <div className="grid gap-2">
-                                                        <Label htmlFor={`beneficiaries[${index}][full_name]`}>
-                                                            Full Name
-                                                        </Label>
-                                                        <Input
-                                                            id={`beneficiaries[${index}][full_name]`}
-                                                            name={`beneficiaries[${index}][full_name]`}
-                                                            value={beneficiary.full_name}
-                                                            onChange={(e) => updateBeneficiary(index, 'full_name', e.target.value)}
-                                                            placeholder="Full name"
-                                                        />
-                                                    </div>
-                                                    <div className="grid gap-2">
-                                                        <Label htmlFor={`beneficiaries[${index}][relationship]`}>
-                                                            Relationship
-                                                        </Label>
-                                                        <Input
-                                                            id={`beneficiaries[${index}][relationship]`}
-                                                            name={`beneficiaries[${index}][relationship]`}
-                                                            value={beneficiary.relationship}
-                                                            onChange={(e) => updateBeneficiary(index, 'relationship', e.target.value)}
-                                                            placeholder="e.g., Wife, Daughter"
-                                                        />
-                                                    </div>
-                                                </div>
+                        return (
+                            <>
+                                {/* ════════════════════════════════════════════ */}
+                                {/* SECTION 1 — Personal Information */}
+                                {/* ════════════════════════════════════════════ */}
+                                <Card>
+                                    <CardHeader className="flex flex-row items-center justify-between pb-2 border-b">
+                                        <div className="flex items-center gap-3">
+                                            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
+                                                <User className="h-5 w-5 text-primary" />
                                             </div>
-                                        ))}
-                                    </div>
-                                </CardContent>
-                            </Card>
+                                            <div>
+                                                <CardTitle className="text-base">
+                                                    Personal Information
+                                                </CardTitle>
+                                                <CardDescription>
+                                                    Full name, birth details, and civil status
+                                                </CardDescription>
+                                            </div>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent className="pt-5">
+                                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                                            {/* Employee ID */}
+                                            <div className="grid gap-1.5">
+                                                <Label htmlFor="employee_id">
+                                                    Employee ID <span className="text-red-500">*</span>
+                                                </Label>
+                                                <Input
+                                                    id="employee_id"
+                                                    name="employee_id"
+                                                    value={formData.employee_id}
+                                                    onChange={(e) =>
+                                                        handleChange('employee_id', e.target.value)
+                                                    }
+                                                    placeholder="e.g., EMP-001"
+                                                    aria-invalid={!!err.employee_id}
+                                                />
+                                                <p className="text-xs text-muted-foreground">
+                                                    Unique employee identifier
+                                                </p>
+                                                <InputError message={err.employee_id} />
+                                            </div>
 
-                            {/* Submit Button */}
-                            <div className="flex items-center gap-4 pb-8">
-                                <div className="flex items-center gap-4">
-                                    <Button disabled={processing} type="submit">
+                                            {/* Email */}
+                                            <div className="grid gap-1.5">
+                                                <Label htmlFor="email">
+                                                    Email Address <span className="text-red-500">*</span>
+                                                </Label>
+                                                <Input
+                                                    id="email"
+                                                    name="email"
+                                                    type="email"
+                                                    value={formData.email}
+                                                    onChange={(e) =>
+                                                        handleChange('email', e.target.value)
+                                                    }
+                                                    placeholder="e.g., member@company.com"
+                                                    aria-invalid={!!err.email}
+                                                />
+                                                <InputError message={err.email} />
+                                            </div>
+
+                                            {/* First Name */}
+                                            {renderInput('first_name', 'First Name', err, {
+                                                required: true,
+                                                placeholder: 'Juan',
+                                            })}
+
+                                            {/* Middle Name */}
+                                            {renderInput('middle_name', 'Middle Name', err, {
+                                                placeholder: 'Dela Cruz',
+                                            })}
+
+                                            {/* Last Name */}
+                                            {renderInput('last_name', 'Last Name', err, {
+                                                required: true,
+                                                placeholder: 'Santos',
+                                            })}
+
+                                            {/* Date of Birth */}
+                                            <div className="grid gap-1.5">
+                                                <Label htmlFor="date_of_birth">
+                                                    Date of Birth <span className="text-red-500">*</span>
+                                                </Label>
+                                                <Input
+                                                    id="date_of_birth"
+                                                    name="date_of_birth"
+                                                    type="date"
+                                                    value={formData.date_of_birth}
+                                                    max={todayISO}
+                                                    onChange={(e) =>
+                                                        handleChange('date_of_birth', e.target.value)
+                                                    }
+                                                    aria-invalid={!!err.date_of_birth}
+                                                />
+                                                <p className="text-xs text-muted-foreground">
+                                                    Must not be a future date
+                                                </p>
+                                                <InputError message={err.date_of_birth} />
+                                            </div>
+
+                                            {/* Sex */}
+                                            {renderSelect(
+                                                'sex',
+                                                'Sex',
+                                                [
+                                                    { value: 'male', label: 'Male' },
+                                                    { value: 'female', label: 'Female' },
+                                                ],
+                                                err,
+                                                { required: true },
+                                            )}
+
+                                            {/* Civil Status */}
+                                            {renderSelect(
+                                                'civil_status',
+                                                'Civil Status',
+                                                [
+                                                    { value: 'single', label: 'Single' },
+                                                    { value: 'married', label: 'Married' },
+                                                    { value: 'widowed', label: 'Widower / Widow' },
+                                                ],
+                                                err,
+                                                { required: true },
+                                            )}
+
+                                            {/* Place of Birth */}
+                                            {renderInput('place_of_birth', 'Place of Birth', err, {
+                                                required: true,
+                                                placeholder: 'City, Province',
+                                            })}
+
+                                            {/* Educational Attainment */}
+                                            {renderSelect(
+                                                'educational_attainment',
+                                                'Educational Attainment',
+                                                [
+                                                    { value: 'Elementary', label: 'Elementary' },
+                                                    { value: 'High School', label: 'High School' },
+                                                    { value: 'Vocational', label: 'Vocational' },
+                                                    { value: 'College', label: 'College' },
+                                                    { value: 'Postgraduate', label: 'Postgraduate' },
+                                                    { value: 'Other', label: 'Other' },
+                                                ],
+                                                err,
+                                                { required: true },
+                                            )}
+
+                                            {/* Facebook Account */}
+                                            {renderInput('facebook_account_name', 'Facebook Account', err, {
+                                                placeholder: 'Profile name (optional)',
+                                                helperText: 'For reference and verification',
+                                            })}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                {/* ════════════════════════════════════════════ */}
+                                {/* SECTION 2 — Contact & Address Details */}
+                                {/* ════════════════════════════════════════════ */}
+                                <Card>
+                                    <CardHeader className="flex flex-row items-center justify-between pb-2 border-b">
+                                        <div className="flex items-center gap-3">
+                                            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
+                                                <MapPin className="h-5 w-5 text-primary" />
+                                            </div>
+                                            <div>
+                                                <CardTitle className="text-base">
+                                                    Contact &amp; Address Details
+                                                </CardTitle>
+                                                <CardDescription>
+                                                    Primary contact number and residential addresses
+                                                </CardDescription>
+                                            </div>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent className="pt-5">
+                                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                                            {/* Contact Number */}
+                                            <div className="grid gap-1.5 md:col-span-2 lg:col-span-1">
+                                                <Label htmlFor="permanent_mobile_number">
+                                                    Contact Number <span className="text-red-500">*</span>
+                                                </Label>
+                                                <div className="relative">
+                                                    <Phone className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground" />
+                                                    <Input
+                                                        id="permanent_mobile_number"
+                                                        name="permanent_mobile_number"
+                                                        type="tel"
+                                                        inputMode="numeric"
+                                                        value={formatPhone(
+                                                            formData.permanent_mobile_number,
+                                                        )}
+                                                        onChange={(e) =>
+                                                            handlePhoneChange(e.target.value)
+                                                        }
+                                                        placeholder="+63 912 345 6789"
+                                                        className="pl-9"
+                                                        aria-invalid={!!err.permanent_mobile_number}
+                                                    />
+                                                </div>
+                                                <p className="text-xs text-muted-foreground">
+                                                    Format: +63 9XX XXX XXXX
+                                                </p>
+                                                <InputError message={err.permanent_mobile_number} />
+                                            </div>
+
+                                            {/* Present Address */}
+                                            {renderTextarea('present_address', 'Present Address', err, {
+                                                required: true,
+                                                placeholder: 'House/Unit No., Street, Barangay, City',
+                                                helperText: 'Current residential address',
+                                            })}
+
+                                            {/* Present Zip Code */}
+                                            {renderInput('present_zip_code', 'Present Zip Code', err, {
+                                                required: true,
+                                                placeholder: 'e.g., 1000',
+                                                helperText: 'Four-digit postal code',
+                                            })}
+
+                                            {/* Permanent Address */}
+                                            {renderTextarea(
+                                                'permanent_address',
+                                                'Permanent / Provincial Address',
+                                                err,
+                                                {
+                                                    required: true,
+                                                    placeholder:
+                                                        'House/Unit No., Street, Barangay, City, Province',
+                                                    helperText: 'Address on official records',
+                                                },
+                                            )}
+
+                                            {/* Permanent Zip Code */}
+                                            {renderInput('permanent_zip_code', 'Permanent Zip Code', err, {
+                                                required: true,
+                                                placeholder: 'e.g., 1000',
+                                                helperText: 'Four-digit postal code',
+                                            })}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                {/* ════════════════════════════════════════════ */}
+                                {/* SECTION 3 — Employment & Financial Assessment */}
+                                {/* ════════════════════════════════════════════ */}
+                                <Card>
+                                    <CardHeader className="flex flex-row items-center justify-between pb-2 border-b">
+                                        <div className="flex items-center gap-3">
+                                            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
+                                                <Briefcase className="h-5 w-5 text-primary" />
+                                            </div>
+                                            <div>
+                                                <CardTitle className="text-base">
+                                                    Employment &amp; Financial Assessment
+                                                </CardTitle>
+                                                <CardDescription>
+                                                    Job details and income information for loan eligibility
+                                                </CardDescription>
+                                            </div>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent className="pt-5">
+                                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                                            {/* Position */}
+                                            {renderInput('position', 'Position', err, {
+                                                required: true,
+                                                placeholder: 'e.g., Software Engineer',
+                                            })}
+
+                                            {/* Date Hired */}
+                                            <div className="grid gap-1.5">
+                                                <Label htmlFor="date_hired">
+                                                    Date Hired <span className="text-red-500">*</span>
+                                                </Label>
+                                                <Input
+                                                    id="date_hired"
+                                                    name="date_hired"
+                                                    type="date"
+                                                    value={formData.date_hired}
+                                                    max={todayISO}
+                                                    onChange={(e) =>
+                                                        handleChange('date_hired', e.target.value)
+                                                    }
+                                                    aria-invalid={!!err.date_hired}
+                                                />
+                                                <p className="text-xs text-muted-foreground">
+                                                    Must not be a future date
+                                                </p>
+                                                <InputError message={err.date_hired} />
+                                            </div>
+
+                                            {/* Income (Gross) */}
+                                            {renderCurrency('basic_salary', 'Income (Gross)', err, {
+                                                required: true,
+                                                helperText: 'Minimum ₱10,000.00',
+                                            })}
+
+                                            {/* Net Income */}
+                                            {renderCurrency('net_income', 'Net Income', err, {
+                                                required: true,
+                                            })}
+
+                                            {/* Income Type */}
+                                            {renderSelect(
+                                                'income_type',
+                                                'Income Type',
+                                                [
+                                                    { value: 'monthly', label: 'Monthly' },
+                                                    { value: 'daily', label: 'Daily' },
+                                                    { value: 'yearly', label: 'Yearly' },
+                                                ],
+                                                err,
+                                                { required: true },
+                                            )}
+
+                                            {/* Share Capital Balance */}
+                                            {renderCurrency(
+                                                'share_capital_balance',
+                                                'Share Capital Balance',
+                                                err,
+                                                {
+                                                    required: true,
+                                                    helperText: 'Minimum ₱10,000.00',
+                                                },
+                                            )}
+
+                                            {/* Other Source of Income */}
+                                            {renderInput(
+                                                'other_source_of_income',
+                                                'Other Source of Income',
+                                                err,
+                                                {
+                                                    placeholder: 'e.g., Freelance, Business',
+                                                    helperText: 'Specify if applicable',
+                                                },
+                                            )}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                {/* ════════════════════════════════════════════ */}
+                                {/* SECTION 4 — Spouse & Beneficiaries */}
+                                {/* ════════════════════════════════════════════ */}
+                                <Card>
+                                    <CardHeader className="flex flex-row items-center justify-between pb-2 border-b">
+                                        <div className="flex items-center gap-3">
+                                            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
+                                                <Heart className="h-5 w-5 text-primary" />
+                                            </div>
+                                            <div>
+                                                <CardTitle className="text-base">
+                                                    Spouse &amp; Beneficiaries
+                                                </CardTitle>
+                                                <CardDescription>
+                                                    Spouse financial profile and beneficiary designations
+                                                    (if applicable)
+                                                </CardDescription>
+                                            </div>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent className="pt-5">
+                                        {/* ── Spouse Sub-section ── */}
+                                        <div className="mb-6">
+                                            <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+                                                <UserCircle className="h-4 w-4" />
+                                                Spouse Information
+                                            </h4>
+                                            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                                                {renderInput('spouse_occupation', 'Occupation of Spouse', err, {
+                                                    placeholder: 'Enter spouse occupation',
+                                                })}
+
+                                                {renderCurrency(
+                                                    'spouse_gross_income',
+                                                    'Spouse Income (Gross)',
+                                                    err,
+                                                    { helperText: 'Optional' },
+                                                )}
+
+                                                {renderSelect(
+                                                    'spouse_income_type',
+                                                    'Spouse Income Type',
+                                                    [
+                                                        { value: 'monthly', label: 'Monthly' },
+                                                        { value: 'daily', label: 'Daily' },
+                                                        { value: 'yearly', label: 'Yearly' },
+                                                    ],
+                                                    err,
+                                                    { helperText: 'Optional' },
+                                                )}
+
+                                                {renderCurrency(
+                                                    'spouse_net_income',
+                                                    'Spouse Income (Net)',
+                                                    err,
+                                                    { helperText: 'Optional' },
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* ── Real Properties ── */}
+                                        <div className="mb-6">
+                                            <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+                                                <Building className="h-4 w-4" />
+                                                Assets
+                                            </h4>
+                                            <div className="grid gap-4 md:grid-cols-1">
+                                                {renderTextarea(
+                                                    'real_properties_owned',
+                                                    'Real Properties Owned',
+                                                    err,
+                                                    {
+                                                        placeholder:
+                                                            'Specify real properties owned (e.g., Lot in Quezon City, House in Batangas)',
+                                                        helperText: 'Optional — list properties if any',
+                                                    },
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* ── Beneficiaries ── */}
+                                        <div>
+                                            <div className="mb-3 flex items-center justify-between">
+                                                <h4 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+                                                    <Users className="h-4 w-4" />
+                                                    Beneficiaries
+                                                </h4>
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={addBeneficiary}
+                                                >
+                                                    Add Beneficiary
+                                                </Button>
+                                            </div>
+
+                                            <div className="space-y-3">
+                                                {formData.beneficiaries.map((beneficiary, index) => (
+                                                    <div
+                                                        key={index}
+                                                        className="rounded-lg border bg-muted/30 p-4 transition-colors hover:bg-muted/50"
+                                                    >
+                                                        <div className="mb-2 flex items-center justify-between">
+                                                            <span className="text-sm font-medium">
+                                                                Beneficiary {index + 1}
+                                                            </span>
+                                                            {formData.beneficiaries.length > 1 && (
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    onClick={() =>
+                                                                        removeBeneficiary(index)
+                                                                    }
+                                                                    className="text-destructive hover:text-destructive/80"
+                                                                >
+                                                                    Remove
+                                                                </Button>
+                                                            )}
+                                                        </div>
+                                                        <div className="grid gap-4 md:grid-cols-2">
+                                                            <div className="grid gap-1.5">
+                                                                <Label
+                                                                    htmlFor={`beneficiaries[${index}][full_name]`}
+                                                                >
+                                                                    Full Name
+                                                                </Label>
+                                                                <Input
+                                                                    id={`beneficiaries[${index}][full_name]`}
+                                                                    name={`beneficiaries[${index}][full_name]`}
+                                                                    value={beneficiary.full_name}
+                                                                    onChange={(e) =>
+                                                                        updateBeneficiary(
+                                                                            index,
+                                                                            'full_name',
+                                                                            e.target.value,
+                                                                        )
+                                                                    }
+                                                                    placeholder="Full name"
+                                                                />
+                                                            </div>
+                                                            <div className="grid gap-1.5">
+                                                                <Label
+                                                                    htmlFor={`beneficiaries[${index}][relationship]`}
+                                                                >
+                                                                    Relationship
+                                                                </Label>
+                                                                <Input
+                                                                    id={`beneficiaries[${index}][relationship]`}
+                                                                    name={`beneficiaries[${index}][relationship]`}
+                                                                    value={beneficiary.relationship}
+                                                                    onChange={(e) =>
+                                                                        updateBeneficiary(
+                                                                            index,
+                                                                            'relationship',
+                                                                            e.target.value,
+                                                                        )
+                                                                    }
+                                                                    placeholder="e.g., Wife, Daughter"
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                {/* ── Submit ── */}
+                                <div className="flex items-center gap-4 pb-8">
+                                    <Button disabled={processing} type="submit" size="lg">
                                         {processing ? 'Creating...' : 'Create Member Account'}
                                     </Button>
                                 </div>
-                            </div>
-                        </>
-                    )}
+                            </>
+                        );
+                    }}
                 </Form>
             </div>
         </AppLayout>
     );
 }
+

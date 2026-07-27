@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\HrController;
 
 use App\Http\Controllers\Controller;
+use App\Models\ProfileUpdateRequest;
 use App\Models\User;
 use App\Services\ActivityLogService;
 use Illuminate\Http\Request;
@@ -103,6 +104,17 @@ class CreateMemberController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate(10)
             ->withQueryString();
+
+        // Attach pending update request status for each user
+        $pendingRequestMemberIds = ProfileUpdateRequest::where('status', 'pending')
+            ->pluck('member_id')
+            ->toArray();
+
+        $users->getCollection()->transform(function ($user) use ($pendingRequestMemberIds) {
+            $memberProfile = $user->memberProfile;
+            $user->has_pending_update_request = $memberProfile && in_array($memberProfile->employee_id, $pendingRequestMemberIds);
+            return $user;
+        });
 
         return Inertia::render('dashboards/HR/SeeUsers', [
             'users' => $users,

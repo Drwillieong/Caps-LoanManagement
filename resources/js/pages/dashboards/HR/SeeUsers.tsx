@@ -48,6 +48,7 @@ interface User {
     created_at: string
     updated_at: string
     member_profile: MemberProfile | null
+    has_pending_update_request?: boolean
 }
 
 interface Filters {
@@ -321,7 +322,7 @@ export default function SeeUsers({ users, filters }: Props) {
                                         className="border-b transition-colors hover:bg-muted/30"
                                     >
                                         <td className="px-6 py-4 font-medium">
-                                            #{user.member_profile?.employee_id}
+                                            {user.member_profile?.employee_id}
                                         </td>
 
                                         <td className="px-6 py-4">
@@ -344,17 +345,24 @@ export default function SeeUsers({ users, filters }: Props) {
                                         </td>
 
                                         <td className="px-6 py-4">
-                                            <span
-                                                className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${
-                                                    user.status === 'active'
-                                                        ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                                                        : user.status === 'pending'
-                                                        ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
-                                                        : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                                                }`}
-                                            >
-                                                {user.status === 'pending' ? 'Pending' : user.status === 'active' ? 'Active' : 'Rejected'}
-                                            </span>
+                                            <div className="flex items-center gap-2">
+                                                <span
+                                                    className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${
+                                                        user.status === 'active'
+                                                            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                                                            : user.status === 'pending'
+                                                            ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                                                            : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                                                    }`}
+                                                >
+                                                    {user.status === 'pending' ? 'Pending' : user.status === 'active' ? 'Active' : 'Rejected'}
+                                                </span>
+                                                {user.has_pending_update_request && (
+                                                    <span className="inline-flex items-center rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 px-2.5 py-0.5 text-xs font-medium">
+                                                        Pending Edit
+                                                    </span>
+                                                )}
+                                            </div>
                                         </td>
 
                                         <td className="px-6 py-4 text-muted-foreground">
@@ -374,6 +382,21 @@ export default function SeeUsers({ users, filters }: Props) {
                                                         </TooltipTrigger>
                                                         <TooltipContent>
                                                             <p>Rejected accounts cannot be edited</p>
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
+                                            ) : user.has_pending_update_request ? (
+                                                <TooltipProvider>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <span>
+                                                                <Button variant="ghost" size="sm" disabled>
+                                                                    Edit
+                                                                </Button>
+                                                            </span>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>
+                                                            <p>Profile has a pending edit request awaiting GM approval</p>
                                                         </TooltipContent>
                                                     </Tooltip>
                                                 </TooltipProvider>

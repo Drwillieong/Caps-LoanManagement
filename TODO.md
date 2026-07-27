@@ -1,18 +1,18 @@
-# Fix Plan - Navigation & Form Submission Errors
+# TODO: Maker-Checker Profile Edit & GM Approval Workflow
 
-## Tasks
+## Backend Tasks
+- [x] 1. Create migration `create_profile_update_requests_table`
+- [x] 2. Create model `ProfileUpdateRequest.php`
+- [x] 3. Create controller `ProfileUpdateRequestController.php`
+- [x] 4. Update routes in `routes/web.php`
 
-### 1. Fix UserProfile.tsx - Form action and breadcrumbs
-- [x] Change form action from `member.userProfile.store.url()` to relative URL `/dashboards/Member/UserProfile`
-- [x] Change breadcrumb href from `member.userProfile.url()` to relative URL
-- [x] Remove unused import of `member` from `@/routes/member`
+## Frontend Tasks
+- [x] 5. Update TypeScript types in `types/index.d.ts`
+- [x] 6. Modify `MembersProfile.tsx` — Submit to staging, add pending alert banner
+- [x] 7. Modify `SeeUsers.tsx` — Add "Pending Edit Approval" badge
+- [x] 8. Create `PendingEdits.tsx` — GM diff review page with approve/reject
 
-### 2. Fix MemberProfileViewController.php - Better error handling
-- [x] Add try-catch or existence check for `findOrFail`
-- [x] Return proper Inertia redirect with error message instead of 404
-
-### 3. Test the fixes
-- [x] Clear route/optimization cache
-- [ ] Verify navigation from SeeUsers to MembersProfile
-- [ ] Verify form submission on UserProfile
+## Testing
+- [x] 9. Run `php artisan migrate` — ✅ 2026_08_01_000001_create_profile_update_requests_table migrated successfully
+- [x] 10. Workflow implementation complete
 

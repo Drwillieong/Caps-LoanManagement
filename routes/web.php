@@ -232,6 +232,25 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware('role:gm')
         ->name('gm.payroll-deductions.template');
 
+    // GM - Profile Update Requests (Maker-Checker)
+    Route::get('dashboards/Gm/PendingEdits', [\App\Http\Controllers\GmController\ProfileUpdateRequestController::class, 'index'])
+        ->middleware('role:gm')
+        ->name('gm.pending-edits');
+
+    // HR - Submit Profile Update Request
+    Route::post('dashboards/HR/EditMember/{employeeId}/update-request', [\App\Http\Controllers\GmController\ProfileUpdateRequestController::class, 'store'])
+        ->middleware('role:hr')
+        ->name('hr.profile-update-request.store');
+
+    // API-like routes for GM actions on pending edits
+    Route::post('dashboards/Gm/PendingEdits/{id}/approve', [\App\Http\Controllers\GmController\ProfileUpdateRequestController::class, 'approve'])
+        ->middleware('role:gm')
+        ->name('gm.pending-edits.approve');
+
+    Route::post('dashboards/Gm/PendingEdits/{id}/reject', [\App\Http\Controllers\GmController\ProfileUpdateRequestController::class, 'reject'])
+        ->middleware('role:gm')
+        ->name('gm.pending-edits.reject');
+
     // GM - Create Application (NEW)
     Route::get('dashboards/Gm/CreateApplication', [GmController::class, 'createApplication'])
         ->middleware('role:gm')

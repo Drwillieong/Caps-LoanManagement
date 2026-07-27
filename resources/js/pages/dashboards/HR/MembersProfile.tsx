@@ -93,11 +93,12 @@ interface Props {
     profileCompleted: boolean;
     targetEmployeeId: string;
     targetUserName: string;
+    hasPendingUpdateRequest?: boolean;
 }
 
-export default function MembersProfile({ user, memberProfile, beneficiaries, isAdmin, isNewUser, profileCompleted, targetEmployeeId, targetUserName }: Props) {
+export default function MembersProfile({ user, memberProfile, beneficiaries, isAdmin, isNewUser, profileCompleted, targetEmployeeId, targetUserName, hasPendingUpdateRequest = false }: Props) {
     const isRejected = user.status === 'rejected'
-    const [isEditing, setIsEditing] = useState(!isRejected);
+    const [isEditing, setIsEditing] = useState(!isRejected && !hasPendingUpdateRequest);
     
     const [previewUrl, setPreviewUrl] = useState('');
     
@@ -324,8 +325,10 @@ export default function MembersProfile({ user, memberProfile, beneficiaries, isA
         doc.save(fileName);
     };
 
-    const formActionUrl = `/dashboards/HR/EditMember/${targetEmployeeId}`;
-    const formMethod = 'put';
+    const formActionUrl = hasPendingUpdateRequest 
+        ? '#' 
+        : `/dashboards/HR/EditMember/${targetEmployeeId}/update-request`;
+    const formMethod = 'post';
 
     return (
         <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
@@ -425,16 +428,38 @@ export default function MembersProfile({ user, memberProfile, beneficiaries, isA
                     </Card>
                 )}
 
+                {/* Pending Update Request Alert */}
+                {hasPendingUpdateRequest && (
+                    <Card className="border-l-4 border-l-blue-500 bg-blue-50">
+                        <CardContent className="flex items-center justify-between py-4">
+                            <div className="flex items-start gap-3">
+                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900">
+                                    <span className="text-sm font-bold text-blue-600 dark:text-blue-400">⚠</span>
+                                </div>
+                                <div>
+                                    <h3 className="font-semibold text-blue-800 dark:text-blue-300">Pending GM Approval</h3>
+                                    <p className="mt-1 text-sm text-blue-700 dark:text-blue-400">
+                                        An update request for this profile is currently awaiting GM approval. Further edits are disabled until the request is reviewed.
+                                    </p>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+
                 <Form
                     method={formMethod}
                     action={formActionUrl}
-                    transform={() => formData as any}
+                    transform={() => ({
+                        member_id: targetEmployeeId,
+                        pending_data: formData as any,
+                    })}
                     className="space-y-6"
                     onSuccess={() => {
-                        toast.success('Member profile updated successfully!');
+                        toast.success('Profile update request submitted successfully and is awaiting GM approval!');
                     }}
                     onError={() => {
-                        toast.error('Failed to update member profile. Please check the form for errors.');
+                        toast.error('Failed to submit profile update request. Please check the form for errors.');
                     }}
                 >
                     {({ processing, recentlySuccessful, errors }) => (

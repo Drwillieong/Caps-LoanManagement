@@ -1,19 +1,8 @@
 import { Transition } from '@headlessui/react';
-import { Form, Head, Link } from '@inertiajs/react';
-import { useState, useEffect } from 'react';
-import toast from 'react-hot-toast';
-import { 
-    ArrowLeft,
-    User, 
-    MapPin, 
-    Briefcase, 
-    Heart, 
-    Camera, 
-    Download,
-    Users,
-} from 'lucide-react';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import { Head, useForm } from '@inertiajs/react';
+import { type FormEvent } from 'react';
+import { toast } from 'react-hot-toast';
+import { z } from 'zod';
 
 import HeadingSmall from '@/components/heading-small';
 import InputError from '@/components/input-error';
@@ -21,13 +10,22 @@ import { LiveClock } from '@/components/live-clock';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import { Spinner } from '@/components/ui/spinner';
+import { Textarea } from '@/components/ui/textarea';
 import AppLayout from '@/layouts/app-layout';
+import { store } from '@/routes/users';
 import { type BreadcrumbItem } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Members', href: '/dashboards/HR/SeeUsers' },
-    { title: 'User Profile', href: '' },
+    { title: 'Create', href: '/dashboards/HR/create' },
 ];
 
 const MIN_FINANCIAL_AMOUNT = 10000;
@@ -89,23 +87,6 @@ const requiredPastDate = (label: string) =>
 
             return !Number.isNaN(date.getTime()) && date < today;
         }, `${label} must be before today.`);
-
-// ===== FORMATTING UTILITIES (mirrored from ApplyLoan.tsx) =====
-const formatCurrency = (amount: number | string | null | undefined): string => {
-    if (amount == null || amount === '') return '₱0.00';
-    const num = typeof amount === 'string' ? parseFloat(amount.toString().replace(/,/g, '')) : Number(amount);
-    return isNaN(num) ? '₱0.00' : `₱${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-};
-
-const formatNumberInput = (value: string): string => {
-    const num = parseFloat(value.replace(/,/g, ''));
-    return isNaN(num) || num === 0 ? '' : num.toLocaleString('en-US', { maximumFractionDigits: 2 });
-};
-
-const parseNumber = (value: string): number => {
-    const num = parseFloat(value.replace(/,/g, ''));
-    return isNaN(num) ? 0 : num;
-};
 
 export const createMemberSchema = z.object({
     first_name: requiredText('First name'),
@@ -321,45 +302,6 @@ export default function Create() {
         <InputError message={errors[name]} />
     </div>
 );
-
-    const renderAmountInput = (
-        name: CreateMemberField,
-        label: string,
-        options: {
-            required?: boolean;
-            placeholder?: string;
-            min?: number;
-        } = {},
-    ) => {
-        const rawValue = String(data[name] ?? '');
-        const displayValue = rawValue ? formatNumberInput(rawValue) : '';
-
-        return (
-            <div className="space-y-2">
-                <Label htmlFor={name}>
-                    {label}
-                    {options.required && <span className="text-red-500"> *</span>}
-                </Label>
-                <Input
-                    id={name}
-                    name={name}
-                    type="text"
-                    inputMode="numeric"
-                    required={options.required}
-                    placeholder={options.placeholder}
-                    value={displayValue}
-                    onChange={(event) => {
-                        const raw = event.target.value.replace(/,/g, '');
-                        if (raw === '' || /^\d*\.?\d{0,2}$/.test(raw)) {
-                            setData(name, raw);
-                        }
-                    }}
-                    className={inputClass}
-                />
-                <InputError message={errors[name]} />
-            </div>
-        );
-    };
 const yesterday = new Date();
 yesterday.setDate(yesterday.getDate() - 1);
 
@@ -401,28 +343,18 @@ const maxHireDate = `${yesterday.getFullYear()}-${String(
 
     return (
         <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
-            <Head title={`${memberProfile?.first_name || user.name}'s Profile`} />
+            <Head title="Create Member" />
 
             <div className="flex flex-1 flex-col gap-6 p-6">
-                {/* Header Section */}
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <Button variant="outline" size="icon" asChild>
-                            <Link href="/dashboards/HR/SeeUsers">
-                                <ArrowLeft className="h-4 w-4" />
-                            </Link>
-                        </Button>
-                        <div>
-                            <HeadingSmall
-                                title={targetUserName || `${memberProfile?.first_name || ''} ${memberProfile?.last_name || ''}`}
-                                description={
-                                    isEditing
-                                        ? 'Editing member profile details'
-                                        : 'View member profile information'
-                                }
-                            />
-                        </div>
-                    </div>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <HeadingSmall
+                        title="Create New Member"
+                        description="Add a new member to your organization"
+                    />
+                    <p className="text-sm text-muted-foreground">
+                        Fields marked * are required
+                    </p>
+                </div>
 
                 <form onSubmit={submit} className="space-y-6">
                     <Transition
@@ -451,12 +383,16 @@ const maxHireDate = `${yesterday.getFullYear()}-${String(
                             <h3 className="text-base font-semibold tracking-tight text-emerald-900 dark:text-emerald-100">
                                 Account Information
                             </h3>
+                            <p className="text-sm text-muted-foreground">
+                                The member role is fixed and the temporary
+                                password is generated automatically.
+                            </p>
                         </div>
 
                         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                             {renderTextInput(
                                 'last_name',
-                                'Family Name',
+                                'Name - Family Name',
                                 {
                                     required: true,
                                     placeholder: 'Enter family name',
@@ -464,7 +400,7 @@ const maxHireDate = `${yesterday.getFullYear()}-${String(
                             )}
                             {renderTextInput(
                                 'first_name',
-                                'First Name',
+                                'Name - First Name',
                                 {
                                     required: true,
                                     placeholder: 'Enter first name',
@@ -472,7 +408,7 @@ const maxHireDate = `${yesterday.getFullYear()}-${String(
                             )}
                             {renderTextInput(
                                 'middle_name',
-                                'Middle Name',
+                                'Name - Middle Name',
                                 {
                                     placeholder: 'Enter middle name',
                                 },
@@ -482,7 +418,28 @@ const maxHireDate = `${yesterday.getFullYear()}-${String(
                                 required: true,
                                 placeholder: 'member@gmail.com',
                             })}
-            
+                            {renderTextInput('employee_id', 'Member ID', {
+                                required: true,
+                                placeholder: 'Enter member ID',
+                            })}
+                            {renderTextInput('payroll_id', 'Payroll ID', {
+                                placeholder: 'Optional payroll identifier',
+                            })}
+
+                            <div className="space-y-2">
+                                <Label>
+                                    Role <span className="text-red-500">*</span>
+                                </Label>
+                                <Input
+                                    type="hidden"
+                                    name="role"
+                                    value={data.role}
+                                />
+                                <p className="flex h-10 items-center rounded-lg border border-emerald-100 bg-gray-50 px-3 text-sm font-medium text-muted-foreground">
+                                    MEMBER
+                                </p>
+                                <InputError message={errors.role} />
+                            </div>
                         </div>
                     </section>
 
@@ -496,243 +453,88 @@ const maxHireDate = `${yesterday.getFullYear()}-${String(
                             </p>
                         </div>
 
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="middle_name">Middle Name</Label>
-                                            <Input
-                                                id="middle_name"
-                                                name="middle_name"
-                                                value={formData.middle_name}
-                                                onChange={(e) => setFormData({ ...formData, middle_name: e.target.value })}
-                                                placeholder="Middle name"
-                                                disabled={!isEditing}
-                                            />
-                                            <InputError message={errors.middle_name} />
-                                        </div>
+                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                            {renderSelect(
+                                'civil_status',
+                                'Civil Status',
+                                data.civil_status,
+                                (value) => setData('civil_status', value),
+                                civilStatusOptions,
+                            )}
+                            {renderSelect(
+                                'sex',
+                                'Sex',
+                                data.sex,
+                                (value) => setData('sex', value),
+                                sexOptions,
+                            )}
+                            {renderTextInput(
+                                'place_of_birth',
+                                'Place of Birth',
+                                {
+                                    required: true,
+                                    placeholder: 'Enter place of birth',
+                                },
+                            )}
+                            {renderTextInput('date_of_birth', 'Date of Birth', {
+                                type: 'date',
+                                required: true,
+                            })}
 
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="last_name">
-                                                Last Name <span className="text-red-500">*</span>
-                                            </Label>
-                                            <Input
-                                                id="last_name"
-                                                name="last_name"
-                                                value={formData.last_name}
-                                                onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-                                                placeholder="Last name"
-                                                disabled={!isEditing}
-                                            />
-                                            <InputError message={errors.last_name} />
-                                        </div>
-
-                                        <div className="grid gap-2">
-                                            <Label>Date of Birth</Label>
-                                            {!isEditing ? (
-                                                <div className="rounded-md border bg-muted px-3 py-2 text-sm">
-                                                    {formatDate(formData.date_of_birth)}
-                                                </div>
-                                            ) : (
-                                                <Input
-                                                    type="date"
-                                                    name="date_of_birth"
-                                                    value={formData.date_of_birth}
-                                                    onChange={(e) =>
-                                                        setFormData({ ...formData, date_of_birth: e.target.value })
-                                                    }
-                                                />
-                                            )}
-                                            <InputError message={errors.date_of_birth} />
-                                        </div>
-
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="sex">
-                                                Sex <span className="text-red-500">*</span>
-                                            </Label>
-                                            <select
-                                                id="sex"
-                                                name="sex"
-                                                value={formData.sex}
-                                                onChange={(e) => setFormData({ ...formData, sex: e.target.value })}
-                                                disabled={!isEditing}
-                                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                            >
-                                                <option value="">Select sex</option>
-                                                <option value="male">Male</option>
-                                                <option value="female">Female</option>
-                                            </select>
-                                            <InputError message={errors.sex} />
-                                        </div>
-
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="civil_status">
-                                                Civil Status <span className="text-red-500">*</span>
-                                            </Label>
-                                            <select
-                                                id="civil_status"
-                                                name="civil_status"
-                                                value={formData.civil_status}
-                                                onChange={(e) => setFormData({ ...formData, civil_status: e.target.value })}
-                                                disabled={!isEditing}
-                                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                            >
-                                                <option value="">Select civil status</option>
-                                                <option value="single">Single</option>
-                                                <option value="married">Married</option>
-                                                <option value="widowed">Widower/Widow</option>
-                                            </select>
-                                            <InputError message={errors.civil_status} />
-                                        </div>
-
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="place_of_birth">
-                                                Place of Birth <span className="text-red-500">*</span>
-                                            </Label>
-                                            {!isEditing ? (
-                                                <div className="rounded-md border bg-muted px-3 py-2 text-sm">
-                                                    {formData.place_of_birth || 'Not provided'}
-                                                </div>
-                                            ) : (
-                                                <Input
-                                                    id="place_of_birth"
-                                                    name="place_of_birth"
-                                                    value={formData.place_of_birth}
-                                                    onChange={(e) => setFormData({ ...formData, place_of_birth: e.target.value })}
-                                                    placeholder="Enter place of birth"
-                                                    disabled={!isEditing}
-                                                />
-                                            )}
-                                            <InputError message={errors.place_of_birth} />
-                                        </div>
-
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="educational_attainment">
-                                                Educational Attainment <span className="text-red-500">*</span>
-                                            </Label>
-                                            {!isEditing ? (
-                                                <div className="rounded-md border bg-muted px-3 py-2 text-sm">
-                                                    {formData.educational_attainment || 'Not provided'}
-                                                </div>
-                                            ) : (
-                                                <select
-                                                    id="educational_attainment"
-                                                    name="educational_attainment"
-                                                    value={formData.educational_attainment}
-                                                    onChange={(e) => setFormData({ ...formData, educational_attainment: e.target.value })}
-                                                    disabled={!isEditing}
-                                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            <div className="space-y-2">
+                                <Label htmlFor="educational_attainment">
+                                    Educational Attainment{' '}
+                                    <span className="text-red-500">*</span>
+                                </Label>
+                                <Select
+                                    value={data.educational_attainment}
+                                    onValueChange={(value) =>
+                                        setData('educational_attainment', value)
+                                    }
+                                >
+                                    <SelectTrigger
+                                        id="educational_attainment"
+                                        className={selectClass}
+                                    >
+                                        <SelectValue placeholder="Select educational attainment" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {educationalAttainmentOptions.map(
+                                            (option) => (
+                                                <SelectItem
+                                                    key={option}
+                                                    value={option}
                                                 >
-                                                    <option value="">Select educational attainment</option>
-                                                    <option value="Elementary">Elementary</option>
-                                                    <option value="High School">High School</option>
-                                                    <option value="Vocational">Vocational</option>
-                                                    <option value="College">College</option>
-                                                    <option value="Postgraduate">Postgraduate</option>
-                                                    <option value="Other">Other</option>
-                                                </select>
-                                            )}
-                                            <InputError message={errors.educational_attainment} />
-                                        </div>
+                                                    {option}
+                                                </SelectItem>
+                                            ),
+                                        )}
+                                    </SelectContent>
+                                </Select>
+                                <InputError
+                                    message={errors.educational_attainment}
+                                />
+                            </div>
 
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="facebook_account_name">Facebook Account (Name)</Label>
-                                            {!isEditing ? (
-                                                <div className="rounded-md border bg-muted px-3 py-2 text-sm">
-                                                    {formData.facebook_account_name || 'Not provided'}
-                                                </div>
-                                            ) : (
-                                                <Input
-                                                    id="facebook_account_name"
-                                                    name="facebook_account_name"
-                                                    value={formData.facebook_account_name}
-                                                    onChange={(e) => setFormData({ ...formData, facebook_account_name: e.target.value })}
-                                                    placeholder="Enter Facebook account name"
-                                                    disabled={!isEditing}
-                                                />
-                                            )}
-                                            <InputError message={errors.facebook_account_name} />
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
+                            {renderTextInput(
+                                'facebook_account_name',
+                                'Facebook Account (Name)',
+                                {
+                                    placeholder: 'Enter Facebook account name',
+                                },
+                            )}
+                        </div>
+                    </section>
 
-                            {/* Contact & Address Section */}
-                            <Card className="border-emerald-100">
-                                <CardHeader className="flex flex-row items-center justify-between pb-3">
-                                    <div className="flex items-center gap-2">
-                                        <MapPin className="h-5 w-5 text-emerald-600" />
-                                        <CardTitle className="text-emerald-900 dark:text-emerald-100 text-lg">
-                                            Contact & Address
-                                        </CardTitle>
-                                    </div>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="mobile_number">
-                                                Present Cellphone Number <span className="text-red-500">*</span>
-                                            </Label>
-                                            <Input
-                                                id="mobile_number"
-                                                name="mobile_number"
-                                                type="tel"
-                                                inputMode="numeric"
-                                                pattern="[0-9]{11}"
-                                                maxLength={11}
-                                                minLength={11}
-                                                value={formData.mobile_number}
-                                                onChange={(e) => {
-                                                    const value = e.target.value.replace(/[^0-9]/g, '').slice(0, 11);
-                                                    setFormData({ ...formData, mobile_number: value });
-                                                }}
-                                                placeholder="e.g., 09123456789"
-                                                disabled={!isEditing}
-                                            />
-                                            <InputError message={errors.mobile_number} />
-                                        </div>
-
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="permanent_mobile_number">Permanent Mobile Number</Label>
-                                            {!isEditing ? (
-                                                <div className="rounded-md border bg-muted px-3 py-2 text-sm">
-                                                    {formData.permanent_mobile_number || 'Not provided'}
-                                                </div>
-                                            ) : (
-                                                <Input
-                                                    id="permanent_mobile_number"
-                                                    name="permanent_mobile_number"
-                                                    type="tel"
-                                                    inputMode="numeric"
-                                                    pattern="[0-9]{11}"
-                                                    maxLength={11}
-                                                    value={formData.permanent_mobile_number}
-                                                    onChange={(e) => {
-                                                        const value = e.target.value.replace(/[^0-9]/g, '').slice(0, 11);
-                                                        setFormData({ ...formData, permanent_mobile_number: value });
-                                                    }}
-                                                    placeholder="e.g., 09123456789"
-                                                    disabled={!isEditing}
-                                                />
-                                            )}
-                                            <InputError message={errors.permanent_mobile_number} />
-                                        </div>
-
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="tin_number">TIN Number</Label>
-                                            {!isEditing ? (
-                                                <div className="rounded-md border bg-muted px-3 py-2 text-sm">
-                                                    {formData.tin_number || 'Not provided'}
-                                                </div>
-                                            ) : (
-                                                <Input
-                                                    id="tin_number"
-                                                    name="tin_number"
-                                                    value={formData.tin_number}
-                                                    onChange={(e) => setFormData({ ...formData, tin_number: e.target.value })}
-                                                    placeholder="e.g., 123-456-789"
-                                                    disabled={!isEditing}
-                                                />
-                                            )}
-                                            <InputError message={errors.tin_number} />
-                                        </div>
+                    <section className={`${sectionClass} space-y-6`}>
+                        <div>
+                            <h3 className="text-base font-semibold tracking-tight text-emerald-900 dark:text-emerald-100">
+                                Contact and Address
+                            </h3>
+                            <p className="text-sm text-muted-foreground">
+                                Permanent and present address details.
+                            </p>
+                        </div>
 
                         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                             {renderTextInput(
@@ -799,72 +601,67 @@ const maxHireDate = `${yesterday.getFullYear()}-${String(
                             </p>
                         </div>
 
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="spouse_gross_income">Spouse Income (Gross)</Label>
-                                            {!isEditing ? (
-                                                <div className="rounded-md border bg-muted px-3 py-2 text-sm">
-                                                    {formData.spouse_gross_income ? parseFloat(String(formData.spouse_gross_income)).toLocaleString('en-US', { style: 'currency', currency: 'PHP' }) : 'Not provided'}
-                                                </div>
-                                            ) : (
-                                                <Input
-                                                    id="spouse_gross_income"
-                                                    name="spouse_gross_income"
-                                                    type="number"
-                                                    step="0.01"
-                                                    min="0"
-                                                    value={formData.spouse_gross_income}
-                                                    onChange={(e) => setFormData({ ...formData, spouse_gross_income: e.target.value })}
-                                                    placeholder="0.00"
-                                                    disabled={!isEditing}
-                                                />
-                                            )}
-                                            <InputError message={errors.spouse_gross_income} />
-                                        </div>
+                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                            {renderTextInput('position', 'Position', {
+                                required: true,
+                                placeholder: 'Enter position',
+                            })}
+                            {renderTextInput('date_hired', 'Date Hired', {
+    type: 'date',
+    required: true,
+    max: maxHireDate,
+})}
+                            {renderTextInput('basic_salary', 'Income (Gross)', {
+                                type: 'number',
+                                required: true,
+                                min: MIN_FINANCIAL_AMOUNT,
+                                step: '0.01',
+                                placeholder: '10000.00',
+                            })}
+                            {renderSelect(
+                                'income_type',
+                                'Income Type',
+                                data.income_type,
+                                (value) => setData('income_type', value),
+                                incomeTypeOptions,
+                            )}
+                            {renderTextInput('net_income', 'Income (Net)', {
+                                type: 'number',
+                                required: true,
+                                min: 0,
+                                step: '0.01',
+                                placeholder: '0.00',
+                            })}
+                            {renderTextInput(
+                                'share_capital_balance',
+                                'Share Capital Balance',
+                                {
+                                    type: 'number',
+                                    required: true,
+                                    min: MIN_FINANCIAL_AMOUNT,
+                                    step: '0.01',
+                                    placeholder: '10000.00',
+                                },
+                            )}
+                            {renderTextInput(
+                                'other_source_of_income',
+                                'Other Source of Income (Specify)',
+                                {
+                                    placeholder: 'Specify other income source',
+                                },
+                            )}
+                        </div>
+                    </section>
 
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="spouse_income_type">Spouse Income Type</Label>
-                                            {!isEditing ? (
-                                                <div className="rounded-md border bg-muted px-3 py-2 text-sm capitalize">
-                                                    {formData.spouse_income_type || 'Not provided'}
-                                                </div>
-                                            ) : (
-                                                <select
-                                                    id="spouse_income_type"
-                                                    name="spouse_income_type"
-                                                    value={formData.spouse_income_type}
-                                                    onChange={(e) => setFormData({ ...formData, spouse_income_type: e.target.value })}
-                                                    disabled={!isEditing}
-                                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                                >
-                                                    <option value="monthly">Monthly</option>
-                                                    <option value="daily">Daily</option>
-                                                    <option value="yearly">Yearly</option>
-                                                </select>
-                                            )}
-                                            <InputError message={errors.spouse_income_type} />
-                                        </div>
-
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="spouse_net_income">Spouse Income (Net)</Label>
-                                            {!isEditing ? (
-                                                <div className="rounded-md border bg-muted px-3 py-2 text-sm">
-                                                    {formData.spouse_net_income ? parseFloat(String(formData.spouse_net_income)).toLocaleString('en-US', { style: 'currency', currency: 'PHP' }) : 'Not provided'}
-                                                </div>
-                                            ) : (
-                                                <Input
-                                                    id="spouse_net_income"
-                                                    name="spouse_net_income"
-                                                    type="number"
-                                                    step="0.01"
-                                                    min="0"
-                                                    value={formData.spouse_net_income}
-                                                    onChange={(e) => setFormData({ ...formData, spouse_net_income: e.target.value })}
-                                                    placeholder="0.00"
-                                                    disabled={!isEditing}
-                                                />
-                                            )}
-                                            <InputError message={errors.spouse_net_income} />
-                                        </div>
+                    <section className={`${sectionClass} space-y-6`}>
+                        <div>
+                            <h3 className="text-base font-semibold tracking-tight text-emerald-900 dark:text-emerald-100">
+                                Spouse, Beneficiary, and Assets
+                            </h3>
+                            <p className="text-sm text-muted-foreground">
+                                Optional household and property information.
+                            </p>
+                        </div>
 
                         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                             {renderTextInput(
@@ -874,9 +671,16 @@ const maxHireDate = `${yesterday.getFullYear()}-${String(
                                     placeholder: 'Enter spouse occupation',
                                 },
                             )}
-                            {renderAmountInput('spouse_gross_income', 'Spouse Income (Gross)', {
-                                placeholder: '0.00',
-                            })}
+                            {renderTextInput(
+                                'spouse_gross_income',
+                                'Spouse Income (Gross)',
+                                {
+                                    type: 'number',
+                                    min: 0,
+                                    step: '0.01',
+                                    placeholder: '0.00',
+                                },
+                            )}
                             {renderSelect(
                                 'spouse_income_type',
                                 'Spouse Income Type',
@@ -885,9 +689,16 @@ const maxHireDate = `${yesterday.getFullYear()}-${String(
                                 incomeTypeOptions,
                                 false,
                             )}
-                            {renderAmountInput('spouse_net_income', 'Spouse Income (Net)', {
-                                placeholder: '0.00',
-                            })}
+                            {renderTextInput(
+                                'spouse_net_income',
+                                'Spouse Income (Net)',
+                                {
+                                    type: 'number',
+                                    min: 0,
+                                    step: '0.01',
+                                    placeholder: '0.00',
+                                },
+                            )}
                             <div className="md:col-span-2 lg:col-span-3 space-y-4">
                                 <Label>Legal Beneficiaries</Label>
                                 {(data.legal_beneficiaries ?? [{ full_name: '', relationship: '' }]).map((beneficiary, index) => (
@@ -976,7 +787,7 @@ const maxHireDate = `${yesterday.getFullYear()}-${String(
 
                     <div className="flex flex-col gap-4 border-t border-emerald-100 pt-6 sm:flex-row sm:items-center sm:justify-between">
                         <p className="text-sm text-muted-foreground">
-                            Double-check all information before submitting. The member profile will be submitted for General Maniger validation, and the welcome email with credentials will be sent upon approval.
+                            Double-check all information before submitting. The member profile will be submitted for GM validation, and the welcome email with credentials will be sent upon approval.
                         </p>
 
                         <Button
@@ -985,7 +796,7 @@ const maxHireDate = `${yesterday.getFullYear()}-${String(
                             className="h-10 min-w-[180px] bg-emerald-600 font-medium hover:bg-emerald-700"
                         >
                             {processing && <Spinner className="mr-2 h-4 w-4" />}
-                            Submit for Validation
+                            Create Member
                         </Button>
                     </div>
                 </form>

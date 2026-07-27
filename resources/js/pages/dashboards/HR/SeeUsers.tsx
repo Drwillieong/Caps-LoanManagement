@@ -6,14 +6,6 @@ import autoTable from 'jspdf-autotable'
 
 import AppLayout from '@/layouts/app-layout'
 import { Button } from '@/components/ui/button'
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { LiveClock } from '@/components/live-clock'
 import { type BreadcrumbItem } from '@/types'
 
@@ -48,12 +40,12 @@ interface User {
     created_at: string
     updated_at: string
     member_profile: MemberProfile | null
-    has_pending_update_request?: boolean
 }
 
 interface Filters {
     search: string | null
     filter: string
+    role: string
 }
 
 interface Props {
@@ -66,33 +58,37 @@ interface Props {
         links: any[]
     }
     filters: Filters
+    roles: string[]
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Members', href: '/dashboards/HR/SeeUsers' },
 ]
 
-export default function SeeUsers({ users, filters }: Props) {
+export default function SeeUsers({ users, filters, roles }: Props) {
     const [search, setSearch] = useState(filters.search || '')
     const [filter, setFilter] = useState(filters.filter || 'all')
-    const [status, setStatus] = useState('all')
+    const [role, setRole] = useState(filters.role || 'all')
 
-    // 1. Filter out users who do not have a member profile or valid employee_id
-    const membersOnly = users.data.filter((user) => user.member_profile !== null && user.member_profile?.employee_id)
+    // 1. Filter out users who do not have a member profile
+    const membersOnly = users.data.filter((user) => user.member_profile !== null)
 
-    // 2. Filter by account status
-    const filteredMembers = membersOnly.filter((user) => {
-        if (status === 'all') return true
-        return user.status === status
-    })
+    // 2. Extract only the roles that belong to users with active member profiles
+    const activeMemberRoles = Array.from(
+        new Set(
+            users.data
+                .filter((user) => user.member_profile !== null)
+                .map((user) => user.role)
+        )
+    )
 
     useEffect(() => {
         const timeout = setTimeout(() => {
-            router.reload({ data: { search, filter } })
+            router.reload({ data: { search, filter, role } })
         }, 300)
 
         return () => clearTimeout(timeout)
-    }, [search, filter])
+    }, [search, filter, role])
 
     const formatDate = (date: string) =>
         new Date(date).toLocaleDateString('en-US', {
@@ -147,9 +143,10 @@ export default function SeeUsers({ users, filters }: Props) {
             doc.text(`Total Members: ${allUsers.length}`, 14, 34)
 
             const tableData = allUsers.map((user: User) => [
-                user.member_profile?.employee_id || 'N/A',
+                user.id,
                 getFullName(user),
                 user.email,
+                user.member_profile?.employee_id || 'N/A',
                 user.member_profile?.position || 'N/A',
                 user.member_profile ? formatCurrency(user.member_profile.basic_salary) : 'N/A',
                 user.member_profile ? formatCurrency(user.member_profile.share_capital_balance) : 'N/A',
@@ -159,13 +156,13 @@ export default function SeeUsers({ users, filters }: Props) {
 
             autoTable(doc, {
                 startY: 40,
-                head: [['Employee ID', 'Name', 'Email', 'Position', 'Salary', 'Share Capital', 'Role', 'Status']],
+                head: [['ID', 'Name', 'Email', 'Employee ID', 'Position', 'Salary', 'Share Capital', 'Role', 'Status']],
                 body: tableData,
                 theme: 'striped',
                 headStyles: { fillColor: [59, 130, 246] },
                 styles: { fontSize: 8 },
                 columnStyles: {
-                    0: { cellWidth: 20 },
+                    0: { cellWidth: 10 },
                     1: { cellWidth: 30 },
                     2: { cellWidth: 35 },
                     3: { cellWidth: 20 },
@@ -173,6 +170,7 @@ export default function SeeUsers({ users, filters }: Props) {
                     5: { cellWidth: 20 },
                     6: { cellWidth: 20 },
                     7: { cellWidth: 15 },
+                    8: { cellWidth: 15 },
                 },
             })
 
@@ -186,7 +184,7 @@ export default function SeeUsers({ users, filters }: Props) {
 
                 doc.setFontSize(12)
                 doc.setFont('helvetica', 'bold')
-                doc.text(`${user.member_profile?.employee_id || user.id} - ${getFullName(user)}`, 14, currentY)
+                doc.text(`#${user.id} - ${getFullName(user)}`, 14, currentY)
                 currentY += 7
 
                 doc.setFontSize(10)
@@ -240,7 +238,7 @@ export default function SeeUsers({ users, filters }: Props) {
                             Members
                         </h1>
                         <p className="text-sm text-muted-foreground">
-                            Manage your team members ({filteredMembers.length})
+                            Manage your team members ({membersOnly.length})
                         </p>
                     </div>
 
@@ -252,7 +250,7 @@ export default function SeeUsers({ users, filters }: Props) {
                         <Button asChild>
                             <Link href="/dashboards/HR/create">
                                 <Plus className="mr-2 h-4 w-4" />
-                                Create Member Account
+                                Create Member
                             </Link>
                         </Button>
                     </div>
@@ -284,18 +282,19 @@ export default function SeeUsers({ users, filters }: Props) {
                             <option value="old">Old</option>
                         </select>
 
-                        {/* Status Filter */}
-                        <Select value={status} onValueChange={setStatus}>
-                            <SelectTrigger className="w-[180px]">
-                                <SelectValue placeholder="All Statuses" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All Statuses</SelectItem>
-                                <SelectItem value="active">Active</SelectItem>
-                                <SelectItem value="pending">Pending</SelectItem>
-                                <SelectItem value="rejected">Rejected</SelectItem>
-                            </SelectContent>
-                        </Select>
+                        {/* Role Dropdown - dynamically filtered to only show roles belonging to active members */}
+                        <select
+                            value={role}
+                            onChange={(e) => setRole(e.target.value)}
+                            className="rounded-lg border px-3 py-2 text-sm bg-background"
+                        >
+                            <option value="all">All Roles</option>
+                            {activeMemberRoles.map((r) => (
+                                <option key={r} value={r}>
+                                    {r.toUpperCase()}
+                                </option>
+                            ))}
+                        </select>
                     </div>
                 </div>
 
@@ -315,19 +314,19 @@ export default function SeeUsers({ users, filters }: Props) {
                         </thead>
 
                         <tbody>
-                            {filteredMembers.length ? (
-                                filteredMembers.map((user) => (
+                            {membersOnly.length ? (
+                                membersOnly.map((user) => (
                                     <tr
-                                        key={user.member_profile?.employee_id || user.id}
+                                        key={user.id}
                                         className="border-b transition-colors hover:bg-muted/30"
                                     >
                                         <td className="px-6 py-4 font-medium">
-                                            {user.member_profile?.employee_id}
+                                            #{user.id}
                                         </td>
 
                                         <td className="px-6 py-4">
                                             <Link 
-                                                href={`/dashboards/HR/MembersProfile/${user.member_profile?.employee_id}`}
+                                                href={`/dashboards/HR/MembersProfile/${user.id}`}
                                                 className="text-primary hover:underline cursor-pointer font-medium"
                                             >
                                                 {getFullName(user)}
@@ -345,24 +344,17 @@ export default function SeeUsers({ users, filters }: Props) {
                                         </td>
 
                                         <td className="px-6 py-4">
-                                            <div className="flex items-center gap-2">
-                                                <span
-                                                    className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${
-                                                        user.status === 'active'
-                                                            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                                                            : user.status === 'pending'
-                                                            ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
-                                                            : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                                                    }`}
-                                                >
-                                                    {user.status === 'pending' ? 'Pending' : user.status === 'active' ? 'Active' : 'Rejected'}
-                                                </span>
-                                                {user.has_pending_update_request && (
-                                                    <span className="inline-flex items-center rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 px-2.5 py-0.5 text-xs font-medium">
-                                                        Pending Edit
-                                                    </span>
-                                                )}
-                                            </div>
+                                            <span
+                                                className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${
+                                                    user.status === 'active'
+                                                        ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                                                        : user.status === 'pending'
+                                                        ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                                                        : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                                                }`}
+                                            >
+                                                {user.status === 'pending' ? 'Pending' : user.status === 'active' ? 'Active' : 'Rejected'}
+                                            </span>
                                         </td>
 
                                         <td className="px-6 py-4 text-muted-foreground">
@@ -370,43 +362,11 @@ export default function SeeUsers({ users, filters }: Props) {
                                         </td>
 
                                         <td className="px-6 py-4 text-right">
-                                            {user.status === 'rejected' ? (
-                                                <TooltipProvider>
-                                                    <Tooltip>
-                                                        <TooltipTrigger asChild>
-                                                            <span>
-                                                                <Button variant="ghost" size="sm" disabled>
-                                                                    Edit
-                                                                </Button>
-                                                            </span>
-                                                        </TooltipTrigger>
-                                                        <TooltipContent>
-                                                            <p>Rejected accounts cannot be edited</p>
-                                                        </TooltipContent>
-                                                    </Tooltip>
-                                                </TooltipProvider>
-                                            ) : user.has_pending_update_request ? (
-                                                <TooltipProvider>
-                                                    <Tooltip>
-                                                        <TooltipTrigger asChild>
-                                                            <span>
-                                                                <Button variant="ghost" size="sm" disabled>
-                                                                    Edit
-                                                                </Button>
-                                                            </span>
-                                                        </TooltipTrigger>
-                                                        <TooltipContent>
-                                                            <p>Profile has a pending edit request awaiting GM approval</p>
-                                                        </TooltipContent>
-                                                    </Tooltip>
-                                                </TooltipProvider>
-                                            ) : (
-                                                <Button variant="ghost" size="sm" asChild>
-                                                    <Link href={`/dashboards/HR/MembersProfile/${user.member_profile?.employee_id}`}>
-                                                        Edit
-                                                    </Link>
-                                                </Button>
-                                            )}
+                                            <Button variant="ghost" size="sm" asChild>
+                                                <Link href={`/dashboards/HR/EditMember/${user.id}`}>
+                                                    Edit
+                                                </Link>
+                                            </Button>
                                         </td>
                                     </tr>
                                 ))

@@ -189,7 +189,7 @@ export default function PendingEdits({ pendingEdits }: Props) {
     };
 
     const diffFields = useMemo(() => {
-        if (!selectedRequest) return [];
+        if (!selectedRequest) return { changed: [], unchanged: [] };
 
         const { original_data, pending_data } = selectedRequest;
         const changedFields: Array<{ key: string; label: string; category: string; original: any; pending: any }> = [];
@@ -220,7 +220,7 @@ export default function PendingEdits({ pendingEdits }: Props) {
 
     // Group changed fields by category
     const changedByCategory = useMemo(() => {
-        const groups: Record<string, typeof diffFields.changed> = {};
+        const groups: Record<string, Array<{ key: string; label: string; category: string; original: any; pending: any }>> = {};
         diffFields.changed.forEach((field) => {
             if (!groups[field.category]) groups[field.category] = [];
             groups[field.category].push(field);

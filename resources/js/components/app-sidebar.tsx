@@ -5,6 +5,7 @@ import {
     CheckCircle2,
     ClipboardCheck,
     FileClock,
+    FileEdit,
     FilePlus,
     FileSpreadsheet,
     FileText,
@@ -121,6 +122,11 @@ const gmNavItems: NavItem[] = [
                 title: 'Bulk Upload Members',
                 href: '/dashboards/Gm/BulkUploadMembers',
                 icon: FileSpreadsheet,
+            },
+            {
+                title: 'Profile Updates',
+                href: '/dashboards/Gm/PendingEdits',
+                icon: FileEdit,
             },
           
         ],

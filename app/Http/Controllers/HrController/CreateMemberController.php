@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\HrController;
 
 use App\Http\Controllers\Controller;
+use App\Models\MemberProfile;
 use App\Models\ProfileUpdateRequest;
 use App\Models\User;
 use App\Services\ActivityLogService;
@@ -61,8 +62,13 @@ class CreateMemberController extends Controller
                         'last_name' => $user->last_name,
                         'email' => $user->email,
                         'role' => $user->role,
+                        'status' => $user->status,
+                        'rejection_reason' => $user->rejection_reason,
                         'is_active' => $user->is_active,
                         'created_at' => $user->created_at,
+                        'has_pending_update_request' => $user->has_pending_update_request ?? false,
+                        'has_rejected_update_request' => $user->has_rejected_update_request ?? false,
+                        'update_request_rejection_reason' => $user->update_request_rejection_reason ?? null,
                         'member_profile' => $user->memberProfile ? [
                             'employee_id' => $user->memberProfile->employee_id,
                             'payroll_id' => $user->memberProfile->payroll_id,
@@ -105,14 +111,27 @@ class CreateMemberController extends Controller
             ->paginate(10)
             ->withQueryString();
 
-        // Attach pending update request status for each user
+        // Attach pending and rejected update request status for each user
         $pendingRequestMemberIds = ProfileUpdateRequest::where('status', 'pending')
             ->pluck('member_id')
             ->toArray();
 
-        $users->getCollection()->transform(function ($user) use ($pendingRequestMemberIds) {
+        $rejectedUpdateRequests = ProfileUpdateRequest::where('status', 'rejected')
+            ->get(['member_id', 'rejection_reason'])
+            ->mapWithKeys(function ($request) {
+                return [$request->member_id => $request->rejection_reason];
+            })
+            ->toArray();
+
+        $users->getCollection()->transform(function ($user) use ($pendingRequestMemberIds, $rejectedUpdateRequests) {
             $memberProfile = $user->memberProfile;
             $user->has_pending_update_request = $memberProfile && in_array($memberProfile->employee_id, $pendingRequestMemberIds);
+            $user->has_rejected_update_request = false;
+            $user->update_request_rejection_reason = null;
+            if ($memberProfile && isset($rejectedUpdateRequests[$memberProfile->employee_id])) {
+                $user->has_rejected_update_request = true;
+                $user->update_request_rejection_reason = $rejectedUpdateRequests[$memberProfile->employee_id];
+            }
             return $user;
         });
 
@@ -153,10 +172,6 @@ class CreateMemberController extends Controller
             'email' => 'required|string|lowercase|email|max:255|unique:users',
             'role' => 'required|in:member',
 
-            // Employee ID
-            'employee_id' => 'required|string|max:255|unique:member_profiles,employee_id',
-            'payroll_id' => 'nullable|string|max:255|unique:member_profiles,payroll_id',
-
             // Personal fields
             'place_of_birth' => 'required|string|max:255',
             'date_of_birth' => 'required|date|before:today',
@@ -193,8 +208,9 @@ class CreateMemberController extends Controller
         ]);
 
         $temporaryPassword = $this->generateTemporaryPassword();
+        $nextEmployeeId = $this->generateNextEmployeeId();
 
-        $user = DB::transaction(function () use ($validated, $temporaryPassword) {
+        $user = DB::transaction(function () use ($validated, $temporaryPassword, $nextEmployeeId) {
             $user = User::create([
                 'first_name' => $validated['first_name'],
                 'middle_name' => $validated['middle_name'] ?? null,
@@ -208,7 +224,7 @@ class CreateMemberController extends Controller
             ]);
 
             $user->memberProfile()->create([
-                'employee_id' => $validated['employee_id'],
+                'employee_id' => $nextEmployeeId,
                 'payroll_id' => $validated['payroll_id'] ?? null,
                 'first_name' => $validated['first_name'],
                 'middle_name' => $validated['middle_name'] ?? null,
@@ -251,6 +267,19 @@ class CreateMemberController extends Controller
 
         // Email dispatch is deferred — will be sent when GM approves the member
         return redirect()->route('users')->with('success', 'Member created successfully. The application has been submitted for GM validation. The welcome email with credentials will be sent upon GM approval.');
+    }
+
+    private function generateNextEmployeeId(): string
+    {
+        $maxNum = MemberProfile::query()
+            ->select('employee_id')
+            ->get()
+            ->filter(fn ($id) => preg_match('/\d/', $id))
+            ->max(fn ($id) => (int) preg_replace('/\D/', '', $id));
+
+        $nextNum = ($maxNum ?? 0) + 1;
+
+        return str_pad($nextNum, 3, '0', STR_PAD_LEFT);
     }
 
     private function generateTemporaryPassword(int $length = 14): string

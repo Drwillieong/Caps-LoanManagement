@@ -12,7 +12,9 @@ use App\Services\ActivityLogService;
 use App\Mail\SendMembersPass;
 use App\Mail\MemberRejectedMail;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 class GmController extends Controller
@@ -681,7 +683,17 @@ class GmController extends Controller
             return back()->with('error', 'This member is not in pending status.');
         }
 
+        // Determine the temporary password — generate one if none exists (e.g., self-registered users)
         $temporaryPassword = $user->temporary_password;
+        if (empty($temporaryPassword)) {
+            $temporaryPassword = $this->generateTemporaryPassword();
+
+            // Hash and store the generated password, and mark user as having it set
+            $user->update([
+                'password' => Hash::make($temporaryPassword),
+                'temporary_password' => $temporaryPassword,
+            ]);
+        }
 
         // Update user status to active
         $user->update([
@@ -721,6 +733,37 @@ class GmController extends Controller
         return redirect()
             ->route('gm.pending-members')
             ->with('success', 'Member approved successfully. Welcome email with credentials has been sent to '.$user->email.'.');
+    }
+
+    /**
+     * Generate a cryptographically secure temporary password.
+     */
+    private function generateTemporaryPassword(int $length = 14): string
+    {
+        $groups = [
+            'ABCDEFGHJKLMNPQRSTUVWXYZ',
+            'abcdefghijkmnopqrstuvwxyz',
+            '23456789',
+            '!@#$%^&*',
+        ];
+
+        $characters = implode('', $groups);
+        $password = [];
+
+        foreach ($groups as $group) {
+            $password[] = $group[random_int(0, strlen($group) - 1)];
+        }
+
+        while (count($password) < $length) {
+            $password[] = $characters[random_int(0, strlen($characters) - 1)];
+        }
+
+        for ($i = count($password) - 1; $i > 0; $i--) {
+            $j = random_int(0, $i);
+            [$password[$i], $password[$j]] = [$password[$j], $password[$i]];
+        }
+
+        return implode('', $password);
     }
 
     /**

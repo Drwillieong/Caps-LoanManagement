@@ -250,13 +250,18 @@ const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
     const formMethod = isHREditingMember ? 'put' : 'post';
 
     const formatDate = (date?: string) => {
-    if (!date) return '';
-    return new Date(date).toLocaleDateString('en-US', {
-        month: 'short',
-        day: '2-digit',
-        year: 'numeric',
-    });
-};
+        if (!date) return 'N/A';
+        const d = new Date(date);
+        if (isNaN(d.getTime())) return 'N/A';
+        const months = [
+            'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+        ];
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = months[d.getMonth()];
+        const year = d.getFullYear();
+        return `${day} ${month} ${year}`;
+    };
 
 
 
@@ -336,9 +341,7 @@ const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
                                         <CardTitle className="text-base">
                                             Identity
                                         </CardTitle>
-                                        <CardDescription>
-                                            Full name, birth details, and civil status
-                                        </CardDescription>
+                                    
                                     </div>
                                 </div>
                             </CardHeader>
@@ -651,9 +654,7 @@ const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
                                                 aria-invalid={!!errors.permanent_mobile_number}
                                             />
                                         </div>
-                                        <p className="text-xs text-muted-foreground">
-                                            Format: +63 9XX XXX XXXX
-                                        </p>
+                                       
                                         <InputError message={errors.permanent_mobile_number} />
                                     </div>
 
@@ -669,7 +670,7 @@ const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
                                             required={isRequired('present_address')}
                                             disabled={!isEditing}
                                             placeholder="Present address"
-                                            rows={3}
+                                            rows={1}
                                             className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                                         />
                                         <InputError message={errors.present_address} />
@@ -702,7 +703,7 @@ const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
                                             value={formData.permanent_address}
                                             onChange={(e) => setFormData({ ...formData, permanent_address: e.target.value })}
                                             placeholder="Permanent address (optional)"
-                                            rows={3}
+                                            rows={1}
                                             disabled={!isEditing}
                                             className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                                         />

@@ -60,10 +60,10 @@ class DatabaseSeeder extends Seeder
         MemberProfile::create([
             'user_id' => $user->id,
 
-            'employee_id' => 'EMP-001',
-            'first_name' => 'Jairus',
-            'middle_name' => 'Sotto',
-            'last_name' => 'Pecho',
+            'employee_id' => '001',
+            'first_name' => 'Jason',
+            'middle_name' => 'Derullo',
+            'last_name' => 'Racelis',
 
             'date_of_birth' => '2002-05-19',
             'sex' => 'male',
@@ -102,7 +102,7 @@ class DatabaseSeeder extends Seeder
         MemberProfile::create([
             'user_id' => $user->id,
 
-            'employee_id' => 'EMP-002', // fixed duplicate
+            'employee_id' => '002', // fixed duplicate
             'first_name' => 'Kayleen',
             'middle_name' => 'Jairus',
             'last_name' => 'Gallora',
@@ -131,9 +131,9 @@ class DatabaseSeeder extends Seeder
 // Test Member 3
 // -----------------------------
 $user = User::create([
-    'first_name' => 'Nathan',
-    'middle_name' => 'Reyes',
-    'last_name' => 'Yap',
+    'first_name' => 'Jairus',
+    'middle_name' => 'Sotto',
+    'last_name' => 'Pecho',
     'email' => 'nyak123457@gmail.com',
     'password' => Hash::make('admin123'),
     'role' => 'member',
@@ -143,10 +143,10 @@ $user = User::create([
 MemberProfile::create([
     'user_id' => $user->id,
 
-    'employee_id' => 'EMP-003',
-    'first_name' => 'Nathan',
-    'middle_name' => 'Reyes',
-    'last_name' => 'Yap',
+    'employee_id' => '003',
+    'first_name' => 'Randolf',
+    'middle_name' => 'Riprap',
+    'last_name' => 'Arrellano',
 
     'date_of_birth' => '1998-08-12',
     'sex' => 'male',
@@ -182,10 +182,10 @@ $user = User::create([
 MemberProfile::create([
     'user_id' => $user->id,
 
-    'employee_id' => 'EMP-004',
+    'employee_id' => '004',
     'first_name' => 'Jackie',
     'middle_name' => 'Lopez',
-    'last_name' => 'Santos',
+    'last_name' => 'Gallora',
 
     'date_of_birth' => '1999-04-25',
     'sex' => 'female',
@@ -221,9 +221,9 @@ $user = User::create([
 MemberProfile::create([
     'user_id' => $user->id,
 
-    'employee_id' => 'EMP-005',
+    'employee_id' => '005',
     'first_name' => 'John Vincent',
-    'middle_name' => 'Cruz',
+    'middle_name' => 'Almogera',
     'last_name' => 'Saberdo',
 
     'date_of_birth' => '2000-02-18',

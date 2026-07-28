@@ -130,7 +130,6 @@ export default function Create({ roles }: Props) {
         last_name: '',
         email: '',
         role: 'member',
-        employee_id: '',
 
         // ── Personal ──
         place_of_birth: '',
@@ -419,7 +418,6 @@ export default function Create({ roles }: Props) {
                             last_name: tc(formData.last_name),
                             email: formData.email.trim().toLowerCase(),
                             role: 'member',
-                            employee_id: formData.employee_id.trim(),
                             place_of_birth: tc(formData.place_of_birth),
                             date_of_birth: formData.date_of_birth,
                             civil_status: formData.civil_status,
@@ -486,29 +484,8 @@ export default function Create({ roles }: Props) {
                                         </div>
                                     </CardHeader>
                                     <CardContent className="pt-5">
-                                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                                            {/* Employee ID */}
-                                            <div className="grid gap-1.5">
-                                                <Label htmlFor="employee_id">
-                                                    Employee ID <span className="text-red-500">*</span>
-                                                </Label>
-                                                <Input
-                                                    id="employee_id"
-                                                    name="employee_id"
-                                                    value={formData.employee_id}
-                                                    onChange={(e) =>
-                                                        handleChange('employee_id', e.target.value)
-                                                    }
-                                                    placeholder="e.g., EMP-001"
-                                                    aria-invalid={!!err.employee_id}
-                                                />
-                                                <p className="text-xs text-muted-foreground">
-                                                    Unique employee identifier
-                                                </p>
-                                                <InputError message={err.employee_id} />
-                                            </div>
-
-                                            {/* Email */}
+                                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                                        {/* Email */}
                                             <div className="grid gap-1.5">
                                                 <Label htmlFor="email">
                                                     Email Address <span className="text-red-500">*</span>
@@ -560,9 +537,7 @@ export default function Create({ roles }: Props) {
                                                     }
                                                     aria-invalid={!!err.date_of_birth}
                                                 />
-                                                <p className="text-xs text-muted-foreground">
-                                                    Must not be a future date
-                                                </p>
+                                               
                                                 <InputError message={err.date_of_birth} />
                                             </div>
 
@@ -615,8 +590,11 @@ export default function Create({ roles }: Props) {
 
                                             {/* Facebook Account */}
                                             {renderInput('facebook_account_name', 'Facebook Account', err, {
-                                                placeholder: 'Profile name (optional)',
+                                               
+                                                 required: true,
+                                                 placeholder: 'Profile name ',
                                                 helperText: 'For reference and verification',
+                                                
                                             })}
                                         </div>
                                     </CardContent>
@@ -666,9 +644,7 @@ export default function Create({ roles }: Props) {
                                                         aria-invalid={!!err.permanent_mobile_number}
                                                     />
                                                 </div>
-                                                <p className="text-xs text-muted-foreground">
-                                                    Format: +63 9XX XXX XXXX
-                                                </p>
+                                               
                                                 <InputError message={err.permanent_mobile_number} />
                                             </div>
 
@@ -676,14 +652,14 @@ export default function Create({ roles }: Props) {
                                             {renderTextarea('present_address', 'Present Address', err, {
                                                 required: true,
                                                 placeholder: 'House/Unit No., Street, Barangay, City',
-                                                helperText: 'Current residential address',
+                                               
                                             })}
 
                                             {/* Present Zip Code */}
                                             {renderInput('present_zip_code', 'Present Zip Code', err, {
                                                 required: true,
                                                 placeholder: 'e.g., 1000',
-                                                helperText: 'Four-digit postal code',
+                                              
                                             })}
 
                                             {/* Permanent Address */}
@@ -695,7 +671,7 @@ export default function Create({ roles }: Props) {
                                                     required: true,
                                                     placeholder:
                                                         'House/Unit No., Street, Barangay, City, Province',
-                                                    helperText: 'Address on official records',
+                                                   
                                                 },
                                             )}
 
@@ -703,7 +679,7 @@ export default function Create({ roles }: Props) {
                                             {renderInput('permanent_zip_code', 'Permanent Zip Code', err, {
                                                 required: true,
                                                 placeholder: 'e.g., 1000',
-                                                helperText: 'Four-digit postal code',
+                                              
                                             })}
                                         </div>
                                     </CardContent>
@@ -752,9 +728,7 @@ export default function Create({ roles }: Props) {
                                                     }
                                                     aria-invalid={!!err.date_hired}
                                                 />
-                                                <p className="text-xs text-muted-foreground">
-                                                    Must not be a future date
-                                                </p>
+                                              
                                                 <InputError message={err.date_hired} />
                                             </div>
 
@@ -800,7 +774,7 @@ export default function Create({ roles }: Props) {
                                                 err,
                                                 {
                                                     placeholder: 'e.g., Freelance, Business',
-                                                    helperText: 'Specify if applicable',
+                                                
                                                 },
                                             )}
                                         </div>

@@ -13,6 +13,7 @@ import {
     Building,
     Phone,
     Users,
+    AlertTriangle,
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -24,6 +25,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 
@@ -147,7 +149,8 @@ interface Props {
 
 export default function MembersProfile({ user, memberProfile, beneficiaries, isAdmin, isNewUser, profileCompleted, targetEmployeeId, targetUserName, hasPendingUpdateRequest = false }: Props) {
     const isRejected = user.status === 'rejected'
-    const [isEditing, setIsEditing] = useState(!isRejected && !hasPendingUpdateRequest);
+    const isPending = user.status === 'pending'
+    const [isEditing, setIsEditing] = useState(false);
     
     const [previewUrl, setPreviewUrl] = useState('');
     
@@ -160,12 +163,17 @@ export default function MembersProfile({ user, memberProfile, beneficiaries, isA
     }, [memberProfile]);
 
     const formatDate = (date?: string) => {
-        if (!date) return '';
-        return new Date(date).toLocaleDateString('en-US', {
-            month: 'short',
-            day: '2-digit',
-            year: 'numeric',
-        });
+        if (!date) return 'N/A';
+        const d = new Date(date);
+        if (isNaN(d.getTime())) return 'N/A';
+        const months = [
+            'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+        ];
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = months[d.getMonth()];
+        const year = d.getFullYear();
+        return `${day} ${month} ${year}`;
     };
 
     // ── Currency & Phone Handlers ──
@@ -444,7 +452,7 @@ export default function MembersProfile({ user, memberProfile, beneficiaries, isA
                             <Download className="mr-2 h-4 w-4" />
                             Export PDF
                         </Button>
-                        {!isEditing ? (
+                        {isPending ? null : !isEditing ? (
                             <Button onClick={() => setIsEditing(true)} disabled={isRejected}>
                                 Edit Profile
                             </Button>
@@ -519,6 +527,16 @@ export default function MembersProfile({ user, memberProfile, beneficiaries, isA
                     </Card>
                 )}
 
+                {isPending && (
+                    <Alert className="border-l-4 border-l-yellow-500 bg-yellow-50 dark:bg-yellow-900/30">
+                        <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+                        <AlertTitle className="text-yellow-800 dark:text-yellow-300">Editing Locked</AlertTitle>
+                        <AlertDescription className="text-yellow-700 dark:text-yellow-400">
+                            Profile editing is locked while this member is pending GM approval.
+                        </AlertDescription>
+                    </Alert>
+                )}
+
                 <Form
                     method={formMethod}
                     action={formActionUrl}
@@ -547,9 +565,7 @@ export default function MembersProfile({ user, memberProfile, beneficiaries, isA
                                             <CardTitle className="text-base">
                                                 Identity
                                             </CardTitle>
-                                            <CardDescription>
-                                                Full name, birth details, and civil status
-                                            </CardDescription>
+                                           
                                         </div>
                                     </div>
                                 </CardHeader>
@@ -855,9 +871,7 @@ export default function MembersProfile({ user, memberProfile, beneficiaries, isA
                                                     aria-invalid={!!errors.permanent_mobile_number}
                                                 />
                                             </div>
-                                            <p className="text-xs text-muted-foreground">
-                                                Format: +63 9XX XXX XXXX
-                                            </p>
+                                           
                                             <InputError message={errors.permanent_mobile_number} />
                                         </div>
 
@@ -872,7 +886,7 @@ export default function MembersProfile({ user, memberProfile, beneficiaries, isA
                                                 onChange={(e) => setFormData({ ...formData, present_address: e.target.value })}
                                                 disabled={!isEditing}
                                                 placeholder="Present address"
-                                                rows={3}
+                                                rows={1}
                                                 className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                                             />
                                             <InputError message={errors.present_address} />
@@ -905,7 +919,7 @@ export default function MembersProfile({ user, memberProfile, beneficiaries, isA
                                                 value={formData.permanent_address}
                                                 onChange={(e) => setFormData({ ...formData, permanent_address: e.target.value })}
                                                 placeholder="Permanent address (optional)"
-                                                rows={3}
+                                                rows={1}
                                                 disabled={!isEditing}
                                                 className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                                             />

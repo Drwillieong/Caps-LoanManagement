@@ -49,6 +49,8 @@ interface User {
     updated_at: string
     member_profile: MemberProfile | null
     has_pending_update_request?: boolean
+    has_rejected_update_request?: boolean
+    update_request_rejection_reason?: string | null
 }
 
 interface Filters {
@@ -75,7 +77,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 export default function SeeUsers({ users, filters }: Props) {
     const [search, setSearch] = useState(filters.search || '')
     const [filter, setFilter] = useState(filters.filter || 'all')
-    const [status, setStatus] = useState('all')
+    const [status, setStatus] = useState('active_pending')
 
     // 1. Filter out users who do not have a member profile or valid employee_id
     const membersOnly = users.data.filter((user) => user.member_profile !== null && user.member_profile?.employee_id)
@@ -83,6 +85,7 @@ export default function SeeUsers({ users, filters }: Props) {
     // 2. Filter by account status
     const filteredMembers = membersOnly.filter((user) => {
         if (status === 'all') return true
+        if (status === 'active_pending') return ['active', 'pending'].includes(user.status)
         return user.status === status
     })
 
@@ -153,13 +156,12 @@ export default function SeeUsers({ users, filters }: Props) {
                 user.member_profile?.position || 'N/A',
                 user.member_profile ? formatCurrency(user.member_profile.basic_salary) : 'N/A',
                 user.member_profile ? formatCurrency(user.member_profile.share_capital_balance) : 'N/A',
-                user.role,
                 user.is_active ? 'Active' : 'Inactive',
             ])
 
             autoTable(doc, {
                 startY: 40,
-                head: [['Employee ID', 'Name', 'Email', 'Position', 'Salary', 'Share Capital', 'Role', 'Status']],
+                head: [['Employee ID', 'Name', 'Email', 'Position', 'Salary', 'Share Capital', 'Status']],
                 body: tableData,
                 theme: 'striped',
                 headStyles: { fillColor: [59, 130, 246] },
@@ -171,8 +173,7 @@ export default function SeeUsers({ users, filters }: Props) {
                     3: { cellWidth: 20 },
                     4: { cellWidth: 20 },
                     5: { cellWidth: 20 },
-                    6: { cellWidth: 20 },
-                    7: { cellWidth: 15 },
+                    6: { cellWidth: 15 },
                 },
             })
 
@@ -291,9 +292,8 @@ export default function SeeUsers({ users, filters }: Props) {
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">All Statuses</SelectItem>
-                                <SelectItem value="active">Active</SelectItem>
-                                <SelectItem value="pending">Pending</SelectItem>
-                                <SelectItem value="rejected">Rejected</SelectItem>
+                                <SelectItem value="active_pending">Active & Pending</SelectItem>
+                                <SelectItem value="rejected">Rejected Applications</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
@@ -307,7 +307,6 @@ export default function SeeUsers({ users, filters }: Props) {
                                 <th className="px-6 py-3 text-left font-medium">ID</th>
                                 <th className="px-6 py-3 text-left font-medium">Name</th>
                                 <th className="px-6 py-3 text-left font-medium">Email</th>
-                                <th className="px-6 py-3 text-left font-medium">Role</th>
                                 <th className="px-6 py-3 text-left font-medium">Status</th>
                                 <th className="px-6 py-3 text-left font-medium">Joined</th>
                                 <th className="px-6 py-3 text-right font-medium">Actions</th>
@@ -339,12 +338,6 @@ export default function SeeUsers({ users, filters }: Props) {
                                         </td>
 
                                         <td className="px-6 py-4">
-                                            <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary capitalize">
-                                                {user.role}
-                                            </span>
-                                        </td>
-
-                                        <td className="px-6 py-4">
                                             <div className="flex items-center gap-2">
                                                 <span
                                                     className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${
@@ -355,12 +348,28 @@ export default function SeeUsers({ users, filters }: Props) {
                                                             : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
                                                     }`}
                                                 >
-                                                    {user.status === 'pending' ? 'Pending' : user.status === 'active' ? 'Active' : 'Rejected'}
+                                                    {user.status === 'pending' ? 'Pending Approval' : user.status === 'active' ? 'Active' : 'Rejected'}
                                                 </span>
                                                 {user.has_pending_update_request && (
                                                     <span className="inline-flex items-center rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 px-2.5 py-0.5 text-xs font-medium">
                                                         Pending Edit
                                                     </span>
+                                                )}
+                                                {user.has_rejected_update_request && (
+                                                    <TooltipProvider>
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <span>
+                                                                    <span className="inline-flex items-center rounded-full bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 px-2.5 py-0.5 text-xs font-medium cursor-help">
+                                                                        Edit Rejected
+                                                                    </span>
+                                                                </span>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent>
+                                                                <p className="max-w-xs">{user.update_request_rejection_reason || 'Profile edit request was rejected.'}</p>
+                                                            </TooltipContent>
+                                                        </Tooltip>
+                                                    </TooltipProvider>
                                                 )}
                                             </div>
                                         </td>
@@ -381,11 +390,11 @@ export default function SeeUsers({ users, filters }: Props) {
                                                             </span>
                                                         </TooltipTrigger>
                                                         <TooltipContent>
-                                                            <p>Rejected accounts cannot be edited</p>
+                                                            <p>{user.rejection_reason || 'Rejected accounts cannot be edited'}</p>
                                                         </TooltipContent>
                                                     </Tooltip>
                                                 </TooltipProvider>
-                                            ) : user.has_pending_update_request ? (
+                                            ) : user.status === 'pending' || user.status === 'pending_approval' || user.has_pending_update_request ? (
                                                 <TooltipProvider>
                                                     <Tooltip>
                                                         <TooltipTrigger asChild>
@@ -396,7 +405,7 @@ export default function SeeUsers({ users, filters }: Props) {
                                                             </span>
                                                         </TooltipTrigger>
                                                         <TooltipContent>
-                                                            <p>Profile has a pending edit request awaiting GM approval</p>
+                                                            <p>Editing disabled while account/edit is pending GM approval</p>
                                                         </TooltipContent>
                                                     </Tooltip>
                                                 </TooltipProvider>
@@ -413,7 +422,7 @@ export default function SeeUsers({ users, filters }: Props) {
                             ) : (
                                 <tr>
                                     <td
-                                        colSpan={7}
+                                        colSpan={6}
                                         className="py-12 text-center text-muted-foreground"
                                     >
                                         <div className="flex flex-col items-center gap-2">

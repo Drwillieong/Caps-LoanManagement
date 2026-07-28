@@ -219,7 +219,7 @@ export default function PendingApplication({ loan, hasPendingLoan, loanHistory }
 }
 
     const [historyPage, setHistoryPage] = useState(1);
-    const historyPerPage = 5;
+    const historyPerPage = 2;
     const historyTotalPages = Math.max(1, Math.ceil((loanHistory?.length ?? 0) / historyPerPage));
     const historyStart = (historyPage - 1) * historyPerPage;
     const historyEnd = historyStart + historyPerPage;

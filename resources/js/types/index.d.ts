@@ -21,12 +21,23 @@ export interface NavItem {
     icon?: LucideIcon | null;
     isActive?: boolean;
     role?: string;
+    badgeKey?: keyof NotificationBadges;
     items?: NavItem[];
+}
+
+export interface NotificationBadges {
+    unreadMemberValidationCount?: number;
+    pendingComakerRequestsCount?: number;
+    pendingGmLoanValidationCount?: number;
+    pendingCreditCommitteeCount?: number;
+    gmApprovedLoanActionCount?: number;
+    hasMemberStatusChanged?: number | boolean;
 }
 
 export interface SharedData {
     name: string;
     auth: Auth;
+    notificationBadges: NotificationBadges;
     sidebarOpen: boolean;
     [key: string]: unknown;
 }

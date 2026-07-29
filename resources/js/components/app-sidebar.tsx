@@ -14,9 +14,9 @@ import {
     Logs,
     ShieldCheck,
     UserCircle2,
+    Users,
     UsersRound,
     WalletCards,
-    Users
 } from 'lucide-react';
 
 import { NavFooter } from '@/components/nav-footer';
@@ -67,7 +67,6 @@ const memberNavItems: NavItem[] = [
         title: 'Application',
         icon: FilePlus,
         items: [
-            
             {
                 title: 'Application Form',
                 href: '/dashboards/Member/ApplyLoan',
@@ -82,6 +81,7 @@ const memberNavItems: NavItem[] = [
                 title: 'Pending Application',
                 href: '/dashboards/Member/PendingApplication',
                 icon: FileClock,
+                badgeKey: 'hasMemberStatusChanged',
             },
         ],
     },
@@ -106,6 +106,12 @@ const memberNavItems: NavItem[] = [
         href: '/dashboards/Member/UserProfile',
         icon: UserCircle2,
     },
+    {
+        title: 'Co-Maker',
+        href: '/dashboards/Member/CoMaker',
+        icon: UsersRound,
+        badgeKey: 'pendingComakerRequestsCount',
+    },
 ];
 
 const gmNavItems: NavItem[] = [
@@ -117,6 +123,7 @@ const gmNavItems: NavItem[] = [
                 title: 'Member Application',
                 href: '/dashboards/Gm/MemberValidate',
                 icon: Users,
+                badgeKey: 'unreadMemberValidationCount',
             },
             {
                 title: 'Bulk Upload Members',
@@ -128,14 +135,12 @@ const gmNavItems: NavItem[] = [
                 href: '/dashboards/Gm/PendingEdits',
                 icon: FileEdit,
             },
-          
         ],
     },
     {
         title: 'Application',
         icon: ClipboardCheck,
         items: [
-           
             {
                 title: 'Create Application',
                 href: '/dashboards/Gm/CreateApplication',
@@ -145,11 +150,13 @@ const gmNavItems: NavItem[] = [
                 title: 'Pending Application',
                 href: '/dashboards/Gm/LoanApplication',
                 icon: FileClock,
+                badgeKey: 'pendingGmLoanValidationCount',
             },
             {
                 title: 'Approved Loan',
                 href: '/dashboards/Gm/ApprovedLoan',
                 icon: ShieldCheck,
+                badgeKey: 'gmApprovedLoanActionCount',
             },
         ],
     },
@@ -181,6 +188,7 @@ const creditcomNavItems: NavItem[] = [
         title: 'Loan Application',
         href: '/dashboards/CreditCom/LoanApplication',
         icon: FileText,
+        badgeKey: 'pendingCreditCommitteeCount',
     },
     {
         title: 'Approved Loan',

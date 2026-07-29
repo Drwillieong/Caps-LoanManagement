@@ -14,6 +14,7 @@ use App\Http\Controllers\Member\LoanController;
 use App\Http\Controllers\Member\MemberController;
 use App\Http\Controllers\Member\MemberProfileController;
 use App\Http\Controllers\Payroll\PayrollDeductionController;
+use App\Http\Controllers\SidebarNotificationBadgeController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
@@ -36,6 +37,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', [DashBoardController::class, 'index'])
         ->name('dashboard')
         ->middleware('ensure.profile.completed');
+
+    Route::post('sidebar-notification-badges/mark-read', [SidebarNotificationBadgeController::class, 'markRead'])
+        ->name('sidebar-notification-badges.mark-read');
 
     // HR
     Route::get('dashboards/HR/SeeUsers', [CreateMemberController::class, 'index'])->middleware('role:hr')->name('users');

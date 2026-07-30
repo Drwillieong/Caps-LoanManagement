@@ -13,8 +13,78 @@ use Inertia\Inertia;
 class ProfileUpdateRequestController extends Controller
 {
     /**
+     * Fields that are allowed/comparable in the profile update diff.
+     * Must match the DISPLAY_FIELDS keys in PendingEdits.tsx.
+     */
+    private const COMPARABLE_FIELDS = [
+        'first_name', 'middle_name', 'last_name', 'date_of_birth', 'sex',
+        'civil_status', 'place_of_birth', 'educational_attainment',
+        'mobile_number', 'permanent_mobile_number',
+        'present_address', 'present_zip_code', 'permanent_address', 'permanent_zip_code',
+        'position', 'date_hired', 'basic_salary', 'income_type', 'net_income',
+        'share_capital_balance', 'other_source_of_income', 
+        'facebook_account_name',
+        'spouse_occupation', 'spouse_gross_income', 'spouse_income_type', 'spouse_net_income',
+        'legal_beneficiary_1_name', 'real_properties_owned',
+    ];
+
+    /**
+     * Fields that are currency/numeric — normalize to clean float for comparison.
+     */
+    private const CURRENCY_FIELDS = [
+        'basic_salary', 'net_income', 'share_capital_balance',
+        'gross_income', 'capital_build_up',
+        'spouse_gross_income', 'spouse_net_income',
+        'monthly_amortization',
+    ];
+
+    private const IMMUTABLE_FIELDS = [
+        'employee_id', 'id', 'user_id', 'created_at', 'updated_at',
+    ];
+
+    /**
+     * Normalize a value for diff comparison:
+     * - null / empty / '—' → null
+     * - currency fields → float (strip commas, ₱, etc.)
+     * - other → trimmed string
+     */
+    private function normalizeDiffValue(string $key, mixed $value): mixed
+    {
+        // Treat null, empty string, or em-dash as null
+        if (is_null($value) || $value === '' || $value === '—' || $value === '–' || $value === '-') {
+            return null;
+        }
+
+        // Currency fields: strip formatting and cast to float with 2 decimals
+        if (in_array($key, self::CURRENCY_FIELDS)) {
+            // Remove ₱, commas, spaces, any non-numeric chars except dot and minus
+            $cleaned = preg_replace('/[^0-9.\-]/', '', (string) $value);
+            return round((float) $cleaned, 2);
+        }
+
+        return trim((string) $value);
+    }
+
+    private function normalizeBeneficiaries(mixed $value): array
+    {
+        if (! is_array($value)) {
+            return [];
+        }
+
+        return collect($value)
+            ->map(fn ($beneficiary) => [
+                'full_name' => trim((string) ($beneficiary['full_name'] ?? '')),
+                'relationship' => trim((string) ($beneficiary['relationship'] ?? '')),
+                'date_of_birth' => trim((string) ($beneficiary['date_of_birth'] ?? '')),
+            ])
+            ->filter(fn ($beneficiary) => $beneficiary['full_name'] !== '' || $beneficiary['relationship'] !== '' || $beneficiary['date_of_birth'] !== '')
+            ->values()
+            ->all();
+    }
+
+    /**
      * HR: Submit a pending profile update request.
-     * Stores the original data (snapshot) and the pending changes (proposed edits).
+     * Stores the original data (snapshot) and ONLY the truly changed pending edits.
      */
     public function store(Request $request)
     {
@@ -34,18 +104,75 @@ class ProfileUpdateRequestController extends Controller
         }
 
         // Get the current member profile data as snapshot
-        $memberProfile = MemberProfile::findOrFail($validated['member_id']);
+        $memberProfile = MemberProfile::with('beneficiaries')->findOrFail($validated['member_id']);
         $originalData = $memberProfile->toArray();
+        $originalData['beneficiaries'] = $this->normalizeBeneficiaries($memberProfile->beneficiaries->toArray());
 
         // Remove relationships and timestamps from original data snapshot
-        unset($originalData['user'], $originalData['beneficiaries'], $originalData['deduction_records']);
+        unset($originalData['user'], $originalData['deduction_records']);
 
-        // Create the pending update request
+        // Ensure mobile_number and legal_beneficiary_1_name are present in pending_data
+        // so they don't cause false-positives when compared.
+        $pendingData = $validated['pending_data'];
+        foreach (self::IMMUTABLE_FIELDS as $field) {
+            unset($pendingData[$field]);
+        }
+
+        if (!array_key_exists('mobile_number', $pendingData)) {
+            $pendingData['mobile_number'] = $originalData['mobile_number'] ?? null;
+        }
+        if (!array_key_exists('legal_beneficiary_1_name', $pendingData)) {
+            $pendingData['legal_beneficiary_1_name'] = $originalData['legal_beneficiary_1_name'] ?? null;
+        }
+
+        // Filter pending_data to ONLY include fields that actually changed
+        // This prevents unchanged fields (with formatting differences) from appearing as diffs
+        $filteredPending = [];
+        foreach (self::COMPARABLE_FIELDS as $field) {
+            $origVal = $this->normalizeDiffValue($field, $originalData[$field] ?? null);
+            $pendVal = $this->normalizeDiffValue($field, $pendingData[$field] ?? null);
+
+            // If both are null/empty after normalization — skip
+            if (is_null($origVal) && is_null($pendVal)) {
+                continue;
+            }
+
+            // Only include if actually different
+            if ($origVal !== $pendVal) {
+                $filteredPending[$field] = $pendingData[$field];
+            }
+        }
+
+        // Also include non-comparable fields the user might need (e.g. profile_picture)
+        // that are part of the fillable member profile but not in our diff display
+        foreach ($pendingData as $key => $value) {
+            if (
+                !in_array($key, self::COMPARABLE_FIELDS)
+                && !in_array($key, self::IMMUTABLE_FIELDS)
+                && !is_null($value)
+                && $value !== ''
+                && $key !== 'beneficiaries'
+            ) {
+                $filteredPending[$key] = $value;
+            }
+        }
+
+        if (array_key_exists('beneficiaries', $pendingData)) {
+            $originalBeneficiaries = $this->normalizeBeneficiaries($originalData['beneficiaries'] ?? []);
+            $pendingBeneficiaries = $this->normalizeBeneficiaries($pendingData['beneficiaries']);
+
+            if ($originalBeneficiaries !== $pendingBeneficiaries) {
+                $filteredPending['beneficiaries'] = $pendingBeneficiaries;
+            }
+        }
+
+        // Create the pending update request with only the changed data
+        // Store original_data as-is (full snapshot), pending_data as filtered changed fields
         $updateRequest = ProfileUpdateRequest::create([
             'member_id' => $validated['member_id'],
             'requested_by' => Auth::id(),
             'original_data' => $originalData,
-            'pending_data' => $validated['pending_data'],
+            'pending_data' => $filteredPending,
             'status' => 'pending',
         ]);
 
@@ -105,6 +232,56 @@ class ProfileUpdateRequestController extends Controller
     }
 
     /**
+     * Sanitize pending data values before model update to prevent
+     * Laravel 12 / PHP 8.4 MathException from strict decimal casting.
+     *
+     * - null / '' / '—' / '–' / '-' → null
+     * - Currency/decimal fields: strip ₱, commas, non-numeric chars, cast to float
+     * - Other fields: trimmed string or left as-is
+     */
+    private function sanitizeForModelUpdate(array $pendingData, MemberProfile $memberProfile): array
+    {
+        // Decimal/currency fields on MemberProfile that need numeric sanitization
+        $decimalFields = [
+            'basic_salary',
+            'net_income',
+            'gross_income',
+            'share_capital_balance',
+            'capital_build_up',
+            'spouse_gross_income',
+            'spouse_net_income',
+            'monthly_amortization',
+        ];
+
+        $sanitized = [];
+
+        foreach ($pendingData as $field => $value) {
+            // 1. Convert empty strings, dashes, or null to null
+            if ($value === '' || $value === '—' || $value === '–' || $value === '-' || $value === null) {
+                $sanitized[$field] = null;
+                continue;
+            }
+
+            // 2. Sanitize decimal/currency fields
+            if (in_array($field, $decimalFields)) {
+                if (is_numeric($value)) {
+                    $sanitized[$field] = (float) $value;
+                } else {
+                    // Strip out currency symbols, commas, spaces — keep only digits, dot, minus
+                    $cleaned = preg_replace('/[^\d.]/', '', str_replace(',', '', (string) $value));
+                    $sanitized[$field] = $cleaned !== '' ? (float) $cleaned : null;
+                }
+                continue;
+            }
+
+            // 3. All other fields — keep original value (trim if string)
+            $sanitized[$field] = is_string($value) ? trim($value) : $value;
+        }
+
+        return $sanitized;
+    }
+
+    /**
      * GM: Approve a profile update request.
      * Merges pending_data into the member_profiles table.
      */
@@ -125,18 +302,54 @@ class ProfileUpdateRequestController extends Controller
         }
 
         // Extract the pending data fields that are fillable on MemberProfile
-        $pendingData = collect($updateRequest->pending_data)
+        $rawPendingData = $updateRequest->pending_data ?? [];
+        if (is_string($rawPendingData)) {
+            $rawPendingData = json_decode($rawPendingData, true) ?: [];
+        }
+
+        foreach (self::IMMUTABLE_FIELDS as $field) {
+            unset($rawPendingData[$field]);
+        }
+
+        $pendingData = collect($rawPendingData)
             ->only($memberProfile->getFillable())
             ->toArray();
+        foreach (self::IMMUTABLE_FIELDS as $field) {
+            unset($pendingData[$field]);
+        }
 
-        // Update the member profile with the approved changes
+        // Sanitize values before model update to prevent MathException
+        // from Laravel 12's strict decimal casting on formatted currency strings.
+        $pendingData = $this->sanitizeForModelUpdate($pendingData, $memberProfile);
+
+        // Update the member profile with the sanitized changes
         $memberProfile->update($pendingData);
 
-        // Mark the request as approved
+        if (isset($rawPendingData['beneficiaries']) && is_array($rawPendingData['beneficiaries'])) {
+            $memberProfile->beneficiaries()->delete();
+
+            foreach ($this->normalizeBeneficiaries($rawPendingData['beneficiaries']) as $beneficiary) {
+                if ($beneficiary['full_name'] === '') {
+                    continue;
+                }
+
+                $memberProfile->beneficiaries()->create($beneficiary);
+            }
+        }
+
+        // Mark the request as approved and clear any previous rejection reason
         $updateRequest->update([
             'status' => 'approved',
+            'rejection_reason' => null,
             'reviewed_by' => Auth::id(),
         ]);
+
+        // Clear rejection reasons on any previously rejected requests for this member,
+        // so that the "Edit Rejected" badge no longer shows in SeeUsers.tsx.
+        ProfileUpdateRequest::where('member_id', $updateRequest->member_id)
+            ->where('status', 'rejected')
+            ->where('id', '!=', $updateRequest->id)
+            ->update(['rejection_reason' => null]);
 
         app(ActivityLogService::class)->logActivity(
             'profile_update_approved',

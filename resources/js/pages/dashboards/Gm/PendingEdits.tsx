@@ -79,9 +79,13 @@ const DISPLAY_FIELDS: Record<string, { label: string; category: string }> = {
 function formatDisplayValue(key: string, value: any): string {
     if (value === null || value === undefined || value === '') return '—';
 
+    if (key === 'beneficiaries') {
+        return formatBeneficiaries(value);
+    }
+
     // Format currency fields
     if (['basic_salary', 'net_income', 'share_capital_balance', 'spouse_gross_income', 'spouse_net_income'].includes(key)) {
-        const num = typeof value === 'string' ? parseFloat(value) : value;
+        const num = typeof value === 'string' ? cleanNumericValue(value) : value;
         if (isNaN(num)) return String(value);
         return `₱${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     }
@@ -111,17 +115,132 @@ function formatDisplayValue(key: string, value: any): string {
     return String(value);
 }
 
+/**
+ * Currency/numeric fields that need formatting-normalized comparison.
+ */
+const CURRENCY_FIELDS = [
+    'basic_salary', 'net_income', 'share_capital_balance',
+    'spouse_gross_income', 'spouse_net_income',
+];
+
+const BENEFICIARY_KEYS = ['beneficiaries', 'legal_beneficiary', 'legal_beneficiary_1_name'];
+
+function cleanNumericValue(val: string | number) {
+    if (typeof val === 'number') return val;
+    return parseFloat(String(val).replace(/,/g, '')) || 0;
+}
+
+/**
+ * Normalize a single value for diff comparison:
+ * - null / undefined / '' / '—' / '–' / '-' → null
+ * - currency fields → parse to float with 2 decimals (strip ₱, commas)
+ * - other → trimmed string
+ */
+function normalizeCompareValue(key: string, value: any): string | number | null {
+    if (value === null || value === undefined || value === '' || value === '—' || value === '–' || value === '-') {
+        return null;
+    }
+
+    // Currency fields: strip formatting and parse as float
+    if (CURRENCY_FIELDS.includes(key)) {
+        const num = cleanNumericValue(value);
+        return isNaN(num) ? null : Math.round(num * 100) / 100; // round to 2 decimals
+    }
+
+    return String(value).trim();
+}
+
+function normalizeBeneficiaries(value: any): Array<Record<string, string>> {
+    if (!Array.isArray(value)) return [];
+
+    return value
+        .map((beneficiary) => ({
+            full_name: String(beneficiary?.full_name ?? '').trim(),
+            relationship: String(beneficiary?.relationship ?? '').trim(),
+            date_of_birth: String(beneficiary?.date_of_birth ?? '').trim(),
+        }))
+        .filter((beneficiary) => beneficiary.full_name || beneficiary.relationship || beneficiary.date_of_birth);
+}
+
+function getPendingValue(key: string, pending: any): any {
+    const pendingValue = pending?.[key];
+    if (pendingValue !== undefined) return pendingValue;
+
+    const fallbackKey = PENDING_FALLBACK_KEYS[key];
+    return fallbackKey ? pending?.[fallbackKey] : undefined;
+}
+
+function formatBeneficiaries(value: any): string {
+    if (!value || (Array.isArray(value) && value.length === 0)) return '—';
+
+    if (typeof value === 'string') return value.trim() || '—';
+
+    if (Array.isArray(value)) {
+        return value
+            .map((b) => {
+                if (typeof b === 'object' && b !== null) {
+                    const name = b.name || b.full_name || '';
+                    const relationship = b.relationship || b.relation || '';
+                    return relationship ? `${name} (${relationship})` : name;
+                }
+                return String(b);
+            })
+            .filter(Boolean)
+            .join('; ');
+    }
+
+    return String(value);
+}
+
+function beneficiariesChanged(original: any, pending: any): boolean {
+    if (!BENEFICIARY_KEYS.some((key) => pending?.[key] !== undefined)) return false;
+
+    const originalBeneficiaries = normalizeBeneficiaries(original?.beneficiaries);
+    const pendingBeneficiaries = normalizeBeneficiaries(pending?.beneficiaries);
+
+    if (pending?.beneficiaries !== undefined) {
+        return JSON.stringify(originalBeneficiaries) !== JSON.stringify(pendingBeneficiaries);
+    }
+
+    if (pending?.legal_beneficiary !== undefined) {
+        return normalizeCompareValue('legal_beneficiary', original?.legal_beneficiary ?? original?.legal_beneficiary_1_name) !== normalizeCompareValue('legal_beneficiary', pending.legal_beneficiary);
+    }
+
+    return false;
+}
+
+/**
+ * Fallback map: Some fields in original_data may appear under a different key
+ * in pending_data (e.g., form uses permanent_mobile_number, DISPLAY uses mobile_number).
+ * When comparing, if the expected key is missing from pending_data, try these fallbacks.
+ */
+const PENDING_FALLBACK_KEYS: Record<string, string> = {
+    mobile_number: 'permanent_mobile_number',
+};
+
 function hasChanged(key: string, original: any, pending: any): boolean {
-    const origVal = original?.[key];
-    const pendVal = pending?.[key];
-    
+    let origVal = original?.[key];
+    let pendVal = pending?.[key];
+
+    // Fallback: if pending doesn't have this key, try the fallback key
+    if (pendVal === undefined && PENDING_FALLBACK_KEYS[key]) {
+        pendVal = pending?.[PENDING_FALLBACK_KEYS[key]];
+    }
+
+    // If the key is absent from the pending payload entirely, it was not edited
+    if (pendVal === undefined) return false;
+
+    // Normalize both values for comparison
+    const normalizedOrig = normalizeCompareValue(key, origVal);
+    const normalizedPend = normalizeCompareValue(key, pendVal);
+
     // Both null/empty — no change
-    if ((origVal === null || origVal === undefined || origVal === '') && 
-        (pendVal === null || pendVal === undefined || pendVal === '')) {
+    if (normalizedOrig === null && normalizedPend === null) {
         return false;
     }
-    
-    return String(origVal ?? '') !== String(pendVal ?? '');
+
+    // Compare normalized values
+    return normalizedOrig !== normalizedPend;
 }
 
 export default function PendingEdits({ pendingEdits }: Props) {
@@ -197,7 +316,7 @@ export default function PendingEdits({ pendingEdits }: Props) {
 
         Object.entries(DISPLAY_FIELDS).forEach(([key, config]) => {
             const orig = original_data?.[key];
-            const pend = pending_data?.[key];
+            const pend = getPendingValue(key, pending_data);
             const changed = hasChanged(key, original_data, pending_data);
 
             const entry = {
@@ -214,6 +333,16 @@ export default function PendingEdits({ pendingEdits }: Props) {
                 unchangedFields.push(entry);
             }
         });
+
+        if (beneficiariesChanged(original_data, pending_data)) {
+            changedFields.push({
+                key: 'beneficiaries',
+                label: 'Beneficiaries',
+                category: 'Family / Beneficiaries',
+                original: original_data?.beneficiaries,
+                pending: pending_data?.beneficiaries ?? pending_data?.legal_beneficiary ?? pending_data?.legal_beneficiary_1_name,
+            });
+        }
 
         return { changed: changedFields, unchanged: showAllFields ? unchangedFields : [] };
     }, [selectedRequest, showAllFields]);

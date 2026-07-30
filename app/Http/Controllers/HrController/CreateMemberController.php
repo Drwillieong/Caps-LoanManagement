@@ -117,6 +117,7 @@ class CreateMemberController extends Controller
             ->toArray();
 
         $rejectedUpdateRequests = ProfileUpdateRequest::where('status', 'rejected')
+            ->whereNotNull('rejection_reason')
             ->get(['member_id', 'rejection_reason'])
             ->mapWithKeys(function ($request) {
                 return [$request->member_id => $request->rejection_reason];

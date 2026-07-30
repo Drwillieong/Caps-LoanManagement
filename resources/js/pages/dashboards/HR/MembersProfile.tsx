@@ -59,6 +59,19 @@ function parseCurrency(formatted: string): string {
     return formatted.replace(/,/g, '');
 }
 
+const cleanNumericValue = (val: string | number) => {
+    if (typeof val === 'number') return val;
+    return parseFloat(String(val).replace(/,/g, '')) || 0;
+};
+
+const CURRENCY_FIELDS = [
+    'basic_salary',
+    'net_income',
+    'share_capital_balance',
+    'spouse_gross_income',
+    'spouse_net_income',
+];
+
 function formatPhone(raw: string): string {
     const digits = raw.replace(/\D/g, '');
     if (digits.length < 3) return digits;
@@ -540,10 +553,20 @@ export default function MembersProfile({ user, memberProfile, beneficiaries, isA
                 <Form
                     method={formMethod}
                     action={formActionUrl}
-                    transform={() => ({
-                        member_id: targetEmployeeId,
-                        pending_data: formData as any,
-                    })}
+                    transform={() => {
+                        const { employee_id, ...pendingData } = formData as any;
+
+                        CURRENCY_FIELDS.forEach((field) => {
+                            if (pendingData[field] !== undefined && pendingData[field] !== '') {
+                                pendingData[field] = cleanNumericValue(pendingData[field]);
+                            }
+                        });
+
+                        return {
+                            member_id: targetEmployeeId,
+                            pending_data: pendingData,
+                        };
+                    }}
                     className="space-y-6"
                     onSuccess={() => {
                         toast.success('Profile update request submitted successfully and is awaiting GM approval!');
@@ -646,15 +669,15 @@ export default function MembersProfile({ user, memberProfile, beneficiaries, isA
                                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                                         <div className="grid gap-2">
                                             <Label htmlFor="employee_id">
-                                                Employee ID <span className="text-red-500">*</span>
+                                                Member ID <span className="text-red-500">*</span>
                                             </Label>
                                             <Input
                                                 id="employee_id"
                                                 name="employee_id"
                                                 value={formData.employee_id}
-                                                onChange={(e) => setFormData({ ...formData, employee_id: e.target.value })}
                                                 placeholder="e.g., EMP-001"
-                                                disabled={!isEditing}
+                                                readOnly
+                                                disabled
                                             />
                                             <InputError message={errors.employee_id} />
                                         </div>
@@ -1386,4 +1409,3 @@ export default function MembersProfile({ user, memberProfile, beneficiaries, isA
         </AppLayout>
     );
 }
-

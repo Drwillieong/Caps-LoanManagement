@@ -1,40 +1,16 @@
-# Refactor: Rename `employee_id` to `member_id` & Auto-Generate Sequential IDs
+# Task: Clear Rejection Status/Reason upon Approval
 
-## Step-by-Step Implementation Plan
+## Steps
 
-### Phase 1: Create Migration
-- [ ] 1. Create migration to rename `employee_id` to `member_id` across all tables
+- [x] **Step 0**: Understand the code flow (completed)
+  - Read `ProfileUpdateRequestController.php`, `CreateMemberController.php`, `MembersProfile.tsx`, `SeeUsers.tsx`
+  - Identified that rejected requests persist with `rejection_reason` even after a new request is approved
 
-### Phase 2: Update Backend Models
-- [ ] 2. Update `app/Models/MemberProfile.php`
-- [ ] 3. Update `app/Models/Beneficiary.php`
-- [ ] 4. Update `app/Models/PayrollUploadRow.php`
-- [ ] 5. Update `app/Models/ProfileUpdateRequest.php`
-- [ ] 6. Update `app/Models/User.php`
+- [x] **Step 1**: Edit `ProfileUpdateRequestController@approve()` 
+  - After approving the current request, clear `rejection_reason` on all other rejected requests for the same member_id
 
-### Phase 3: Update Controllers
-- [ ] 7. Update `app/Http/Controllers/HrController/CreateMemberController.php`
-- [ ] 8. Update `app/Http/Controllers/Member/MemberProfileController.php`
-- [ ] 9. Update `app/Http/Controllers/HrController/MemberProfileViewController.php`
-- [ ] 10. Update `app/Http/Controllers/GmController/GmController.php`
-- [ ] 11. Update `app/Http/Controllers/GmController/BulkMemberUploadController.php`
-- [ ] 12. Update `app/Http/Controllers/GmController/ProfileUpdateRequestController.php`
+- [x] **Step 2**: Edit `CreateMemberController@index()`
+  - Add `->whereNotNull('rejection_reason')` as a safety net to prevent stale rejected requests from showing the badge
 
-### Phase 4: Update Routes
-- [ ] 13. Update `routes/web.php`
-
-### Phase 5: Update Frontend
-- [ ] 14. Update `resources/js/pages/dashboards/HR/Create.tsx`
-- [ ] 15. Update `resources/js/pages/dashboards/HR/MembersProfile.tsx`
-- [ ] 16. Update `resources/js/pages/dashboards/Member/UserProfile.tsx`
-- [ ] 17. Update `resources/js/pages/dashboards/Gm/MemberValidate.tsx`
-- [ ] 18. Update `resources/js/pages/dashboards/HR/SeeUsers.tsx`
-
-### Phase 6: Run Migration
-- [ ] 19. Run `php artisan migrate`
-
----
-
-## ✅ Bug Fix: Missing Temporary Password in Welcome Email
-- [x] Fixed `app/Http/Controllers/GmController/GmController.php::approveMember()` — now generates a temporary password on-the-fly for self-registered users (where `temporary_password` is null) before sending the welcome email.
+- [x] **Step 3**: Verify the edits are correct
 

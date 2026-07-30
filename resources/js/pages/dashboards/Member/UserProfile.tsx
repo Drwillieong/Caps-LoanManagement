@@ -1,8 +1,7 @@
 import { Transition } from '@headlessui/react';
-import { Form, Head, usePage } from '@inertiajs/react';
+import { Form, Head, Link, usePage } from '@inertiajs/react';
 import { useState, useEffect, useCallback } from 'react';
 import { 
-    AlertCircle, 
     User, 
     MapPin, 
     Briefcase, 
@@ -11,7 +10,11 @@ import {
     Building,
     Phone,
     Users,
+    ArrowLeft,
+    Download,
 } from 'lucide-react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 import HeadingSmall from '@/components/heading-small';
 import InputError from '@/components/input-error';
@@ -72,6 +75,19 @@ function formatPhone(raw: string): string {
     }
     return digits;
 }
+
+const CURRENCY_FIELDS = [
+    'basic_salary',
+    'net_income',
+    'share_capital_balance',
+    'spouse_gross_income',
+    'spouse_net_income',
+];
+
+const cleanNumericValue = (val: string | number) => {
+    if (typeof val === 'number') return val;
+    return parseFloat(String(val).replace(/,/g, '')) || 0;
+};
 
 function parsePhone(formatted: string): string {
     const digits = formatted.replace(/\D/g, '');
@@ -242,6 +258,112 @@ const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
     // Determine if user can edit employment - admins can always edit, members only when isEditing
     const canEditEmployment = isAdmin;
 
+    const exportPDF = () => {
+        if (!memberProfile) return;
+
+        const doc = new jsPDF();
+        
+        doc.setFontSize(18);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Member Profile Report', 14, 20);
+        
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Generated: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`, 14, 28);
+
+        const fmtCurrency = (amount: number) => 
+            '₱' + amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+        const userInfo: string[][] = [
+            ['Employee ID:', memberProfile.employee_id],
+            ['First Name:', memberProfile.first_name],
+            ['Middle Name:', memberProfile.middle_name || 'N/A'],
+            ['Last Name:', memberProfile.last_name],
+            ['Date of Birth:', formatDate(memberProfile.date_of_birth)],
+            ['Sex:', memberProfile.sex],
+            ['Civil Status:', memberProfile.civil_status],
+        ];
+        
+        autoTable(doc, {
+            startY: 45,
+            head: [['Field', 'Value']],
+            body: userInfo,
+            theme: 'striped',
+            headStyles: { fillColor: [59, 130, 246] },
+            margin: { left: 14, right: 100 },
+            tableWidth: 'wrap',
+        });
+
+        const contactInfo: string[][] = [
+            ['Contact Number:', memberProfile.permanent_mobile_number || memberProfile.mobile_number],
+            ['Present Address:', memberProfile.present_address],
+            ['Permanent Address:', memberProfile.permanent_address || 'N/A'],
+        ];
+        
+        autoTable(doc, {
+            startY: (doc as any).lastAutoTable.finalY + 15,
+            head: [['Field', 'Value']],
+            body: contactInfo,
+            theme: 'striped',
+            headStyles: { fillColor: [59, 130, 246] },
+            margin: { left: 14, right: 100 },
+            tableWidth: 'wrap',
+        });
+
+        const employmentInfo: string[][] = [
+            ['Position:', memberProfile.position],
+            ['Date Hired:', formatDate(memberProfile.date_hired)],
+            ['Income (Gross):', fmtCurrency(memberProfile.basic_salary)],
+        ];
+        
+        autoTable(doc, {
+            startY: (doc as any).lastAutoTable.finalY + 15,
+            head: [['Field', 'Value']],
+            body: employmentInfo,
+            theme: 'striped',
+            headStyles: { fillColor: [59, 130, 246] },
+            margin: { left: 14, right: 100 },
+            tableWidth: 'wrap',
+        });
+
+        const financialInfo: string[][] = [
+            ['Share Capital Balance:', fmtCurrency(memberProfile.share_capital_balance || 0)],
+        ];
+        
+        autoTable(doc, {
+            startY: (doc as any).lastAutoTable.finalY + 15,
+            head: [['Field', 'Value']],
+            body: financialInfo,
+            theme: 'striped',
+            headStyles: { fillColor: [59, 130, 246] },
+            margin: { left: 14, right: 100 },
+            tableWidth: 'wrap',
+        });
+
+        const beneficiariesArr = formData.beneficiaries as Beneficiary[];
+        if (beneficiariesArr && beneficiariesArr.length > 0) {
+            const validBens = beneficiariesArr.filter((b: Beneficiary) => b.full_name);
+            if (validBens.length > 0) {
+                const beneficiaryData = validBens.map((b: Beneficiary) => [
+                    b.full_name,
+                    b.relationship || 'N/A',
+                ]);
+                
+                autoTable(doc, {
+                    startY: (doc as any).lastAutoTable.finalY + 15,
+                    head: [['Full Name', 'Relationship']],
+                    body: beneficiaryData,
+                    theme: 'striped',
+                    headStyles: { fillColor: [59, 130, 246] },
+                    margin: { left: 14, right: 14 },
+                });
+            }
+        }
+
+        const fileName = `${memberProfile.last_name}_${memberProfile.first_name}_Profile.pdf`;
+        doc.save(fileName);
+    };
+
     // Get the appropriate URL for form action
     const formActionUrl = isHREditingMember 
         ? `/dashboards/HR/EditMember/${targetEmployeeId}` 
@@ -271,56 +393,69 @@ const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
     <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
         <Head title="User Profile" />
 
-        {/* Warning Banner for Incomplete Profile */}
-        {!profileCompleted && (
-            <Card className="border-l-4 border-l-amber-500 bg-amber-50 m-6">
-                <CardContent className="flex items-center justify-between py-4">
-                    <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100">
-                            <AlertCircle className="h-5 w-5 text-amber-600" />
-                        </div>
-                        <div>
-                            <p className="font-semibold text-amber-800">
-                                Complete Your Profile First
-                            </p>
-                            <p className="text-sm text-amber-700">
-                                Please complete your profile with all required information before you can apply for a loan or access other member services.
-                            </p>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
-        )}
-
         <div className="flex flex-1 flex-col gap-6 p-6">
             {/* Header Section */}
             <div className="flex items-center justify-between">
-                <HeadingSmall
-                    title="Personal Information"
-                    description={
-                        isEditing
-                            ? 'You can now edit your profile details'
-                            : 'View your personal information'
-                    }
-                />
-
-                {!isNewUser && (
-                    <div className="flex gap-2">
-                        {!isEditing ? (
-                            <Button onClick={() => setIsEditing(true)}>
-                                Edit Profile
-                            </Button>
-                        ) : (
-                            <Button
-                                variant="outline"
-                                onClick={() => setIsEditing(false)}
-                            >
-                                Cancel
-                            </Button>
-                        )}
+                <div className="flex items-center gap-4">
+                    <Button variant="outline" size="icon" asChild>
+                        <Link href="/dashboards/Member">
+                            <ArrowLeft className="h-4 w-4" />
+                        </Link>
+                    </Button>
+                    <div>
+                        <HeadingSmall
+                            title={targetUserName || `${memberProfile?.first_name || ''} ${memberProfile?.last_name || ''}`}
+                            description={
+                                isEditing
+                                    ? 'Editing member profile details'
+                                    : 'View member profile information'
+                            }
+                        />
                     </div>
-                )}
+                </div>
+
+                <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" onClick={() => exportPDF()}>
+                        <Download className="mr-2 h-4 w-4" />
+                        Export PDF
+                    </Button>
+                    {!isNewUser && (
+                        <>
+                            {!isEditing ? (
+                                <Button onClick={() => setIsEditing(true)}>
+                                    Edit Profile
+                                </Button>
+                            ) : (
+                                <Button
+                                    variant="outline"
+                                    onClick={() => setIsEditing(false)}
+                                >
+                                    Cancel
+                                </Button>
+                            )}
+                        </>
+                    )}
+                </div>
             </div>
+
+            {/* Warning Banner for Incomplete Profile */}
+            {!profileCompleted && (
+                <Card className="border-l-4 border-l-amber-500 bg-amber-50">
+                    <CardContent className="flex items-center justify-between py-4">
+                        <div className="flex items-start gap-3">
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-100">
+                                <span className="text-sm font-bold text-amber-600">!</span>
+                            </div>
+                            <div>
+                                <h3 className="font-semibold text-amber-800">Complete Your Profile First</h3>
+                                <p className="mt-1 text-sm text-amber-700">
+                                    Please complete your profile with all required information before you can apply for a loan or access other member services.
+                                </p>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
 
             <Form
                 method={formMethod}
@@ -422,7 +557,7 @@ const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
                                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                                     <div className="grid gap-2">
                                         <Label htmlFor="employee_id">
-                                            Employee ID <span className="text-red-500">*</span>
+                                            Member ID <span className="text-red-500">*</span>
                                         </Label>
                                         <Input
                                             id="employee_id"

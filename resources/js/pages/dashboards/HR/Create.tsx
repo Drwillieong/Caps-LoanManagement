@@ -485,24 +485,7 @@ export default function Create({ roles }: Props) {
                                     </CardHeader>
                                     <CardContent className="pt-5">
                                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                                        {/* Email */}
-                                            <div className="grid gap-1.5">
-                                                <Label htmlFor="email">
-                                                    Email Address <span className="text-red-500">*</span>
-                                                </Label>
-                                                <Input
-                                                    id="email"
-                                                    name="email"
-                                                    type="email"
-                                                    value={formData.email}
-                                                    onChange={(e) =>
-                                                        handleChange('email', e.target.value)
-                                                    }
-                                                    placeholder="e.g., member@company.com"
-                                                    aria-invalid={!!err.email}
-                                                />
-                                                <InputError message={err.email} />
-                                            </div>
+                                       
 
                                             {/* First Name */}
                                             {renderInput('first_name', 'First Name', err, {
@@ -520,6 +503,25 @@ export default function Create({ roles }: Props) {
                                                 required: true,
                                                 placeholder: 'Santos',
                                             })}
+
+                                             {/* Email */}
+                                            <div className="grid gap-1.5">
+                                                <Label htmlFor="email">
+                                                    Email Address <span className="text-red-500">*</span>
+                                                </Label>
+                                                <Input
+                                                    id="email"
+                                                    name="email"
+                                                    type="email"
+                                                    value={formData.email}
+                                                    onChange={(e) =>
+                                                        handleChange('email', e.target.value)
+                                                    }
+                                                    placeholder="e.g., member@company.com"
+                                                    aria-invalid={!!err.email}
+                                                />
+                                                <InputError message={err.email} />
+                                            </div>
 
                                             {/* Date of Birth */}
                                             <div className="grid gap-1.5">

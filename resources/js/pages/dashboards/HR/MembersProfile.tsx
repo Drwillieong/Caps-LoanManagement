@@ -1,5 +1,5 @@
 import { Transition } from '@headlessui/react';
-import { Form, Head, Link } from '@inertiajs/react';
+import { Form, Head, Link, router } from '@inertiajs/react';
 import { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import { 
@@ -14,6 +14,9 @@ import {
     Phone,
     Users,
     AlertTriangle,
+    Power,
+    RotateCcw,
+    Shield,
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -134,6 +137,7 @@ interface MemberProfileData {
     spouse_net_income?: number | null;
     real_properties_owned?: string | null;
     profile_picture?: string;
+    account_status?: 'active' | 'inactive';
 }
 
 interface UserData {
@@ -278,6 +282,24 @@ export default function MembersProfile({ user, memberProfile, beneficiaries, isA
 
     // Can edit employment fields (HR can always edit)
     const canEditEmployment = true;
+
+    const requestAccountStatusChange = () => {
+        if (!memberProfile) return;
+
+        const currentStatus = memberProfile.account_status || 'active';
+        const proposedStatus = currentStatus === 'active' ? 'inactive' : 'active';
+        const verb = proposedStatus === 'inactive' ? 'deactivate' : 'reactivate';
+
+        if (!confirm(`Submit a GM approval request to ${verb} ${memberProfile.first_name} ${memberProfile.last_name}'s account?`)) {
+            return;
+        }
+
+        router.post(`/dashboards/HR/Members/${targetEmployeeId}/status-change-request`, {
+            proposed_status: proposedStatus,
+        }, {
+            preserveScroll: true,
+        });
+    };
 
     const exportPDF = () => {
         if (!memberProfile) return;
@@ -1402,6 +1424,69 @@ export default function MembersProfile({ user, memberProfile, beneficiaries, isA
                                     </div>
                                 )}
                             </div>
+
+                            {/* Account Management */}
+                            <Card className="border-border/60">
+                                <CardHeader className="flex flex-row items-center justify-between pb-4 border-b">
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800">
+                                            <Shield className="h-5 w-5 text-slate-600 dark:text-slate-400" />
+                                        </div>
+                                        <div>
+                                            <CardTitle className="text-base">
+                                                Account Management
+                                            </CardTitle>
+                                            <CardDescription>
+                                                Membership status and access control
+                                            </CardDescription>
+                                        </div>
+                                    </div>
+                                    <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium capitalize ${
+                                        (memberProfile?.account_status || 'active') === 'active'
+                                            ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                                            : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                                    }`}>
+                                        {(memberProfile?.account_status || 'active') === 'active' ? 'Active Membership' : 'Inactive Membership'}
+                                    </span>
+                                </CardHeader>
+                                <CardContent className="pt-6">
+                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                                        <div className="space-y-1">
+                                            <p className="text-sm font-medium text-foreground">
+                                                {(memberProfile?.account_status || 'active') === 'active' ? 'Deactivate Account' : 'Reactivate Account'}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground max-w-md">
+                                                {(memberProfile?.account_status || 'active') === 'active'
+                                                    ? 'Temporarily suspend this member\'s account. This action requires General Manager approval and will restrict access to member services.'
+                                                    : 'Restore this member\'s account to active status. This action requires General Manager approval and will restore access to member services.'}
+                                            </p>
+                                        </div>
+                                        <Button
+                                            type="button"
+                                            variant={(memberProfile?.account_status || 'active') === 'active' ? 'destructive' : 'default'}
+                                            size="sm"
+                                            onClick={(event) => {
+                                                event.preventDefault();
+                                                event.stopPropagation();
+                                                requestAccountStatusChange();
+                                            }}
+                                            className="shrink-0"
+                                        >
+                                            {(memberProfile?.account_status || 'active') === 'active' ? (
+                                                <>
+                                                    <Power className="mr-2 h-4 w-4" />
+                                                    Deactivate Account
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <RotateCcw className="mr-2 h-4 w-4" />
+                                                    Reactivate Account
+                                                </>
+                                            )}
+                                        </Button>
+                                    </div>
+                                </CardContent>
+                            </Card>
                         </>
                     )}
                 </Form>

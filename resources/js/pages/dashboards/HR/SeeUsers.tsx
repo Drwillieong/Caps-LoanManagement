@@ -1,5 +1,5 @@
 import { Head, Link, router } from '@inertiajs/react'
-import { Plus, Search, Filter, Download } from 'lucide-react'
+import { Plus, Search, Download } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
@@ -33,6 +33,7 @@ interface MemberProfile {
     share_capital_balance: number
     bank_account_number: string
     tin_number: string
+    account_status?: 'active' | 'inactive'
 }
 
 interface User {
@@ -77,16 +78,36 @@ const breadcrumbs: BreadcrumbItem[] = [
 export default function SeeUsers({ users, filters }: Props) {
     const [search, setSearch] = useState(filters.search || '')
     const [filter, setFilter] = useState(filters.filter || 'all')
-    const [status, setStatus] = useState('active_pending')
+    const [status, setStatus] = useState('all')
 
     // 1. Filter out users who do not have a member profile or valid employee_id
     const membersOnly = users.data.filter((user) => user.member_profile !== null && user.member_profile?.employee_id)
 
-    // 2. Filter by account status
+    const getDisplayStatus = (user: User): 'active' | 'inactive' | 'rejected' | 'pending_gm_approval' => {
+        if (user.status === 'pending' || user.status === 'pending_approval') return 'pending_gm_approval'
+        if (user.status === 'rejected') return 'rejected'
+        if ((user.member_profile?.account_status || 'active') === 'inactive') return 'inactive'
+        return 'active'
+    }
+
+    const getStatusLabel = (displayStatus: ReturnType<typeof getDisplayStatus>) => {
+        if (displayStatus === 'pending_gm_approval') return 'Pending General Manager Approval'
+        if (displayStatus === 'rejected') return 'Rejected'
+        if (displayStatus === 'inactive') return 'Inactive'
+        return 'Active'
+    }
+
+    const getStatusBadgeClass = (displayStatus: ReturnType<typeof getDisplayStatus>) => {
+        if (displayStatus === 'active') return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+        if (displayStatus === 'pending_gm_approval') return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+        if (displayStatus === 'inactive') return 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200'
+        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+    }
+
+    // 2. Filter by displayed member status
     const filteredMembers = membersOnly.filter((user) => {
         if (status === 'all') return true
-        if (status === 'active_pending') return ['active', 'pending'].includes(user.status)
-        return user.status === status
+        return getDisplayStatus(user) === status
     })
 
     useEffect(() => {
@@ -156,7 +177,7 @@ export default function SeeUsers({ users, filters }: Props) {
                 user.member_profile?.position || 'N/A',
                 user.member_profile ? formatCurrency(user.member_profile.basic_salary) : 'N/A',
                 user.member_profile ? formatCurrency(user.member_profile.share_capital_balance) : 'N/A',
-                user.is_active ? 'Active' : 'Inactive',
+                getStatusLabel(getDisplayStatus(user)),
             ])
 
             autoTable(doc, {
@@ -287,13 +308,15 @@ export default function SeeUsers({ users, filters }: Props) {
 
                         {/* Status Filter */}
                         <Select value={status} onValueChange={setStatus}>
-                            <SelectTrigger className="w-[180px]">
+                            <SelectTrigger className="w-[260px]">
                                 <SelectValue placeholder="All Statuses" />
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">All Statuses</SelectItem>
-                                <SelectItem value="active_pending">Active & Pending</SelectItem>
-                                <SelectItem value="rejected">Rejected Applications</SelectItem>
+                                <SelectItem value="active">Active</SelectItem>
+                                <SelectItem value="inactive">Inactive</SelectItem>
+                                <SelectItem value="rejected">Rejected</SelectItem>
+                                <SelectItem value="pending_gm_approval">Pending General Manager Approval</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
@@ -340,15 +363,9 @@ export default function SeeUsers({ users, filters }: Props) {
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-2">
                                                 <span
-                                                    className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${
-                                                        user.status === 'active'
-                                                            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                                                            : user.status === 'pending'
-                                                            ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
-                                                            : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                                                    }`}
+                                                    className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusBadgeClass(getDisplayStatus(user))}`}
                                                 >
-                                                    {user.status === 'pending' ? 'Pending Approval' : user.status === 'active' ? 'Active' : 'Rejected'}
+                                                    {getStatusLabel(getDisplayStatus(user))}
                                                 </span>
                                                 {user.has_pending_update_request && (
                                                     <span className="inline-flex items-center rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 px-2.5 py-0.5 text-xs font-medium">
@@ -410,11 +427,13 @@ export default function SeeUsers({ users, filters }: Props) {
                                                     </Tooltip>
                                                 </TooltipProvider>
                                             ) : (
-                                                <Button variant="ghost" size="sm" asChild>
-                                                    <Link href={`/dashboards/HR/MembersProfile/${user.member_profile?.employee_id}`}>
-                                                        Edit
-                                                    </Link>
-                                                </Button>
+                                                <div className="flex justify-end gap-2">
+                                                    <Button variant="ghost" size="sm" asChild>
+                                                        <Link href={`/dashboards/HR/MembersProfile/${user.member_profile?.employee_id}`}>
+                                                            Edit
+                                                        </Link>
+                                                    </Button>
+                                                </div>
                                             )}
                                         </td>
                                     </tr>

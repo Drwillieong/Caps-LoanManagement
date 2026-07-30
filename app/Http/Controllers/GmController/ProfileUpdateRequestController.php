@@ -170,6 +170,7 @@ class ProfileUpdateRequestController extends Controller
         // Store original_data as-is (full snapshot), pending_data as filtered changed fields
         $updateRequest = ProfileUpdateRequest::create([
             'member_id' => $validated['member_id'],
+            'request_type' => 'profile_update',
             'requested_by' => Auth::id(),
             'original_data' => $originalData,
             'pending_data' => $filteredPending,
@@ -184,6 +185,54 @@ class ProfileUpdateRequestController extends Controller
 
         return redirect()->route('users')
             ->with('success', 'Profile update request submitted successfully and is awaiting GM approval.');
+    }
+
+    public function requestStatusChange(Request $request, string $employeeId)
+    {
+        $memberProfile = MemberProfile::with('user')->findOrFail($employeeId);
+
+        $validated = $request->validate([
+            'proposed_status' => 'required|string|in:active,inactive',
+            'reason' => 'nullable|string|max:2000',
+        ]);
+
+        if ($memberProfile->account_status === $validated['proposed_status']) {
+            return redirect()->route('users')
+                ->with('error', 'This member account is already '.$validated['proposed_status'].'.');
+        }
+
+        $existingPending = ProfileUpdateRequest::where('member_id', $employeeId)
+            ->where('status', 'pending')
+            ->exists();
+
+        if ($existingPending) {
+            return redirect()->route('users')
+                ->with('error', 'A request for this member is already awaiting GM approval.');
+        }
+
+        ProfileUpdateRequest::create([
+            'member_id' => $employeeId,
+            'request_type' => 'status_change',
+            'proposed_status' => $validated['proposed_status'],
+            'reason' => $validated['reason'] ?? null,
+            'requested_by' => Auth::id(),
+            'original_data' => [
+                'account_status' => $memberProfile->account_status ?? 'active',
+            ],
+            'pending_data' => [
+                'account_status' => $validated['proposed_status'],
+            ],
+            'status' => 'pending',
+        ]);
+
+        app(ActivityLogService::class)->logActivity(
+            'member_status_change_requested',
+            null,
+            'HR requested account status change for member ID #'.$employeeId.' to '.$validated['proposed_status'].'.'
+        );
+
+        return redirect()->route('users')
+            ->with('success', 'Account status change request submitted and is awaiting GM approval.');
     }
 
     /**
@@ -209,6 +258,9 @@ class ProfileUpdateRequestController extends Controller
                 'member_email' => $memberUser?->email ?? 'Unknown',
                 'requested_by_name' => $request->requester?->name ?? 'Unknown',
                 'requested_by_email' => $request->requester?->email ?? 'Unknown',
+                'request_type' => $request->request_type ?? 'profile_update',
+                'proposed_status' => $request->proposed_status,
+                'reason' => $request->reason,
                 'original_data' => $request->original_data,
                 'pending_data' => $request->pending_data,
                 'status' => $request->status,
@@ -299,6 +351,53 @@ class ProfileUpdateRequestController extends Controller
         if (! $memberProfile) {
             return redirect()->route('gm.pending-edits')
                 ->with('error', 'Member profile not found.');
+        }
+
+        if ($updateRequest->request_type === 'status_change') {
+            $proposedStatus = $updateRequest->proposed_status;
+
+            $memberProfile->update([
+                'account_status' => $proposedStatus,
+            ]);
+
+            $memberProfile->user?->update([
+                'status' => 'active',
+                'is_active' => $proposedStatus === 'active',
+            ]);
+
+            $updateRequest->update([
+                'status' => 'approved',
+                'rejection_reason' => null,
+                'reviewed_by' => Auth::id(),
+            ]);
+
+            app(ActivityLogService::class)->logActivity(
+                'member_status_change_approved',
+                null,
+                'GM approved account status change request #'.$updateRequest->id.' for member ID #'.$updateRequest->member_id.' to '.$proposedStatus.'.'
+            );
+
+            return redirect()->route('gm.pending-edits')
+                ->with('success', 'Account status change request approved successfully.');
+        }
+
+        // Fallback: explicitly update account_status/status if present in pending_data
+        // regardless of request_type, to ensure status changes are always applied.
+        $rawPendingDataForStatus = $updateRequest->pending_data ?? [];
+        if (is_string($rawPendingDataForStatus)) {
+            $rawPendingDataForStatus = json_decode($rawPendingDataForStatus, true) ?: [];
+        }
+
+        if (isset($rawPendingDataForStatus['account_status']) || isset($rawPendingDataForStatus['status'])) {
+            if (isset($rawPendingDataForStatus['account_status'])) {
+                $memberProfile->update([
+                    'account_status' => $rawPendingDataForStatus['account_status'],
+                ]);
+            } elseif (isset($rawPendingDataForStatus['status'])) {
+                $memberProfile->update([
+                    'status' => $rawPendingDataForStatus['status'],
+                ]);
+            }
         }
 
         // Extract the pending data fields that are fillable on MemberProfile
@@ -395,4 +494,3 @@ class ProfileUpdateRequestController extends Controller
             ->with('success', 'Profile update request rejected.');
     }
 }
-

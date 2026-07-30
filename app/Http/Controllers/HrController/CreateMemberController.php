@@ -100,6 +100,7 @@ class CreateMemberController extends Controller
                             'real_properties_owned' => $user->memberProfile->real_properties_owned,
                             'bank_account_number' => $user->memberProfile->bank_account_number,
                             'tin_number' => $user->memberProfile->tin_number,
+                            'account_status' => $user->memberProfile->account_status ?? 'active',
                         ] : null,
                     ];
                 }),
@@ -255,6 +256,7 @@ class CreateMemberController extends Controller
                 'spouse_net_income' => $validated['spouse_net_income'] ?? null,
                 'legal_beneficiary_1_name' => $validated['legal_beneficiary_1_name'] ?? null,
                 'real_properties_owned' => $validated['real_properties_owned'] ?? null,
+                'account_status' => 'active',
             ]);
 
             return $user;

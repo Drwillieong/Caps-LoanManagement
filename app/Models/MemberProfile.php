@@ -56,6 +56,7 @@ class MemberProfile extends Model
         'bank_account_number',
         'tin_number',
         'profile_picture',
+        'account_status',
     ];
 
     /**

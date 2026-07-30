@@ -102,6 +102,7 @@ export interface MemberProfile {
     bank_account_number?: string;
     tin_number?: string;
     profile_picture?: string;
+    account_status?: 'active' | 'inactive';
 }
 
 export interface EligibleCoMaker {
@@ -435,6 +436,9 @@ export interface ProfileUpdateRequest {
     member_email: string;
     requested_by_name: string;
     requested_by_email: string;
+    request_type: 'profile_update' | 'status_change';
+    proposed_status?: 'active' | 'inactive' | null;
+    reason?: string | null;
     original_data: Record<string, any>;
     pending_data: Record<string, any>;
     status: 'pending' | 'approved' | 'rejected';

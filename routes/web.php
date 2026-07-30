@@ -246,6 +246,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware('role:hr')
         ->name('hr.profile-update-request.store');
 
+    Route::post('dashboards/HR/Members/{employeeId}/status-change-request', [\App\Http\Controllers\GmController\ProfileUpdateRequestController::class, 'requestStatusChange'])
+        ->middleware('role:hr')
+        ->name('hr.member-status-change-request.store');
+
     // API-like routes for GM actions on pending edits
     Route::post('dashboards/Gm/PendingEdits/{id}/approve', [\App\Http\Controllers\GmController\ProfileUpdateRequestController::class, 'approve'])
         ->middleware('role:gm')

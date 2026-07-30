@@ -14,6 +14,9 @@ class ProfileUpdateRequest extends Model
      */
     protected $fillable = [
         'member_id',
+        'request_type',
+        'proposed_status',
+        'reason',
         'requested_by',
         'original_data',
         'pending_data',

@@ -15,6 +15,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from '@/components/ui/popover';
+import {
+  Command,
+  CommandInput,
+  CommandList,
+  CommandEmpty,
+  CommandGroup,
+  CommandItem,
+} from '@/components/ui/command';
 import { Badge } from '@/components/ui/badge';
 import { useMemo, useState, useEffect } from 'react';
 import UserAgreementModal from '@/components/modals/UserAgreementModal';
@@ -24,7 +37,7 @@ import { canSendEmail } from '@/hooks/use-internet-check';
 
 // PreviousLoanWithPercent type now in index.d.ts
 
-import { Search, User, Calendar, AlertCircle, CheckCircle2, Clock, ArrowRight, CheckCircle, EyeOff, Eye,ShieldAlert, Lock, ArrowLeft } from 'lucide-react';
+import { Search, User, Calendar, AlertCircle, CheckCircle2, Clock, ArrowRight, CheckCircle, EyeOff, Eye,ShieldAlert, Lock, ArrowLeft, Check } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
    
@@ -64,6 +77,7 @@ export default function ApplyLoan({
     const [coMakerSearch, setCoMakerSearch] = useState('');
     const [preSelectedCoMaker, setPreSelectedCoMaker] = useState<EligibleCoMaker | null>(null);
     const [isPreSelecting, setIsPreSelecting] = useState(false);
+    const [isComakerPopoverOpen, setIsComakerPopoverOpen] = useState(false);
     const [isAgreementModalOpen, setIsAgreementModalOpen] = useState(false);
     const [lockoutRemaining, setLockoutRemaining] = useState<number | null>(null);
 
@@ -817,8 +831,8 @@ const computed = useMemo(() => {
                     </Card>
 
                   {/* =========================================
-                    CO-MAKER SELECTION WITH SEARCH
-                    ========================================= */}
+                     CO-MAKER SELECTION WITH SEARCH
+                     ========================================= */}
                     <Card className="border-emerald-100 bg-white/50 dark:bg-emerald-950/10 shadow-sm">
                         <CardHeader className="pb-3">
                             <CardTitle className="flex items-center gap-2 text-base text-emerald-900 dark:text-emerald-100">
@@ -832,39 +846,71 @@ const computed = useMemo(() => {
 
                         <CardContent>
                             <div className="space-y-4">
-                                {/* Search input */}
-                                <div className="relative">
-                                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-emerald-500" />
-                                    <Input
-                                        type="text"
-                                        placeholder="Search co-maker by name, ID, or email..."
-                                        className="pl-10"
-                                        value={coMakerSearch}
-                                        onChange={(e) => setCoMakerSearch(e.target.value)}
-                                        disabled={isPreSelecting || isFormLocked}
-                                    />
-                                </div>
-
-                                {/* Co-maker dropdown */}
-                                <Select value={data.co_maker_user_id} onValueChange={(value) => setData('co_maker_user_id', value)} disabled={isFormLocked}>
-                                    <SelectTrigger className="w-full">
-                                        {isPreSelecting && preSelectedCoMaker ? (
-                                            <div className="flex items-center gap-2 p-2">
-                                                <CheckCircle className="h-4 w-4 text-emerald-500" />
-                                                <span>{preSelectedCoMaker.name} ({preSelectedCoMaker.email})</span>
-                                            </div>
-                                        ) : (
-                                            <SelectValue placeholder={filteredCoMakers.length > 0 ? `Select co-maker (${filteredCoMakers.length} available)` : 'No matching co-makers found'} />
-                                        )}
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {filteredCoMakers.map((coMaker: EligibleCoMaker) => (
-                                            <SelectItem key={coMaker.id} value={coMaker.id.toString()}>
-                                                {coMaker.name} ({coMaker.email})
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                <Popover open={isComakerPopoverOpen} onOpenChange={setIsComakerPopoverOpen}>
+                                    <PopoverTrigger asChild>
+                                        <Button 
+                                            variant="outline" 
+                                            className="w-full justify-between font-normal h-auto min-h-10"
+                                            disabled={isFormLocked || isPreSelecting}
+                                        >
+                                            {data.co_maker_user_id && isPreSelecting && preSelectedCoMaker && preSelectedCoMaker.id.toString() === data.co_maker_user_id ? (
+                                                <div className="flex items-center gap-2 truncate">
+                                                    <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                                                    <span className="truncate">{preSelectedCoMaker.name} ({preSelectedCoMaker.id})</span>
+                                                </div>
+                                            ) : data.co_maker_user_id ? (
+                                                <div className="flex items-center gap-2 truncate">
+                                                    <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+                                                    <span className="truncate">
+                                                        {(() => {
+                                                            const selected = eligibleCoMakers.find(cm => cm.id.toString() === data.co_maker_user_id);
+                                                            return selected ? `${selected.name} (${selected.id})` : "Search co-maker by name, ID, or email...";
+                                                        })()}
+                                                    </span>
+                                                </div>
+                                            ) : (
+                                                <span className="text-muted-foreground">
+                                                    Select co-maker ({filteredCoMakers.length} available)
+                                                </span>
+                                            )}
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-full p-0" align="start" sideOffset={4}>
+                                        <Command shouldFilter={false}>
+                                            <CommandInput 
+                                                placeholder="Search co-maker by name, ID, or email..." 
+                                                value={coMakerSearch}
+                                                onValueChange={setCoMakerSearch}
+                                            />
+                                            <CommandList>
+                                                <CommandEmpty>No eligible co-makers found</CommandEmpty>
+                                                <CommandGroup>
+                                                    {filteredCoMakers.map((coMaker: EligibleCoMaker) => (
+                                                        <CommandItem
+                                                            key={coMaker.id}
+                                                            value={`${coMaker.name} ${coMaker.id} ${coMaker.email}`}
+                                                            onSelect={() => {
+                                                                setData('co_maker_user_id', coMaker.id.toString());
+                                                                setIsComakerPopoverOpen(false);
+                                                                setCoMakerSearch('');
+                                                            }}
+                                                        >
+                                                            <div className="flex flex-col gap-0.5">
+                                                                <span className="font-medium text-slate-900 dark:text-slate-100">{coMaker.name}</span>
+                                                                <span className="text-xs text-muted-foreground">
+                                                                    User ID: {coMaker.id} · {coMaker.email}
+                                                                </span>
+                                                            </div>
+                                                            {data.co_maker_user_id === coMaker.id.toString() && (
+                                                                <Check className="ml-auto h-4 w-4 text-emerald-500" />
+                                                            )}
+                                                        </CommandItem>
+                                                    ))}
+                                                </CommandGroup>
+                                            </CommandList>
+                                        </Command>
+                                    </PopoverContent>
+                                </Popover>
                                 <InputError message={errors.co_maker_user_id} />
 
                                 {/* Optional hint */}

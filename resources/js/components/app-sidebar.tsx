@@ -83,6 +83,13 @@ const memberNavItems: NavItem[] = [
                 icon: FileClock,
                 badgeKey: 'hasMemberStatusChanged',
             },
+             {
+        title: 'Pending CoMaker Review',
+        href: '/dashboards/Member/CoMaker',
+        icon: UsersRound,
+        badgeKey: 'pendingComakerRequestsCount',
+    },
+            
         ],
     },
     {
@@ -106,12 +113,7 @@ const memberNavItems: NavItem[] = [
         href: '/dashboards/Member/UserProfile',
         icon: UserCircle2,
     },
-    {
-        title: 'Co-Maker',
-        href: '/dashboards/Member/CoMaker',
-        icon: UsersRound,
-        badgeKey: 'pendingComakerRequestsCount',
-    },
+   
 ];
 
 const gmNavItems: NavItem[] = [

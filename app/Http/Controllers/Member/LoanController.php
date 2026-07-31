@@ -523,10 +523,10 @@ return Inertia::render('dashboards/Member/PendingApplication', [
             ->whereHas('loan', function ($query) {
                 $query->where('status', 'awaiting_comaker');
             })
-            ->with([
-                'loan.loanType',
-                'loan.user'
-            ])
+                ->with([
+                    'loan.loanType',
+                    'loan.user.memberProfile'
+                ])
             ->get()
             ->map(function ($coMaker) {
                 $loan = $coMaker->loan;
@@ -547,6 +547,9 @@ return Inertia::render('dashboards/Member/PendingApplication', [
                         'id' => $loanUser->id,
                         'name' => trim($loanUser->first_name . ($loanUser->middle_name ? ' ' . $loanUser->middle_name : '') . ' ' . $loanUser->last_name),
                         'email' => $loanUser->email,
+                        'employee_id' => $loanUser->memberProfile?->employee_id ?? 'N/A',
+                        'position' => $loanUser->memberProfile?->position ?? 'N/A',
+                        'mobile_number' => $loanUser->memberProfile?->mobile_number ?? 'N/A',
                     ],
                 ];
             });

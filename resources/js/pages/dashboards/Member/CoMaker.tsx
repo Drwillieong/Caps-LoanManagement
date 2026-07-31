@@ -24,6 +24,9 @@ import {
     Loader2,
     Mail,
     User,
+    Phone,
+    Briefcase,
+    IdCard,
 } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -174,26 +177,59 @@ export default function CoMaker({ coMakerRequests }: CoMakerProps) {
 
                                     <CardContent className="space-y-4">
                                         <div className="grid gap-4 md:grid-cols-2">
-                                            <div className="space-y-3">
-                                                <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                                                    <UserCheck className="h-4 w-4 text-slate-500" />
-                                                    Applicant Information
-                                                </div>
-                                                <div className="space-y-2.5">
-                                                    <div className="flex justify-between text-sm">
-                                                        <span className="text-muted-foreground">Name</span>
-                                                        <span className="font-medium">{request.requester.name}</span>
+                                                <div className="space-y-3">
+                                                    <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+                                                        <UserCheck className="h-4 w-4 text-slate-500" />
+                                                        Applicant Information
                                                     </div>
-                                                    <Separator />
-                                                    <div className="flex justify-between text-sm">
-                                                        <span className="text-muted-foreground flex items-center gap-1.5">
-                                                            <Mail className="h-3.5 w-3.5" />
-                                                            Email
-                                                        </span>
-                                                        <span className="font-medium truncate max-w-[200px]">{request.requester.email}</span>
+                                                    <div className="space-y-2.5">
+                                                        <div className="flex justify-between text-sm">
+                                                            <span className="text-muted-foreground">Name</span>
+                                                            <span className="font-medium">{request.requester.name}</span>
+                                                        </div>
+                                                        <Separator />
+                                                        <div className="flex justify-between text-sm">
+                                                            <span className="text-muted-foreground flex items-center gap-1.5">
+                                                                <IdCard className="h-3.5 w-3.5" />
+                                                                Employee ID
+                                                            </span>
+                                                            <span className="font-medium">{request.requester.employee_id}</span>
+                                                        </div>
+                                                        <Separator />
+                                                        <div className="flex justify-between text-sm">
+                                                            <span className="text-muted-foreground flex items-center gap-1.5">
+                                                                <Mail className="h-3.5 w-3.5" />
+                                                                Email
+                                                            </span>
+                                                            <span className="font-medium truncate max-w-[200px]">{request.requester.email}</span>
+                                                        </div>
+                                                        <Separator />
+                                                        <div className="flex justify-between text-sm">
+                                                            <span className="text-muted-foreground flex items-center gap-1.5">
+                                                                <Briefcase className="h-3.5 w-3.5" />
+                                                                Position
+                                                            </span>
+                                                            <span className="font-medium">{request.requester.position}</span>
+                                                        </div>
+                                                        <Separator />
+                                                        <div className="flex justify-between text-sm">
+                                                            <span className="text-muted-foreground flex items-center gap-1.5">
+                                                                <Phone className="h-3.5 w-3.5" />
+                                                                Mobile Number
+                                                            </span>
+                                                            <span className="font-medium">{request.requester.mobile_number}</span>
+                                                        </div>
+                                                          <Separator />
+                                                          <div className="flex justify-between text-sm">
+                                                            <span className="text-muted-foreground flex items-center gap-1.5">
+                                                                <UserCheck  className="h-3.5 w-3.5" />
+                                                                
+                                                              Facebook Account
+                                                            </span>
+                                                            <span className="font-medium">{request.requester.facebook_account_name}</span>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
 
                                             <div className="space-y-3">
                                                 <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">

@@ -95,7 +95,6 @@ type FailedRow = {
     row_number: number;
     employee_id: string | null;
     payroll_id: string | null;
-    member_id: string | null;
     employee_name: string | null;
     cutoff_date: string | null;
     deduction_amount: number;
@@ -142,7 +141,6 @@ interface UploadSalaryDeductProps {
         required_cutoff: string;
         accepted_columns: string[];
         matching_order: string[];
-        member_id_format: string;
     };
 }
 
@@ -594,9 +592,6 @@ export default function UploadSalaryDeduct({
                                             </Badge>
                                         ))}
                                     </div>
-                                    <p className="mt-3 text-sm text-muted-foreground">
-                                        {expectedColumns.member_id_format}
-                                    </p>
                                 </div>
 
                                 <Button
@@ -733,7 +728,7 @@ export default function UploadSalaryDeduct({
                                                     <TableCell>#{row.row_number}</TableCell>
                                                     <TableCell>
                                                         <div className="font-medium">
-                                                            {row.employee_id ?? row.payroll_id ?? row.member_id ?? 'N/A'}
+                                                            {row.employee_id ?? row.payroll_id ?? 'N/A'}
                                                         </div>
                                                         <div className="text-xs text-muted-foreground">
                                                             Upload #{row.upload_id}

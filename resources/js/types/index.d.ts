@@ -184,6 +184,10 @@ export interface CoMakerRequest {
         id: number;
         name: string;
         email: string;
+        employee_id: string;
+        position: string;
+        mobile_number: string;
+        facebook_account_name?: string | null;
     };
 }
 

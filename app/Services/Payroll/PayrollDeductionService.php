@@ -34,23 +34,21 @@ class PayrollDeductionService
 
         return [
             'required_identifier' => $hasPayrollId
-                ? 'employee_id preferred; payroll_id or member_id accepted as fallback'
-                : 'employee_id preferred; member_id accepted as fallback',
+                ? 'employee_id preferred; payroll_id accepted as fallback'
+                : 'employee_id is required',
             'required_amount' => 'deduction_amount',
             'required_cutoff' => 'cutoff_date can be supplied per row, otherwise the upload cutoff date is used',
             'accepted_columns' => [
                 'employee_id',
                 'payroll_id',
-                'member_id',
                 'employee_name',
                 'cutoff_date',
                 'deduction_amount',
                 'remarks',
             ],
             'matching_order' => $hasPayrollId
-                ? ['employee_id', 'payroll_id', 'member_id']
-                : ['employee_id', 'member_id'],
-            'member_id_format' => 'MEM-0001 or the numeric users.id value',
+                ? ['employee_id', 'payroll_id']
+                : ['employee_id'],
         ];
     }
 
@@ -165,7 +163,6 @@ class PayrollDeductionService
         return implode(',', [
             'employee_id',
             'payroll_id',
-            'member_id',
             'employee_name',
             'cutoff_date',
             'deduction_amount',
@@ -194,7 +191,7 @@ class PayrollDeductionService
         $headings = array_keys($rows->first()->toArray());
         $aliases = $this->columnAliases();
 
-        $hasIdentifier = collect(['employee_id', 'payroll_id', 'member_id'])
+        $hasIdentifier = collect(['employee_id', 'payroll_id'])
             ->contains(fn ($column) => $this->hasAnyHeading($headings, $aliases[$column]));
         $hasAmount = $this->hasAnyHeading($headings, $aliases['deduction_amount']);
 
@@ -235,18 +232,23 @@ class PayrollDeductionService
                 $parsedCutoffDate = $this->parseDate($rawCutoffDate);
                 $cutoffDate = $parsedCutoffDate ?? $defaultCutoffDate;
 
-                $uploadRow = PayrollUploadRow::create([
+                $uploadRowPayload = [
                     'payroll_upload_id' => $upload->id,
                     'row_number' => $rowNumber,
                     'employee_id' => $payload['employee_id'] ?? null,
                     'payroll_id' => $payload['payroll_id'] ?? null,
-                    'member_id' => $payload['member_id'] ?? null,
                     'employee_name' => $payload['employee_name'] ?? null,
                     'cutoff_date' => $cutoffDate->toDateString(),
                     'deduction_amount' => $deductionAmount,
                     'raw_payload' => $rawRow->toArray(),
                     'remarks' => $payload['remarks'] ?? null,
-                ]);
+                ];
+
+                if (Schema::hasColumn('payroll_upload_rows', 'member_id')) {
+                    $uploadRowPayload['member_id'] = null;
+                }
+
+                $uploadRow = PayrollUploadRow::create($uploadRowPayload);
 
                 $errors = $this->validatePayload($payload, $deductionAmount, $rawCutoffDate, $parsedCutoffDate);
                 $dedupeKey = $this->dedupeKey($payload, $cutoffDate);
@@ -354,9 +356,8 @@ class PayrollDeductionService
         $errors = [];
 
         if (! filled($payload['employee_id'] ?? null)
-            && ! filled($payload['payroll_id'] ?? null)
-            && ! filled($payload['member_id'] ?? null)) {
-            $errors[] = 'Provide employee_id, payroll_id, or member_id.';
+            && ! filled($payload['payroll_id'] ?? null)) {
+            $errors[] = 'Provide employee_id or payroll_id.';
         }
 
         if ($deductionAmount < 0) {
@@ -392,14 +393,6 @@ class PayrollDeductionService
             }
         }
 
-        if (filled($payload['member_id'] ?? null)) {
-            $userId = $this->normalizeMemberId((string) $payload['member_id']);
-
-            if ($userId) {
-                return MemberProfile::query()->where('user_id', $userId)->first();
-            }
-        }
-
         return null;
     }
 
@@ -429,7 +422,6 @@ class PayrollDeductionService
         return [
             'employee_id' => ['employee_id', 'employee_no', 'employee_number', 'emp_id', 'id_number'],
             'payroll_id' => ['payroll_id', 'payroll_no', 'payroll_number', 'payroll_code'],
-            'member_id' => ['member_id', 'member_no', 'member_number', 'user_id'],
             'employee_name' => ['employee_name', 'member_name', 'full_name', 'name'],
             'cutoff_date' => ['cutoff_date', 'payroll_date', 'deduction_date', 'date'],
             'deduction_amount' => ['deduction_amount', 'loan_deduction', 'salary_deduction', 'deducted_amount', 'payment_amount', 'amount'],
@@ -444,27 +436,13 @@ class PayrollDeductionService
 
     private function dedupeKey(array $payload, Carbon $cutoffDate): ?string
     {
-        foreach (['employee_id', 'payroll_id', 'member_id'] as $identifier) {
+        foreach (['employee_id', 'payroll_id'] as $identifier) {
             if (filled($payload[$identifier] ?? null)) {
                 return $identifier.':'.strtolower((string) $payload[$identifier]).':'.$cutoffDate->toDateString();
             }
         }
 
         return null;
-    }
-
-    private function normalizeMemberId(string $memberId): ?int
-    {
-        $normalized = strtoupper(trim($memberId));
-
-        if (str_starts_with($normalized, 'MEM-')) {
-            $normalized = substr($normalized, 4);
-        }
-
-        $normalized = ltrim($normalized, '#');
-        $normalized = ltrim($normalized, '0') ?: '0';
-
-        return ctype_digit($normalized) ? (int) $normalized : null;
     }
 
     private function parseMoney(mixed $value): float
@@ -538,13 +516,12 @@ class PayrollDeductionService
 
     private function formatRow(PayrollUploadRow $row): array
     {
-        return [
+        $formatted = [
             'id' => $row->id,
             'upload_id' => $row->payroll_upload_id,
             'row_number' => $row->row_number,
             'employee_id' => $row->employee_id,
             'payroll_id' => $row->payroll_id,
-            'member_id' => $row->member_id,
             'employee_name' => $row->employee_name,
             'cutoff_date' => $row->cutoff_date?->format('Y-m-d'),
             'deduction_amount' => (float) $row->deduction_amount,
@@ -553,6 +530,12 @@ class PayrollDeductionService
             'errors' => $row->errors ?? [],
             'file_name' => $row->upload?->original_file_name,
         ];
+
+        if (Schema::hasColumn('payroll_upload_rows', 'member_id')) {
+            $formatted['member_id'] = $row->member_id;
+        }
+
+        return $formatted;
     }
 
     private function exceptionLoans(): Collection

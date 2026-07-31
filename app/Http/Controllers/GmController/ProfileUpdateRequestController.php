@@ -21,7 +21,7 @@ class ProfileUpdateRequestController extends Controller
         'civil_status', 'place_of_birth', 'educational_attainment',
         'mobile_number', 'permanent_mobile_number',
         'present_address', 'present_zip_code', 'permanent_address', 'permanent_zip_code',
-        'position', 'date_hired', 'basic_salary', 'income_type', 'net_income',
+        'position', 'basic_salary', 'income_type', 'net_income',
         'share_capital_balance', 'other_source_of_income', 
         'facebook_account_name',
         'spouse_occupation', 'spouse_gross_income', 'spouse_income_type', 'spouse_net_income',

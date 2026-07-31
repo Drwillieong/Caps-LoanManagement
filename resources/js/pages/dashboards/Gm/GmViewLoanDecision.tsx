@@ -40,7 +40,6 @@ interface LoanMember {
     name: string;
     email: string;
     member_id: string;
-    date_hired?: string;
     basic_salary: number;
     share_capital_balance: number;
 }
@@ -302,10 +301,6 @@ export default function GmViewLoanDecision() {
                             <div>
                                 <p className="text-xs text-muted-foreground">Email</p>
                                 <p className="font-medium">{loan.member.email}</p>
-                            </div>
-                            <div>
-                                <p className="text-xs text-muted-foreground">Date Hired</p>
-                                <p className="font-medium">{loan.member.date_hired || 'N/A'}</p>
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4 mt-3 pt-3 border-t text-sm">

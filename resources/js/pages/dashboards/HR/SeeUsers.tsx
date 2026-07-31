@@ -28,7 +28,6 @@ interface MemberProfile {
     present_address: string
     permanent_address: string
     position: string
-    date_hired: string
     basic_salary: number
     share_capital_balance: number
     bank_account_number: string
@@ -226,7 +225,6 @@ export default function SeeUsers({ users, filters }: Props) {
                         ['Present Address:', user.member_profile.present_address],
                         ['Permanent Address:', user.member_profile.permanent_address],
                         ['Position:', user.member_profile.position],
-                        ['Date Hired:', formatDate(user.member_profile.date_hired)],
                         ['Basic Salary:', formatCurrency(user.member_profile.basic_salary)],
                         ['Share Capital Balance:', formatCurrency(user.member_profile.share_capital_balance)],
                         ['Bank Account Number:', user.member_profile.bank_account_number || 'N/A'],

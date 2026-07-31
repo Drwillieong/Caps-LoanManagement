@@ -35,7 +35,6 @@ class BulkMemberImport implements ToCollection, WithHeadingRow, SkipsEmptyRows
         'mobile_number',
         'present_address',
         'position',
-        'date_hired',
         'basic_salary',
     ];
 
@@ -127,9 +126,6 @@ class BulkMemberImport implements ToCollection, WithHeadingRow, SkipsEmptyRows
                 'position' => 'position',
                 'job_title' => 'position',
                 'designation' => 'position',
-                'date_hired' => 'date_hired',
-                'hired_date' => 'date_hired',
-                'start_date' => 'date_hired',
                 'basic_salary' => 'basic_salary',
                 'gross_income' => 'basic_salary',
                 'salary' => 'basic_salary',
@@ -259,8 +255,7 @@ class BulkMemberImport implements ToCollection, WithHeadingRow, SkipsEmptyRows
         }
 
         // Date validations
-        $dateFields = ['date_of_birth', 'date_hired'];
-        foreach ($dateFields as $field) {
+        foreach (['date_of_birth'] as $field) {
             if (! empty($row[$field])) {
                 $ts = strtotime($row[$field]);
                 if ($ts === false) {
@@ -356,7 +351,6 @@ class BulkMemberImport implements ToCollection, WithHeadingRow, SkipsEmptyRows
                 'permanent_address' => $row['permanent_address'] ?? null,
                 'permanent_zip_code' => $row['permanent_zip_code'] ?? null,
                 'position' => $row['position'],
-                'date_hired' => $row['date_hired'],
                 'basic_salary' => $row['basic_salary'],
                 'income_type' => $row['income_type'] ?? 'monthly',
                 'net_income' => $row['net_income'] ?? null,

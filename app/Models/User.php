@@ -98,7 +98,6 @@ class User extends Authenticatable
             'mobile_number',
             'present_address',
             'position',
-            'date_hired',
             'basic_salary',
         ];
         

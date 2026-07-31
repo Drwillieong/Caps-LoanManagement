@@ -62,7 +62,6 @@ const DISPLAY_FIELDS: Record<string, { label: string; category: string }> = {
     permanent_address: { label: 'Permanent Address', category: 'Address' },
     permanent_zip_code: { label: 'Permanent Zip Code', category: 'Address' },
     position: { label: 'Position', category: 'Employment' },
-    date_hired: { label: 'Date Hired', category: 'Employment' },
     basic_salary: { label: 'Basic Salary', category: 'Employment' },
     income_type: { label: 'Income Type', category: 'Employment' },
     net_income: { label: 'Net Income', category: 'Employment' },
@@ -95,7 +94,7 @@ function formatDisplayValue(key: string, value: any): string {
     }
 
     // Format date fields
-    if (['date_of_birth', 'date_hired'].includes(key)) {
+    if (['date_of_birth'].includes(key)) {
         if (typeof value === 'string' && value.includes('-')) {
             try {
                 return new Date(value).toLocaleDateString('en-US', {

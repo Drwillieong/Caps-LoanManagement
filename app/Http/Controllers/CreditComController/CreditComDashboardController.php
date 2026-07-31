@@ -113,7 +113,6 @@ class CreditComDashboardController extends Controller
                 'name' => trim($loan->user->first_name . ' ' . $loan->user->middle_name . ' ' . $loan->user->last_name),
                 'email' => $loan->user->email,
                 'member_id' => 'MEM-' . str_pad($loan->user->id, 4, '0', STR_PAD_LEFT),
-                'date_hired' => $loan->user->memberProfile?->date_hired?->format('Y-m-d'),
                 'basic_salary' => $loan->user->memberProfile?->basic_salary ?? 0,
                 'share_capital_balance' => $loan->user->memberProfile?->share_capital_balance ?? 0,
             ],

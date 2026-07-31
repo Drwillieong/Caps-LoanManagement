@@ -85,7 +85,7 @@ class CreateMemberController extends Controller
                             'place_of_birth' => $user->memberProfile->place_of_birth,
                             'educational_attainment' => $user->memberProfile->educational_attainment,
                             'position' => $user->memberProfile->position,
-                            'date_hired' => $user->memberProfile->date_hired,
+                            
                             'basic_salary' => $user->memberProfile->basic_salary,
                             'income_type' => $user->memberProfile->income_type,
                             'net_income' => $user->memberProfile->net_income,
@@ -191,23 +191,52 @@ class CreateMemberController extends Controller
 
             // Employment fields
             'position' => 'required|string|max:255',
-            'date_hired' => 'required|date',
             'basic_salary' => 'required|numeric|min:10000',
             'income_type' => 'required|in:monthly,daily,yearly',
-            'net_income' => 'required|numeric|min:0',
+            'net_income' => 'required|numeric|min:1000',
             'share_capital_balance' => 'required|numeric|min:10000',
             'other_source_of_income' => 'nullable|string|max:255',
             'facebook_account_name' => 'nullable|string|max:255',
             'spouse_occupation' => 'nullable|string|max:255',
             'spouse_gross_income' => 'nullable|numeric|min:0',
-            'spouse_income_type' => 'required|in:monthly,daily,yearly',
+            'spouse_income_type' => 'required_with:spouse_occupation|in:monthly,daily,yearly',
             'spouse_net_income' => 'nullable|numeric|min:0',
             'legal_beneficiary_1_name' => 'nullable|string|max:255',
             'real_properties_owned' => 'nullable|string|max:2000',
         ], [
             'basic_salary.min' => 'Income (Gross) must be at least 10,000.',
             'share_capital_balance.min' => 'Share capital balance must be at least 10,000.',
+            'spouse_income_type.required_with' => 'Spouse Income Type is required when Spouse Occupation is provided.',
         ]);
+
+        // Conditional spouse validation: if spouse_occupation is provided,
+        // spouse_gross_income and spouse_net_income become required
+        $request->validate([
+            'spouse_gross_income' => [
+                'nullable',
+                'numeric',
+                'min:0',
+                function ($attribute, $value, $fail) use ($request) {
+                    if ($request->filled('spouse_occupation') && empty($value)) {
+                        $fail('Spouse Income (Gross) is required when Spouse Occupation is provided.');
+                    }
+                },
+            ],
+            'spouse_net_income' => [
+                'nullable',
+                'numeric',
+                'min:0',
+                function ($attribute, $value, $fail) use ($request) {
+                    if ($request->filled('spouse_occupation') && empty($value)) {
+                        $fail('Spouse Net Income is required when Spouse Occupation is provided.');
+                    }
+                },
+            ],
+        ]);
+
+        // Merge the re-validated values back
+        $validated['spouse_gross_income'] = $request->input('spouse_gross_income');
+        $validated['spouse_net_income'] = $request->input('spouse_net_income');
 
         $temporaryPassword = $this->generateTemporaryPassword();
         $nextEmployeeId = $this->generateNextEmployeeId();
@@ -243,7 +272,6 @@ class CreateMemberController extends Controller
                 'permanent_address' => $validated['permanent_address'],
                 'permanent_zip_code' => $validated['permanent_zip_code'],
                 'position' => $validated['position'],
-                'date_hired' => $validated['date_hired'],
                 'basic_salary' => $validated['basic_salary'],
                 'income_type' => $validated['income_type'],
                 'net_income' => $validated['net_income'],

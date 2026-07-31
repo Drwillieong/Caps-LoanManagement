@@ -103,7 +103,6 @@ class LoanController extends Controller
 
         return Inertia::render('dashboards/Member/ApplyLoan', [
             'memberProfile' => [
-                'date_hired' => $memberProfile->date_hired,
                 'basic_salary' => $memberProfile->basic_salary,
                 'share_capital_balance' => $memberProfile->share_capital_balance,
             ],
@@ -490,7 +489,6 @@ return Inertia::render('dashboards/Member/PendingApplication', [
         return Inertia::render('dashboards/Member/ApplyLoan', [
             'loanTypes' => $loanTypes,
             'memberProfile' => [
-                'date_hired' => $memberProfile->date_hired,
                 'basic_salary' => $memberProfile->basic_salary,
                 'share_capital_balance' => $memberProfile->share_capital_balance,
             ],

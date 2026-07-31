@@ -119,6 +119,9 @@ export default function MemberDashboard({
 }: DashboardProps) {
     const [coMakerCount, setCoMakerCount] = useState(comakerRequestCount);
     const [showValues, setShowValues] = useState(true);
+    const [showMaxLoanAllowed, setShowMaxLoanAllowed] = useState(true);
+    const [showBasicSalary, setShowBasicSalary] = useState(true);
+    const [showMaxMonthlyPayment, setShowMaxMonthlyPayment] = useState(true);
     const [currentPage, setCurrentPage] = useState(1);
 
     const notificationsPerPage = 20;
@@ -149,12 +152,18 @@ export default function MemberDashboard({
             );
     }, []);
 
-    function toggleVisibility() {
-        setShowValues((value) => !value);
+    function toggleAllVisibility() {
+        setShowValues((prev) => {
+            const next = !prev;
+            setShowMaxLoanAllowed(next);
+            setShowBasicSalary(next);
+            setShowMaxMonthlyPayment(next);
+            return next;
+        });
     }
 
-    function maskCurrency(value: number | string): string {
-        if (!showValues) return 'PHP *****';
+    function maskCurrency(value: number | string, visible: boolean): string {
+        if (!visible) return 'PHP *****';
 
         return formatCurrency(value);
     }
@@ -275,7 +284,7 @@ export default function MemberDashboard({
                         <Button
                             variant="outline"
                             size="sm"
-                            onClick={toggleVisibility}
+                            onClick={toggleAllVisibility}
                         >
                             {showValues ? (
                                 <EyeOff className="size-4" />
@@ -385,27 +394,42 @@ export default function MemberDashboard({
                                         label="Max Loan Allowed"
                                         value={maskCurrency(
                                             loan_eligibility.max_loan_allowed,
+                                            showValues && showMaxLoanAllowed,
                                         )}
                                         description="Based on share capital"
                                         tone="emerald"
+                                        visible={showValues && showMaxLoanAllowed}
+                                        onToggleVisibility={() =>
+                                            setShowMaxLoanAllowed((prev) => !prev)
+                                        }
                                     />
                                     <MetricItem
                                         icon={CreditCard}
                                         label="Basic Salary"
                                         value={maskCurrency(
                                             loan_eligibility.basic_salary,
+                                            showValues && showBasicSalary,
                                         )}
                                         description="Monthly income"
                                         tone="blue"
+                                        visible={showValues && showBasicSalary}
+                                        onToggleVisibility={() =>
+                                            setShowBasicSalary((prev) => !prev)
+                                        }
                                     />
                                     <MetricItem
                                         icon={HandCoins}
                                         label="Max Monthly Payment"
                                         value={maskCurrency(
                                             loan_eligibility.max_monthly_payment,
+                                            showValues && showMaxMonthlyPayment,
                                         )}
                                         description="Payment capacity"
                                         tone="green"
+                                        visible={showValues && showMaxMonthlyPayment}
+                                        onToggleVisibility={() =>
+                                            setShowMaxMonthlyPayment((prev) => !prev)
+                                        }
                                     />
                                 </div>
 
@@ -527,6 +551,7 @@ export default function MemberDashboard({
                                             label="Remaining Balance"
                                             value={maskCurrency(
                                                 loan_progress.remaining_balance,
+                                                showValues,
                                             )}
                                             tone="red"
                                         />
@@ -537,6 +562,7 @@ export default function MemberDashboard({
                                             )}
                                             description={maskCurrency(
                                                 loan_progress.next_due_amount,
+                                                showValues,
                                             )}
                                             tone="amber"
                                         />
@@ -565,7 +591,7 @@ export default function MemberDashboard({
                                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                     <InfoBlock
                                         label="Loan Balance"
-                                        value={maskCurrency(loan_balance)}
+                                        value={maskCurrency(loan_balance, showValues)}
                                         icon={Wallet}
                                         tone="red"
                                     />
@@ -573,6 +599,7 @@ export default function MemberDashboard({
                                         label="Share Capital"
                                         value={maskCurrency(
                                             share_capital_balance,
+                                            showValues,
                                         )}
                                         icon={CreditCard}
                                         tone="emerald"
@@ -633,11 +660,12 @@ export default function MemberDashboard({
                                                 {formatDate(
                                                     loan_progress.next_due_date,
                                                 )}{' '}
-                                                for{' '}
-                                                {maskCurrency(
-                                                    loan_progress.next_due_amount,
-                                                )}
-                                                .
+                                             for{' '}
+                                             {maskCurrency(
+                                                 loan_progress.next_due_amount,
+                                                 showValues,
+                                             )}
+                                             .
                                             </AlertDescription>
                                         </Alert>
                                     )}
@@ -771,12 +799,16 @@ function MetricItem({
     value,
     description,
     tone = 'emerald',
+    visible,
+    onToggleVisibility,
 }: {
     icon: React.ElementType;
     label: string;
     value: string;
     description: string;
     tone?: Tone;
+    visible?: boolean;
+    onToggleVisibility?: () => void;
 }) {
     const colors = getToneClasses(tone);
 
@@ -788,9 +820,24 @@ function MetricItem({
                 </p>
                 <Icon className={cn('size-4', colors.icon)} />
             </div>
-            <p className={cn('text-base font-semibold', colors.value)}>
-                {value}
-            </p>
+            <div className="flex items-center justify-between gap-3">
+                <p className={cn('text-base font-semibold', colors.value)}>
+                    {value}
+                </p>
+                {onToggleVisibility && (
+                    <button
+                        type="button"
+                        onClick={onToggleVisibility}
+                        className="text-muted-foreground hover:text-foreground"
+                    >
+                        {visible ? (
+                            <EyeOff className="size-4" />
+                        ) : (
+                            <Eye className="size-4" />
+                        )}
+                    </button>
+                )}
+            </div>
             <p className="mt-1 text-sm text-muted-foreground">{description}</p>
         </div>
     );

@@ -124,7 +124,6 @@ interface MemberProfileData {
     permanent_address?: string;
     permanent_zip_code?: string | null;
     position: string;
-    date_hired: string;
     basic_salary: number;
     income_type?: string | null;
     net_income?: number | null;
@@ -240,7 +239,6 @@ export default function MembersProfile({ user, memberProfile, beneficiaries, isA
         permanent_address: memberProfile?.permanent_address || '',
         permanent_zip_code: memberProfile?.permanent_zip_code || '',
         position: memberProfile?.position || '',
-        date_hired: memberProfile?.date_hired || '',
         basic_salary: memberProfile?.basic_salary ? formatCurrency(String(memberProfile.basic_salary)) : '',
         income_type: memberProfile?.income_type || 'monthly',
         net_income: memberProfile?.net_income ? formatCurrency(String(memberProfile.net_income)) : '',
@@ -385,7 +383,6 @@ export default function MembersProfile({ user, memberProfile, beneficiaries, isA
         // Employment Information
         const employmentInfo: string[][] = [
             ['Position:', memberProfile.position],
-            ['Date Hired:', formatDate(memberProfile.date_hired)],
             ['Income (Gross):', fmtCurrency(memberProfile.basic_salary)],
         ];
         
@@ -1027,30 +1024,8 @@ export default function MembersProfile({ user, memberProfile, beneficiaries, isA
                                             <InputError message={errors.position} />
                                         </div>
 
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="date_hired">
-                                                Date Hired <span className="text-red-500">*</span>
-                                            </Label>
-                                            {!canEditEmployment ? (
-                                                <div className="rounded-md border bg-muted px-3 py-2 text-sm">
-                                                    {formatDate(formData.date_hired)}
-                                                </div>
-                                            ) : (
-                                                <Input
-                                                    id="date_hired"
-                                                    type="date"
-                                                    name="date_hired"
-                                                    value={formData.date_hired}
-                                                    max={getTodayISO()}
-                                                    onChange={(e) => setFormData({ ...formData, date_hired: e.target.value })}
-                                                    disabled={!canEditEmployment}
-                                                />
-                                            )}
-                                            <InputError message={errors.date_hired} />
-                                        </div>
-
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="basic_salary">
+                                <div className="grid gap-2">
+                                    <Label htmlFor="basic_salary">
                                                 Income (Gross) <span className="text-red-500">*</span>
                                             </Label>
                                             <div className="relative">

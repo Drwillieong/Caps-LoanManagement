@@ -147,7 +147,6 @@ export default function Create({ roles }: Props) {
 
         // ── Employment & Financial ──
         position: '',
-        date_hired: '',
         basic_salary: '',
         income_type: 'monthly',
         net_income: '',
@@ -373,6 +372,25 @@ export default function Create({ roles }: Props) {
 
     const todayISO = getTodayISO();
 
+    // ── Check if spouse fields are conditionally required ──
+    const hasSpouseOccupation = formData.spouse_occupation.trim().length > 0;
+
+    // ── Client-side conditional spouse validation errors ──
+    const getSpouseConditionalErrors = (): Record<string, string> => {
+        if (!hasSpouseOccupation) return {};
+        const errors: Record<string, string> = {};
+        if (!formData.spouse_gross_income || parseFloat(formData.spouse_gross_income.replace(/,/g, '')) <= 0) {
+            errors.spouse_gross_income = 'Spouse Income (Gross) is required when spouse occupation is provided.';
+        }
+        if (!formData.spouse_income_type) {
+            errors.spouse_income_type = 'Spouse Income Type is required when spouse occupation is provided.';
+        }
+        if (!formData.spouse_net_income || parseFloat(formData.spouse_net_income.replace(/,/g, '')) <= 0) {
+            errors.spouse_net_income = 'Spouse Net Income is required when spouse occupation is provided.';
+        }
+        return errors;
+    };
+
     return (
         <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
             <Head title="Create Member" />
@@ -430,7 +448,6 @@ export default function Create({ roles }: Props) {
                             permanent_address: formData.permanent_address.trim(),
                             permanent_zip_code: formData.permanent_zip_code.trim(),
                             position: formData.position.trim(),
-                            date_hired: formData.date_hired,
                             basic_salary: parseNum(formData.basic_salary),
                             income_type: formData.income_type,
                             net_income: parseNum(formData.net_income),
@@ -460,7 +477,9 @@ export default function Create({ roles }: Props) {
                     }}
                 >
                     {({ processing, errors }: { processing: boolean; errors: Record<string, string> }) => {
-                        const err = errors as Record<string, string>;
+                        const serverErrors = errors as Record<string, string>;
+                        const spouseConditionalErrors = getSpouseConditionalErrors();
+                        const err = { ...serverErrors, ...spouseConditionalErrors };
 
                         return (
                             <>
@@ -714,26 +733,6 @@ export default function Create({ roles }: Props) {
                                                 placeholder: 'e.g., Software Engineer',
                                             })}
 
-                                            {/* Date Hired */}
-                                            <div className="grid gap-1.5">
-                                                <Label htmlFor="date_hired">
-                                                    Date Hired <span className="text-red-500">*</span>
-                                                </Label>
-                                                <Input
-                                                    id="date_hired"
-                                                    name="date_hired"
-                                                    type="date"
-                                                    value={formData.date_hired}
-                                                    max={todayISO}
-                                                    onChange={(e) =>
-                                                        handleChange('date_hired', e.target.value)
-                                                    }
-                                                    aria-invalid={!!err.date_hired}
-                                                />
-                                              
-                                                <InputError message={err.date_hired} />
-                                            </div>
-
                                             {/* Income (Gross) */}
                                             {renderCurrency('basic_salary', 'Income (Gross)', err, {
                                                 required: true,
@@ -813,13 +812,14 @@ export default function Create({ roles }: Props) {
                                             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                                                 {renderInput('spouse_occupation', 'Occupation of Spouse', err, {
                                                     placeholder: 'Enter spouse occupation',
+                                                    helperText: 'If provided, Spouse Income, Income Type, and Net Income become required.',
                                                 })}
 
                                                 {renderCurrency(
                                                     'spouse_gross_income',
                                                     'Spouse Income (Gross)',
                                                     err,
-                                                    { helperText: 'Optional' },
+                                                    { required: hasSpouseOccupation, helperText: hasSpouseOccupation ? 'Required' : 'Optional' },
                                                 )}
 
                                                 {renderSelect(
@@ -831,14 +831,14 @@ export default function Create({ roles }: Props) {
                                                         { value: 'yearly', label: 'Yearly' },
                                                     ],
                                                     err,
-                                                    { helperText: 'Optional' },
+                                                    { required: hasSpouseOccupation, helperText: hasSpouseOccupation ? 'Required' : 'Optional' },
                                                 )}
 
                                                 {renderCurrency(
                                                     'spouse_net_income',
                                                     'Spouse Income (Net)',
                                                     err,
-                                                    { helperText: 'Optional' },
+                                                    { required: hasSpouseOccupation, helperText: hasSpouseOccupation ? 'Required' : 'Optional' },
                                                 )}
                                             </div>
                                         </div>

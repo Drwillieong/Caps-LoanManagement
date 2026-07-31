@@ -50,7 +50,6 @@ interface RecentMember {
     full_name: string
     email: string
     position: string
-    date_hired: string
     created_at: string
 }
 

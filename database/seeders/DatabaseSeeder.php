@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             'password' => Hash::make('admin123'),
             'role' => 'hr',
             'is_active' => true,
+             'status' => 'active',
         ]);
 
         // GM Admin
@@ -31,6 +32,8 @@ class DatabaseSeeder extends Seeder
             'password' => Hash::make('admin123'),
             'role' => 'gm',
             'is_active' => true,
+             'status' => 'active',
+              'status' => 'active',
         ]);
 
         // Credit Committee Admin
@@ -42,6 +45,7 @@ class DatabaseSeeder extends Seeder
             'password' => Hash::make('admin123'),
             'role' => 'creditcom',
             'is_active' => true,
+             'status' => 'active',
         ]);
 
         // -----------------------------
@@ -55,6 +59,7 @@ class DatabaseSeeder extends Seeder
             'password' => Hash::make('admin123'),
             'role' => 'member',
             'is_active' => true,
+             'status' => 'active',
         ]);
 
         MemberProfile::create([
@@ -77,7 +82,6 @@ class DatabaseSeeder extends Seeder
 
             // Employment
             'position' => 'IT Staff',
-            'date_hired' => '2024-01-15',
             'basic_salary' => 25000.00,
 
             // Financial
@@ -97,6 +101,7 @@ class DatabaseSeeder extends Seeder
             'password' => Hash::make('admin123'),
             'role' => 'member',
             'is_active' => true,
+             'status' => 'active',
         ]);
 
         MemberProfile::create([
@@ -119,7 +124,6 @@ class DatabaseSeeder extends Seeder
 
             // Employment
             'position' => 'IT Staff',
-            'date_hired' => '2024-01-15',
             'basic_salary' => 20000.00,
 
             // Financial
@@ -138,6 +142,7 @@ $user = User::create([
     'password' => Hash::make('admin123'),
     'role' => 'member',
     'is_active' => true,
+     'status' => 'active',
 ]);
 
 MemberProfile::create([
@@ -158,7 +163,6 @@ MemberProfile::create([
     'permanent_address' => 'Barangay Real, Calamba City, Laguna',
 
     'position' => 'Accounting Staff',
-    'date_hired' => '2023-06-05',
     'basic_salary' => 24000.00,
 
     'share_capital_balance' => 18000.00,
@@ -177,6 +181,7 @@ $user = User::create([
     'password' => Hash::make('admin123'),
     'role' => 'member',
     'is_active' => true,
+     'status' => 'active',
 ]);
 
 MemberProfile::create([
@@ -197,7 +202,6 @@ MemberProfile::create([
     'permanent_address' => 'Barangay Parian, Calamba City, Laguna',
 
     'position' => 'HR Assistant',
-    'date_hired' => '2022-11-15',
     'basic_salary' => 23000.00,
 
     'share_capital_balance' => 21000.00,
@@ -216,6 +220,7 @@ $user = User::create([
     'password' => Hash::make('admin123'),
     'role' => 'member',
     'is_active' => true,
+     'status' => 'active',
 ]);
 
 MemberProfile::create([
@@ -236,7 +241,6 @@ MemberProfile::create([
     'permanent_address' => 'Barangay Canlubang, Calamba City, Laguna',
 
     'position' => 'Operations Staff',
-    'date_hired' => '2024-03-18',
     'basic_salary' => 26000.00,
 
     'share_capital_balance' => 17000.00,

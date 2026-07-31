@@ -51,7 +51,7 @@ class FortifyServiceProvider extends ServiceProvider
 
                 if ($accountStatus !== 'active') {
                     throw ValidationException::withMessages([
-                        'email' => ['Your account is currently inactive. Please contact the Cooperative Manager.'],
+                        'email' => ['Your account is currently inactive. .'],
                     ]);
                 }
 

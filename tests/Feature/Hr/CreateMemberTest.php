@@ -29,7 +29,6 @@ function validCreateMemberPayload(array $overrides = []): array
         'present_zip_code' => '4027',
         'mobile_number' => '09170000002',
         'position' => 'Accounting Staff',
-        'date_hired' => '2024-01-15',
         'basic_salary' => 25000,
         'income_type' => 'monthly',
         'net_income' => 22000,

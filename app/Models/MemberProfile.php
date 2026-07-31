@@ -40,7 +40,6 @@ class MemberProfile extends Model
         'permanent_address',
         'permanent_zip_code',
         'position',
-        'date_hired',
         'basic_salary',
         'income_type',
         'net_income',
@@ -68,7 +67,6 @@ class MemberProfile extends Model
     {
         return [
             'date_of_birth' => 'date',
-            'date_hired' => 'date',
             'basic_salary' => 'decimal:2',
             'net_income' => 'decimal:2',
             'share_capital_balance' => 'decimal:2',

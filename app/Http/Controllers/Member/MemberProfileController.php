@@ -90,7 +90,6 @@ class MemberProfileController extends Controller
 
             // Employment
             'position' => 'required|string|max:255',
-            'date_hired' => 'required|date',
             'basic_salary' => 'required|numeric|min:10000',
 
             // Financials
@@ -178,7 +177,6 @@ class MemberProfileController extends Controller
 
             // Employment
             'position' => 'required|string|max:255',
-            'date_hired' => 'required|date',
             'basic_salary' => 'required|numeric|min:10000',
 
             // Financials

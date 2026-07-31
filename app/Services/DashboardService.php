@@ -114,7 +114,6 @@ class DashboardService
                 'full_name' => trim($u->first_name.' '.$u->middle_name.' '.$u->last_name),
                 'email' => $u->email,
                 'position' => $u->memberProfile?->position ?? 'N/A',
-                'date_hired' => $u->memberProfile?->date_hired?->format('Y-m-d'),
                 'created_at' => $u->created_at->format('Y-m-d'),
             ]),
         ];

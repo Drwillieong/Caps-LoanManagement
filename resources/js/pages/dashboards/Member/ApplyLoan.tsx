@@ -58,6 +58,9 @@ export default function ApplyLoan({
 
     // UI state
     const [showApplicantInfo, setShowApplicantInfo] = useState(false);
+    const [showBasicSalary, setShowBasicSalary] = useState(true);
+    const [showShareCapital, setShareCapital] = useState(true);
+    const [showMaxLoan, setShowMaxLoan] = useState(true);
     const [coMakerSearch, setCoMakerSearch] = useState('');
     const [preSelectedCoMaker, setPreSelectedCoMaker] = useState<EligibleCoMaker | null>(null);
     const [isPreSelecting, setIsPreSelecting] = useState(false);
@@ -439,6 +442,19 @@ const computed = useMemo(() => {
             return;
         }
 
+        const hasInputs =
+            data.loan_type_id &&
+            data.principal_amount &&
+            data.terms_months;
+        const hasCoMaker = !!data.co_maker_user_id;
+
+        if (!hasInputs || !hasCoMaker) {
+            toast.error(
+                'Please fill in all loan details and select a Co-Maker before proceeding.',
+            );
+            return;
+        }
+
         setIsAgreementModalOpen(true);
     }
 
@@ -650,7 +666,13 @@ const computed = useMemo(() => {
                             {/* Show / Hide Toggle */}
                         <button
                             type="button"
-                            onClick={() => setShowApplicantInfo(!showApplicantInfo)}
+                            onClick={() => {
+                                const next = !showApplicantInfo;
+                                setShowApplicantInfo(next);
+                                setShowBasicSalary(next);
+                                setShareCapital(next);
+                                setShowMaxLoan(next);
+                            }}
                             disabled={isFormLocked}
                             className="text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
                         >
@@ -661,23 +683,62 @@ const computed = useMemo(() => {
                         <CardContent>
                             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                                 <div className="rounded-lg bg-emerald-50 border border-emerald-100 p-3">
-                                    <p className="text-xs text-emerald-600">Basic Salary</p>
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-xs text-emerald-600">Basic Salary</p>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowBasicSalary((prev) => !prev)}
+                                            className="text-muted-foreground hover:text-foreground"
+                                        >
+                                            {showBasicSalary ? (
+                                                <EyeOff size={16} />
+                                            ) : (
+                                                <Eye size={16} />
+                                            )}
+                                        </button>
+                                    </div>
                                     <p className="font-semibold text-lg text-emerald-700">
-                                        {maskCurrency(memberProfile.basic_salary, showApplicantInfo)}
+                                        {maskCurrency(memberProfile.basic_salary, showBasicSalary)}
                                     </p>
                                 </div>
 
                                 <div className="rounded-lg bg-emerald-50 border border-emerald-100 p-3">
-                                    <p className="text-xs text-emerald-600">Share Capital</p>
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-xs text-emerald-600">Share Capital</p>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShareCapital((prev) => !prev)}
+                                            className="text-muted-foreground hover:text-foreground"
+                                        >
+                                            {showShareCapital ? (
+                                                <EyeOff size={16} />
+                                            ) : (
+                                                <Eye size={16} />
+                                            )}
+                                        </button>
+                                    </div>
                                     <p className="font-semibold text-lg text-emerald-700">
-                                        {maskCurrency(memberProfile.share_capital_balance || 0, showApplicantInfo)}
+                                        {maskCurrency(memberProfile.share_capital_balance || 0, showShareCapital)}
                                     </p>
                                 </div>
 
                                 <div className="rounded-lg bg-emerald-50 border border-emerald-100 p-3">
-                                    <p className="text-xs text-emerald-600">Max Loan Allowed</p>
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-xs text-emerald-600">Max Loan Allowed</p>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowMaxLoan((prev) => !prev)}
+                                            className="text-muted-foreground hover:text-foreground"
+                                        >
+                                            {showMaxLoan ? (
+                                                <EyeOff size={16} />
+                                            ) : (
+                                                <Eye size={16} />
+                                            )}
+                                        </button>
+                                    </div>
                                     <p className="font-semibold text-lg text-emerald-700">
-                                        {maskCurrency(maxLoanAllowed, showApplicantInfo)}
+                                        {maskCurrency(maxLoanAllowed, showMaxLoan)}
                                     </p>
                                 </div>
                             </div>

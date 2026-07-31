@@ -86,7 +86,6 @@ export interface MemberProfile {
     permanent_address?: string;
     permanent_zip_code?: string | null;
     position: string;
-    date_hired: string;
     basic_salary: number;
     income_type?: string | null;
     net_income?: number | null;
@@ -209,7 +208,6 @@ export interface GmMember {
     name: string;
     email: string;
     member_id: string;
-    date_hired: string | null;
     basic_salary: number;
     share_capital_balance: number;
 }

@@ -43,7 +43,6 @@ class BulkMemberUploadController extends Controller
             'permanent_address',
             'permanent_zip_code',
             'position',
-            'date_hired',
             'basic_salary',
             'income_type',
             'net_income',

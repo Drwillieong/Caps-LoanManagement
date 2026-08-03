@@ -403,6 +403,21 @@ const computed = useMemo(() => {
         };
     }, [data.principal_amount, data.terms_months, data.loan_type_id, loanTypes]);
 
+    const maxTerm = useMemo(() => {
+        const principal = parseNumber(data.principal_amount);
+        if (principal <= 0) return 24;
+        if (principal <= 50000) return 12;
+        if (principal < 100000) return 18;
+        return 24;
+    }, [data.principal_amount]);
+
+    useEffect(() => {
+        const currentTerm = parseInt(data.terms_months);
+        if (currentTerm > maxTerm) {
+            setData('terms_months', maxTerm.toString());
+        }
+    }, [data.terms_months, maxTerm, setData]);
+
     const activeMonthlyTotal = useMemo(() => 
     (previousLoans || [])
         ?.filter((loan) => ['approved', 'released'].includes(loan.status as string))
@@ -816,7 +831,7 @@ const computed = useMemo(() => {
     </SelectTrigger>
 
     <SelectContent className="max-h-48 overflow-y-auto">
-      {[...Array(24)].map((_, i) => (
+      {[...Array(maxTerm)].map((_, i) => (
         <SelectItem key={i + 1} value={(i + 1).toString()}>
           {i + 1} {i + 1 === 1 ? "Month" : "Months"}
         </SelectItem>
@@ -824,7 +839,12 @@ const computed = useMemo(() => {
     </SelectContent>
   </Select>
 
-  <InputError message={errors.terms_months} />
+   <InputError message={errors.terms_months} />
+   {data.principal_amount && parseNumber(data.principal_amount) > 0 && (
+       <p className="text-xs text-muted-foreground">
+           Maximum term allowed for {formatNumberInput(data.principal_amount)}: <span className="font-medium">{maxTerm} months</span>
+       </p>
+   )}
 </div>
                             </div>
                         </CardContent>

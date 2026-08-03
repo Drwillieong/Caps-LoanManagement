@@ -812,7 +812,7 @@ export default function Create({ roles }: Props) {
                                             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                                                 {renderInput('spouse_occupation', 'Occupation of Spouse', err, {
                                                     placeholder: 'Enter spouse occupation',
-                                                    helperText: 'If provided, Spouse Income, Income Type, and Net Income become required.',
+                                                    helperText: 'Optional',
                                                 })}
 
                                                 {renderCurrency(

@@ -307,11 +307,11 @@ export default function SeeUsers({ users, filters }: Props) {
                         {/* Status Filter */}
                         <Select value={status} onValueChange={setStatus}>
                             <SelectTrigger className="w-[260px]">
-                                <SelectValue placeholder="All Statuses" />
+                                <SelectValue placeholder="active" />
                             </SelectTrigger>
                             <SelectContent>
+                                 <SelectItem value="active">Active</SelectItem>
                                 <SelectItem value="all">All Statuses</SelectItem>
-                                <SelectItem value="active">Active</SelectItem>
                                 <SelectItem value="inactive">Inactive</SelectItem>
                                 <SelectItem value="rejected">Rejected</SelectItem>
                                 <SelectItem value="pending_gm_approval">Pending General Manager Approval</SelectItem>

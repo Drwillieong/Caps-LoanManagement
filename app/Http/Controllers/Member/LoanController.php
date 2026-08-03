@@ -150,6 +150,7 @@ class LoanController extends Controller
             'principal_amount' => 'required|numeric|min:1000',
             'terms_months' => 'required|integer|min:1',
             'co_maker_user_id' => 'nullable|exists:users,id|different:' . auth()->id(),
+            'disbursement_method' => 'required|in:cash,bank_transfer',
         ]);
 
         $user = Auth::user();
@@ -208,17 +209,18 @@ class LoanController extends Controller
          * =============================== */
 
          $loan = Loan::create([
-             'user_id' => $user->id,
-             'loan_type_id' => $validated['loan_type_id'],
-            'principal_amount' => $validated['principal_amount'],
-            'terms_months' => $validated['terms_months'],
-            'interest_amount' => $computed['interest'],
-            'total_amount_due' => $computed['total'],
-            'monthly_amortization' => $computed['monthly'],
-            'status' => $loanType->requires_comaker
-                ? 'awaiting_comaker'
-                : 'pending_gm_review',
-        ]);
+              'user_id' => $user->id,
+              'loan_type_id' => $validated['loan_type_id'],
+             'principal_amount' => $validated['principal_amount'],
+             'terms_months' => $validated['terms_months'],
+             'interest_amount' => $computed['interest'],
+             'total_amount_due' => $computed['total'],
+             'monthly_amortization' => $computed['monthly'],
+             'disbursement_method' => $validated['disbursement_method'],
+             'status' => $loanType->requires_comaker
+                 ? 'awaiting_comaker'
+                 : 'pending_gm_review',
+         ]);
 
         if (!empty($validated['co_maker_user_id'])) {
             LoanCoMaker::create([
@@ -263,6 +265,7 @@ class LoanController extends Controller
             'principal_amount' => 'required|numeric|min:1000',
             'terms_months' => 'required|integer|min:1',
             'co_maker_user_id' => 'nullable|exists:users,id|different:' . auth()->id(),
+            'disbursement_method' => 'required|in:cash,bank_transfer',
         ]);
 
         $user = Auth::user();
@@ -301,7 +304,7 @@ class LoanController extends Controller
             ]);
         }
 
-// Update loan
+ // Update loan
         $loan->update([
             'loan_type_id' => $loanType->id,
             'principal_amount' => $validated['principal_amount'],
@@ -309,6 +312,7 @@ class LoanController extends Controller
             'interest_amount' => round($interest, 2),
             'total_amount_due' => round($total, 2),
             'monthly_amortization' => round($monthly, 2),
+            'disbursement_method' => $validated['disbursement_method'],
             'status' => $loanType->requires_comaker
                 ? 'awaiting_comaker'
                 : 'pending_gm_review',
@@ -387,6 +391,7 @@ class LoanController extends Controller
                     'interest_amount' => $loanItem->interest_amount,
                     'total_amount_due' => $loanItem->total_amount_due,
                     'monthly_amortization' => $loanItem->monthly_amortization,
+                    'disbursement_method' => $loanItem->disbursement_method,
                     'status' => $loanItem->status,
                     'remarks' => $loanItem->remarks,
                     'rejected_by' => $loanItem->rejected_by,
@@ -412,16 +417,17 @@ class LoanController extends Controller
         ]);
         }
 
-return Inertia::render('dashboards/Member/PendingApplication', [
-            'loan' => [
-                'id' => $loan->id,
-                'loan_type_name' => $loan->loanType->name ?? 'N/A',
-                'principal_amount' => $loan->principal_amount,
-                'terms_months' => $loan->terms_months,
-                'interest_amount' => $loan->interest_amount,
-                'total_amount_due' => $loan->total_amount_due,
-                'monthly_amortization' => $loan->monthly_amortization,
-                'status' => $loan->status,
+ return Inertia::render('dashboards/Member/PendingApplication', [
+             'loan' => [
+                 'id' => $loan->id,
+                 'loan_type_name' => $loan->loanType->name ?? 'N/A',
+                 'principal_amount' => $loan->principal_amount,
+                 'terms_months' => $loan->terms_months,
+                 'interest_amount' => $loan->interest_amount,
+                 'total_amount_due' => $loan->total_amount_due,
+                 'monthly_amortization' => $loan->monthly_amortization,
+                 'disbursement_method' => $loan->disbursement_method,
+                 'status' => $loan->status,
                 'remarks' => $loan->remarks,
                 'rejected_by' => $loan->rejected_by,
                 'rejected_at' => $loan->rejected_at?->format('c'),
@@ -504,6 +510,7 @@ return Inertia::render('dashboards/Member/PendingApplication', [
                 'principal_amount' => $loan->principal_amount,
                 'terms_months' => $loan->terms_months,
                 'co_maker_user_id' => $loan->coMakers->first()?->user_id ?? '',
+                'disbursement_method' => $loan->disbursement_method,
             ],
             'unread_notifications_count' => $this->getMemberUnreadNotificationCount(request()),
         ]);
@@ -541,6 +548,7 @@ return Inertia::render('dashboards/Member/PendingApplication', [
                     'interest_amount' => $loan->interest_amount,
                     'total_amount_due' => $loan->total_amount_due,
                     'monthly_amortization' => $loan->monthly_amortization,
+                    'disbursement_method' => $loan->disbursement_method,
                     'status' => $loan->status,
                     'created_at' => $loan->created_at->format('Y-m-d H:i:s'),
                     'requester' => [

@@ -139,6 +139,7 @@ export interface ApplyLoanProps {
         principal_amount: number;
         terms_months: number;
         co_maker_user_id: number | '';
+        disbursement_method: string;
     } | null;
 }
 
@@ -178,6 +179,7 @@ export interface CoMakerRequest {
     interest_amount: number;
     total_amount_due: number;
     monthly_amortization: number;
+    disbursement_method?: string;
     status: string;
     created_at: string;
     requester: {
@@ -242,6 +244,7 @@ export interface GmPendingLoan {
     interest_amount: number;
     total_amount_due: number;
     monthly_amortization: number;
+    disbursement_method?: string;
     status: string;
     created_at: string;
     member: GmMember;

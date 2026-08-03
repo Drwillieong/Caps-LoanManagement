@@ -268,6 +268,14 @@ export default function CoMaker({ coMakerRequests }: CoMakerProps) {
                                                             {formatCurrency(request.monthly_amortization)}
                                                         </span>
                                                     </div>
+                                                    {request.disbursement_method && (
+                                                        <div className="flex justify-between text-sm">
+                                                            <span className="text-muted-foreground">Disbursement Method</span>
+                                                            <span className="font-medium capitalize">
+                                                                {request.disbursement_method.replace('_', ' ')}
+                                                            </span>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>

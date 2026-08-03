@@ -55,6 +55,7 @@ interface DetailedLoan {
         name: string;
         relationship: string;
     };
+    disbursement_method?: string;
     amortization_schedule: Array<{
         period: number;
         due_date: string;
@@ -381,6 +382,12 @@ export default function ViewActiveLoan({ loan }: Props) {
                                             <label className="text-sm font-medium text-muted-foreground">Co-maker</label>
                                             <div className="font-medium">{displayLoan.co_maker.name}</div>
                                             <div className="text-xs text-muted-foreground">({displayLoan.co_maker.relationship})</div>
+                                        </div>
+                                    )}
+                                    {displayLoan.disbursement_method && (
+                                        <div className="space-y-1">
+                                            <label className="text-sm font-medium text-muted-foreground">Disbursement Method</label>
+                                            <div className="font-medium capitalize">{displayLoan.disbursement_method.replace('_', ' ')}</div>
                                         </div>
                                     )}
                                 </div>

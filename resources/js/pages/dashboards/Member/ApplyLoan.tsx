@@ -67,6 +67,7 @@ export default function ApplyLoan({
         principal_amount: editingLoan?.principal_amount?.toString() || '',
         terms_months: editingLoan?.terms_months?.toString() || '',
         co_maker_user_id: editingLoan?.co_maker_user_id?.toString() || '',
+        disbursement_method: editingLoan?.disbursement_method || 'cash',
     });
 
     // UI state
@@ -474,7 +475,8 @@ const computed = useMemo(() => {
         const hasInputs =
             data.loan_type_id &&
             data.principal_amount &&
-            data.terms_months;
+            data.terms_months &&
+            data.disbursement_method;
         const hasCoMaker = !!data.co_maker_user_id;
 
         if (!hasInputs || !hasCoMaker) {
@@ -818,33 +820,42 @@ const computed = useMemo(() => {
                                     <InputError message={errors.principal_amount} />
                                 </div>
 
-                              <div className="space-y-2">
-  <Label>Term (Months)</Label>
+                               <div className="space-y-2">
+   <Label>Term (Months)</Label>
 
-  <Select
-    value={data.terms_months}
-    onValueChange={(value) => setData("terms_months", value)}
-    disabled={isFormLocked}
-  >
-    <SelectTrigger className="w-full">
-      <SelectValue placeholder="Select term" />
-    </SelectTrigger>
+   <Select
+     value={data.terms_months}
+     onValueChange={(value) => setData("terms_months", value)}
+     disabled={isFormLocked}
+   >
+     <SelectTrigger className="w-full">
+       <SelectValue placeholder="Select term" />
+     </SelectTrigger>
 
-    <SelectContent className="max-h-48 overflow-y-auto">
-      {[...Array(maxTerm)].map((_, i) => (
-        <SelectItem key={i + 1} value={(i + 1).toString()}>
-          {i + 1} {i + 1 === 1 ? "Month" : "Months"}
-        </SelectItem>
-      ))}
-    </SelectContent>
-  </Select>
+     <SelectContent className="max-h-48 overflow-y-auto">
+       {[...Array(maxTerm)].map((_, i) => (
+         <SelectItem key={i + 1} value={(i + 1).toString()}>
+           {i + 1} {i + 1 === 1 ? "Month" : "Months"}
+         </SelectItem>
+       ))}
+     </SelectContent>
+   </Select>
 
    <InputError message={errors.terms_months} />
-   {data.principal_amount && parseNumber(data.principal_amount) > 0 && (
-       <p className="text-xs text-muted-foreground">
-           Maximum term allowed for {formatNumberInput(data.principal_amount)}: <span className="font-medium">{maxTerm} months</span>
-       </p>
-   )}
+</div>
+
+<div className="space-y-2">
+    <Label>Disbursement Method</Label>
+    <Select value={data.disbursement_method} onValueChange={(value) => setData('disbursement_method', value)} disabled={isFormLocked}>
+        <SelectTrigger className="w-full">
+            <SelectValue placeholder="Select method" />
+        </SelectTrigger>
+        <SelectContent>
+            <SelectItem value="cash">Cash</SelectItem>
+            <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+        </SelectContent>
+    </Select>
+    <InputError message={errors.disbursement_method} />
 </div>
                             </div>
                         </CardContent>

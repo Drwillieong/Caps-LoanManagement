@@ -33,6 +33,7 @@ class Loan extends Model
         'rejected_at',
         'notifications_read_at',
         'has_edited',
+        'disbursement_method',
     ];
 
     /**

@@ -66,9 +66,9 @@ class DatabaseSeeder extends Seeder
             'user_id' => $user->id,
 
             'employee_id' => '001',
-            'first_name' => 'Jason',
-            'middle_name' => 'Derullo',
-            'last_name' => 'Racelis',
+           'first_name' => 'Jairus',
+            'middle_name' => 'Sotto',
+            'last_name' => 'Pecho',
 
             'date_of_birth' => '2002-05-19',
             'sex' => 'male',
@@ -94,9 +94,9 @@ class DatabaseSeeder extends Seeder
         // Test Member 2
         // -----------------------------
         $user = User::create([
-            'first_name' => 'Kayleen',
-            'middle_name' => 'Jairus',
-            'last_name' => 'Gallora',
+            'first_name' => 'Kevin ',
+            'middle_name' => 'Corpuz',
+            'last_name' => 'Bolado',
             'email' => 'kevincorpuz321@gmail.com',
             'password' => Hash::make('admin123'),
             'role' => 'member',
@@ -108,9 +108,9 @@ class DatabaseSeeder extends Seeder
             'user_id' => $user->id,
 
             'employee_id' => '002', // fixed duplicate
-            'first_name' => 'Kayleen',
-            'middle_name' => 'Jairus',
-            'last_name' => 'Gallora',
+            'first_name' => 'Kevin ',
+            'middle_name' => 'Corpuz',
+            'last_name' => 'Bolado',
 
             'date_of_birth' => '2002-12-01',
             'sex' => 'female',
@@ -135,9 +135,9 @@ class DatabaseSeeder extends Seeder
 // Test Member 3
 // -----------------------------
 $user = User::create([
-    'first_name' => 'Jairus',
-    'middle_name' => 'Sotto',
-    'last_name' => 'Pecho',
+    'first_name' => 'Kayhleen',
+    'middle_name' => '',
+    'last_name' => 'Minor',
     'email' => 'nyak123457@gmail.com',
     'password' => Hash::make('admin123'),
     'role' => 'member',
@@ -149,9 +149,9 @@ MemberProfile::create([
     'user_id' => $user->id,
 
     'employee_id' => '003',
-    'first_name' => 'Randolf',
-    'middle_name' => 'Riprap',
-    'last_name' => 'Arrellano',
+    'first_name' => 'Kayhleen',
+    'middle_name' => '',
+    'last_name' => 'Minor',
 
     'date_of_birth' => '1998-08-12',
     'sex' => 'male',
@@ -175,8 +175,8 @@ MemberProfile::create([
 // -----------------------------
 $user = User::create([
     'first_name' => 'Jackie',
-    'middle_name' => 'Lopez',
-    'last_name' => 'Santos',
+    'middle_name' => '',
+    'last_name' => 'Gallora',
     'email' => 'jackiewxyz0412@gmail.com',
     'password' => Hash::make('admin123'),
     'role' => 'member',
@@ -189,7 +189,7 @@ MemberProfile::create([
 
     'employee_id' => '004',
     'first_name' => 'Jackie',
-    'middle_name' => 'Lopez',
+    'middle_name' => '',
     'last_name' => 'Gallora',
 
     'date_of_birth' => '1999-04-25',

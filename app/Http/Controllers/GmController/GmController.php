@@ -77,6 +77,7 @@ class GmController extends Controller
                     'interest_amount' => $loan->interest_amount,
                     'total_amount_due' => $loan->total_amount_due,
                     'monthly_amortization' => $loan->monthly_amortization,
+                    'disbursement_method' => $loan->disbursement_method,
                     'status' => $loan->status,
                     'created_at' => $loan->created_at->format('Y-m-d H:i:s'),
                     'member' => [

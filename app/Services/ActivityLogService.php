@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Auth;
 
 class ActivityLogService
 {
-    private const ADMIN_ROLES = ['gm', 'hr'];
+    private const ADMIN_ROLES = ['gm', 'hr', 'creditcom'];
 
     public function logActivity(
         string $actionType,
@@ -37,7 +37,9 @@ class ActivityLogService
     public function adminLogsQuery(
         ?string $actorRole = null,
         ?string $actionType = null,
-        ?string $search = null
+        ?string $search = null,
+        ?string $dateFrom = null,
+        ?string $dateTo = null
     ) {
         $roles = in_array($actorRole, self::ADMIN_ROLES, true)
             ? [$actorRole]
@@ -45,7 +47,7 @@ class ActivityLogService
 
         $query = ActivityLog::query()
             ->with([
-                'user:id,first_name,middle_name,last_name,role',
+                'user:id,first_name,middle_name,last_name,email,role',
                 'loan:id,principal_amount,user_id',
             ])
             ->forAdministrativeActors($roles)
@@ -61,7 +63,6 @@ class ActivityLogService
             $query->where(function ($query) use ($term) {
                 $query->where('description', 'like', "%{$term}%")
                     ->orWhere('action_type', 'like', "%{$term}%")
-                    ->orWhere('ip_address', 'like', "%{$term}%")
                     ->orWhereHas('user', function ($query) use ($term) {
                         $query->where('first_name', 'like', "%{$term}%")
                             ->orWhere('middle_name', 'like', "%{$term}%")
@@ -73,6 +74,14 @@ class ActivityLogService
                     $query->orWhere('loan_id', (int) $term);
                 }
             });
+        }
+
+        if ($dateFrom) {
+            $query->whereDate('created_at', '>=', $dateFrom);
+        }
+
+        if ($dateTo) {
+            $query->whereDate('created_at', '<=', $dateTo);
         }
 
         return $query;
@@ -100,6 +109,7 @@ class ActivityLogService
         $actorPayload = $actor ? [
             'id' => $actor->id,
             'name' => $actor->name,
+            'email' => $actor->email,
             'role' => $actor->role,
         ] : null;
 
@@ -110,7 +120,6 @@ class ActivityLogService
             'action_type' => $activity->action_type,
             'description' => $activity->description,
             'reject_reason' => $activity->reject_reason,
-            'ip_address' => $activity->ip_address,
             'created_at' => $activity->created_at?->toIso8601String(),
             'updated_at' => $activity->updated_at?->toIso8601String(),
             'actor' => $actorPayload,

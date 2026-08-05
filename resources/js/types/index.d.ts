@@ -380,6 +380,7 @@ export interface CompletedLoan {
 export interface ActivityLogActor {
     id: number;
     name: string;
+    email: string;
     role: string;
 }
 
@@ -390,7 +391,6 @@ export interface ActivityLog {
     action_type: string;
     description: string;
     reject_reason: string | null;
-    ip_address: string | null;
     created_at: string;
     updated_at: string;
     actor: ActivityLogActor | null;

@@ -212,6 +212,12 @@ const footerNavItems: NavItem[] = [
         icon: Logs,
         role: 'hr',
     },
+    {
+        title: 'Activity Log',
+        href: '/dashboards/CreditCom/ActivityLog',
+        icon: Logs,
+        role: 'creditcom',
+    },
 ];
 
 export function AppSidebar() {

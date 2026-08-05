@@ -159,7 +159,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('api.members.eligible');
 
     Route::get('/api/admin/activity-logs', [AdminActivityLogController::class, 'index'])
-        ->middleware('role:gm,hr')
+        ->middleware('role:gm,hr,creditcom')
         ->name('api.admin.activity-logs.index');
 
     Route::post('/api/admin/loan-applications', [GmController::class, 'storeApplicationApi'])
@@ -299,6 +299,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('hr.activity-log');
 
     // Credit Coordinator
+    Route::get('dashboards/CreditCom/ActivityLog', [AdminActivityLogController::class, 'creditCom'])
+        ->middleware('role:creditcom')
+        ->name('creditcom.activity-log');
+
     Route::get('dashboards/CreditCom/ValidateLoan', [CreditComController::class, 'index'])
         ->middleware('role:creditcom')
         ->name('creditcom.validate-loan');

@@ -100,6 +100,17 @@ export default function ApplyLoan({
         }
     }, [eligibleCoMakers, setData]);
 
+    
+ // Auto-select cash loan when not editing
+    useEffect(() => {
+        if (!isEditing && !data.loan_type_id && loanTypes.length > 0) {
+            const cashLoan = loanTypes.find((type) => type.name.toLowerCase().includes('cash'));
+            if (cashLoan) {
+                setData('loan_type_id', cashLoan.id.toString());
+            }
+        }
+    }, [isEditing, data.loan_type_id, loanTypes, setData]);
+    
     const LOCKOUT_MS = 3 * 60 * 60 * 1000;
 
     const isReapplicationLocked = useMemo(() => {
@@ -787,10 +798,10 @@ const computed = useMemo(() => {
                             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                                 <div className="space-y-2">
                                     <Label>Loan Type</Label>
-                                    <Select value={data.loan_type_id} onValueChange={(value) => setData('loan_type_id', value)} disabled={isFormLocked}>
-                                        <SelectTrigger className="w-full">
-                                            <SelectValue placeholder="Select loan type" />
-                                        </SelectTrigger>
+                                     <Select value={data.loan_type_id} onValueChange={(value) => setData('loan_type_id', value)} disabled aria-invalid={!!errors.loan_type_id}>
+                                         <SelectTrigger className="w-full">
+                                             <SelectValue placeholder="Select loan type" />
+                                         </SelectTrigger>
                                         <SelectContent>
                                             {loanTypes.map((type) => (
                                                 <SelectItem key={type.id} value={type.id.toString()}>
@@ -804,7 +815,7 @@ const computed = useMemo(() => {
 
                                 <div className="space-y-2">
                                     <Label>Loan Amount (₱)</Label>
- <Input
+  <Input
                                         type="text"
                                         inputMode="numeric"
                                         placeholder="0"
@@ -816,6 +827,7 @@ const computed = useMemo(() => {
                                             }
                                         }}
                                         disabled={isFormLocked}
+                                        aria-invalid={!!errors.principal_amount}
                                     />
                                     <InputError message={errors.principal_amount} />
                                 </div>
@@ -823,14 +835,15 @@ const computed = useMemo(() => {
                                <div className="space-y-2">
    <Label>Term (Months)</Label>
 
-   <Select
-     value={data.terms_months}
-     onValueChange={(value) => setData("terms_months", value)}
-     disabled={isFormLocked}
-   >
-     <SelectTrigger className="w-full">
-       <SelectValue placeholder="Select term" />
-     </SelectTrigger>
+    <Select
+      value={data.terms_months}
+      onValueChange={(value) => setData("terms_months", value)}
+      disabled={isFormLocked}
+      aria-invalid={!!errors.terms_months}
+    >
+      <SelectTrigger className="w-full">
+        <SelectValue placeholder="Select term" />
+      </SelectTrigger>
 
      <SelectContent className="max-h-48 overflow-y-auto">
        {[...Array(maxTerm)].map((_, i) => (
@@ -846,7 +859,7 @@ const computed = useMemo(() => {
 
 <div className="space-y-2">
     <Label>Disbursement Method</Label>
-    <Select value={data.disbursement_method} onValueChange={(value) => setData('disbursement_method', value)} disabled={isFormLocked}>
+    <Select value={data.disbursement_method} onValueChange={(value) => setData('disbursement_method', value)} disabled={isFormLocked} aria-invalid={!!errors.disbursement_method}>
         <SelectTrigger className="w-full">
             <SelectValue placeholder="Select method" />
         </SelectTrigger>
@@ -883,6 +896,7 @@ const computed = useMemo(() => {
                                             variant="outline" 
                                             className="w-full justify-between font-normal h-auto min-h-10"
                                             disabled={isFormLocked || isPreSelecting}
+                                            aria-invalid={!!errors.co_maker_user_id}
                                         >
                                             {data.co_maker_user_id && isPreSelecting && preSelectedCoMaker && preSelectedCoMaker.id.toString() === data.co_maker_user_id ? (
                                                 <div className="flex items-center gap-2 truncate">

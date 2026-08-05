@@ -49,6 +49,7 @@ interface LoanData {
     remarks: string | null;
     rejected_by: string | null;
     rejected_at: string | null;
+    co_maker_rejection_reason: string | null;
     created_at: string;
     has_edited: boolean;
     co_makers: Array<{
@@ -393,6 +394,16 @@ export default function PendingApplication({ loan, hasPendingLoan, loanHistory }
                                         : 'You can now submit a new loan application.'}
                                 </p>
                             </div>
+                        )}
+
+                        {rejectedByCoMaker && currentLoan.co_maker_rejection_reason && (
+                            <Alert className="mt-3 border-red-200 bg-red-50 text-red-800">
+                                <XCircle className="h-4 w-4 text-red-600" />
+                                <AlertTitle className="font-semibold text-red-900">Co-Maker's Reason for Declining</AlertTitle>
+                                <AlertDescription className="text-sm text-red-700 mt-1">
+                                    {currentLoan.co_maker_rejection_reason}
+                                </AlertDescription>
+                            </Alert>
                         )}
                     </CardHeader>
                 </Card>

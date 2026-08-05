@@ -22,6 +22,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
+import { cn } from '@/lib/utils';
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Members', href: '/dashboards/HR/SeeUsers' },
@@ -250,7 +251,10 @@ export default function Create({ roles }: Props) {
                     max={opts.max}
                     placeholder={opts.placeholder}
                     onChange={(e) => handleChange(field, e.target.value)}
-                    className={opts.className}
+                    className={cn(
+                        opts.className,
+                        err[field] && 'border-destructive ring-destructive/20 dark:ring-destructive/40',
+                    )}
                     aria-invalid={!!err[field]}
                 />
                 {opts.helperText && (
@@ -288,7 +292,10 @@ export default function Create({ roles }: Props) {
                         onChange={(e) => handleCurrencyChange(field, e.target.value)}
                         onFocus={() => handleCurrencyFocus(field)}
                         onBlur={() => handleCurrencyBlur(field)}
-                        className="pl-7"
+                        className={cn(
+                            'pl-7',
+                            err[field] && 'border-destructive ring-destructive/20 dark:ring-destructive/40',
+                        )}
                         aria-invalid={!!err[field]}
                     />
                 </div>
@@ -319,7 +326,10 @@ export default function Create({ roles }: Props) {
                     name={field}
                     value={value}
                     onChange={(e) => handleChange(field, e.target.value)}
-                    className={SELECT_CLASS}
+                    className={cn(
+                        SELECT_CLASS,
+                        err[field] && 'border-destructive ring-destructive/20 dark:ring-destructive/40',
+                    )}
                     aria-invalid={!!err[field]}
                 >
                     <option value="">
@@ -359,7 +369,10 @@ export default function Create({ roles }: Props) {
                     onChange={(e) => handleChange(field, e.target.value)}
                     placeholder={opts.placeholder}
                     rows={3}
-                    className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    className={cn(
+                        'flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
+                        err[field] && 'border-destructive ring-destructive/20 dark:ring-destructive/40',
+                    )}
                     aria-invalid={!!err[field]}
                 />
                 {opts.helperText && (
@@ -537,6 +550,9 @@ export default function Create({ roles }: Props) {
                                                         handleChange('email', e.target.value)
                                                     }
                                                     placeholder="e.g., member@company.com"
+                                                    className={cn(
+                                                        err.email && 'border-destructive ring-destructive/20 dark:ring-destructive/40',
+                                                    )}
                                                     aria-invalid={!!err.email}
                                                 />
                                                 <InputError message={err.email} />
@@ -556,9 +572,12 @@ export default function Create({ roles }: Props) {
                                                     onChange={(e) =>
                                                         handleChange('date_of_birth', e.target.value)
                                                     }
+                                                    className={cn(
+                                                        err.date_of_birth && 'border-destructive ring-destructive/20 dark:ring-destructive/40',
+                                                    )}
                                                     aria-invalid={!!err.date_of_birth}
                                                 />
-                                               
+                                                
                                                 <InputError message={err.date_of_birth} />
                                             </div>
 
@@ -661,7 +680,10 @@ export default function Create({ roles }: Props) {
                                                             handlePhoneChange(e.target.value)
                                                         }
                                                         placeholder="+63 912 345 6789"
-                                                        className="pl-9"
+                                                        className={cn(
+                                                            'pl-9',
+                                                            err.permanent_mobile_number && 'border-destructive ring-destructive/20 dark:ring-destructive/40',
+                                                        )}
                                                         aria-invalid={!!err.permanent_mobile_number}
                                                     />
                                                 </div>

@@ -383,29 +383,30 @@ class LoanController extends Controller
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($loanItem) {
-                return [
-                    'id' => $loanItem->id,
-                    'loan_type_name' => $loanItem->loanType->name ?? 'N/A',
-                    'principal_amount' => $loanItem->principal_amount,
-                    'terms_months' => $loanItem->terms_months,
-                    'interest_amount' => $loanItem->interest_amount,
-                    'total_amount_due' => $loanItem->total_amount_due,
-                    'monthly_amortization' => $loanItem->monthly_amortization,
-                    'disbursement_method' => $loanItem->disbursement_method,
-                    'status' => $loanItem->status,
-                    'remarks' => $loanItem->remarks,
-                    'rejected_by' => $loanItem->rejected_by,
-                    'rejected_at' => $loanItem->rejected_at?->format('c'),
-                    'created_at' => $loanItem->created_at->format('Y-m-d H:i:s'),
-                    'co_makers' => $loanItem->coMakers->map(function ($coMaker) {
-                        return [
-                            'id' => $coMaker->user->id,
-                            'name' => trim($coMaker->user->first_name . ($coMaker->user->middle_name ? ' ' . $coMaker->user->middle_name : '') . ' ' . $coMaker->user->last_name),
-                            'email' => $coMaker->user->email,
-                            'status' => $coMaker->status,
-                        ];
-                    }),
-                ];
+                 return [
+                     'id' => $loanItem->id,
+                     'loan_type_name' => $loanItem->loanType->name ?? 'N/A',
+                     'principal_amount' => $loanItem->principal_amount,
+                     'terms_months' => $loanItem->terms_months,
+                     'interest_amount' => $loanItem->interest_amount,
+                     'total_amount_due' => $loanItem->total_amount_due,
+                     'monthly_amortization' => $loanItem->monthly_amortization,
+                     'disbursement_method' => $loanItem->disbursement_method,
+                     'status' => $loanItem->status,
+                     'remarks' => $loanItem->remarks,
+                     'rejected_by' => $loanItem->rejected_by,
+                     'rejected_at' => $loanItem->rejected_at?->format('c'),
+                     'co_maker_rejection_reason' => $loanItem->co_maker_rejection_reason,
+                     'created_at' => $loanItem->created_at->format('Y-m-d H:i:s'),
+                     'co_makers' => $loanItem->coMakers->map(function ($coMaker) {
+                         return [
+                             'id' => $coMaker->user->id,
+                             'name' => trim($coMaker->user->first_name . ($coMaker->user->middle_name ? ' ' . $coMaker->user->middle_name : '') . ' ' . $coMaker->user->last_name),
+                             'email' => $coMaker->user->email,
+                             'status' => $coMaker->status,
+                         ];
+                     }),
+                 ];
             });
 
         if (!$loan) {
@@ -428,20 +429,21 @@ class LoanController extends Controller
                  'monthly_amortization' => $loan->monthly_amortization,
                  'disbursement_method' => $loan->disbursement_method,
                  'status' => $loan->status,
-                'remarks' => $loan->remarks,
-                'rejected_by' => $loan->rejected_by,
-                'rejected_at' => $loan->rejected_at?->format('c'),
-                'created_at' => $loan->created_at->format('Y-m-d H:i:s'),
-                'has_edited' => $loan->has_edited,
-                'co_makers' => $loan->coMakers->map(function ($coMaker) {
-                    return [
-                        'id' => $coMaker->user->id,
-                        'name' => trim($coMaker->user->first_name . ($coMaker->user->middle_name ? ' ' . $coMaker->user->middle_name : '') . ' ' . $coMaker->user->last_name),
-                        'email' => $coMaker->user->email,
-                        'status' => $coMaker->status,
-                    ];
-                }),
-            ],
+                 'remarks' => $loan->remarks,
+                 'rejected_by' => $loan->rejected_by,
+                 'rejected_at' => $loan->rejected_at?->format('c'),
+                 'co_maker_rejection_reason' => $loan->co_maker_rejection_reason,
+                 'created_at' => $loan->created_at->format('Y-m-d H:i:s'),
+                 'has_edited' => $loan->has_edited,
+                 'co_makers' => $loan->coMakers->map(function ($coMaker) {
+                     return [
+                         'id' => $coMaker->user->id,
+                         'name' => trim($coMaker->user->first_name . ($coMaker->user->middle_name ? ' ' . $coMaker->user->middle_name : '') . ' ' . $coMaker->user->last_name),
+                         'email' => $coMaker->user->email,
+                         'status' => $coMaker->status,
+                     ];
+                 }),
+             ],
             'hasPendingLoan' => true,
             'loanHistory' => $loanHistory,
             'unread_notifications_count' => $this->getMemberUnreadNotificationCount(request()),
@@ -576,7 +578,14 @@ class LoanController extends Controller
         $validated = $request->validate([
             'loan_id' => 'required|exists:loans,id',
             'action' => 'required|in:accept,reject',
+            'rejection_reason' => 'nullable|string|max:2000',
         ]);
+
+        if ($validated['action'] === 'reject' && empty($validated['rejection_reason'])) {
+            return back()->withErrors([
+                'rejection_reason' => 'Please provide a reason for declining the co-maker request.',
+            ])->withInput();
+        }
 
         $user = Auth::user();
 
@@ -643,6 +652,7 @@ class LoanController extends Controller
                 'remarks' => 'Co-maker declined the request.',
                 'rejected_by' => 'co_maker',
                 'rejected_at' => now(),
+                'co_maker_rejection_reason' => $validated['rejection_reason'],
             ]);
         }
 
@@ -659,7 +669,8 @@ class LoanController extends Controller
                 $loan->terms_months,
                 $loan->interest_amount,
                 $loan->monthly_amortization,
-                $loan->total_amount_due
+                $loan->total_amount_due,
+                $validated['rejection_reason'] ?? null
             ));
         } catch (\Exception $e) {
             // Log error but don't fail the request

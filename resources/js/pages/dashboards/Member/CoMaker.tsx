@@ -28,6 +28,17 @@ import {
     Briefcase,
     IdCard,
 } from 'lucide-react';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -74,6 +85,12 @@ function formatCurrency(amount: number | string): string {
 
 export default function CoMaker({ coMakerRequests }: CoMakerProps) {
     const [processingAction, setProcessingAction] = useState<'approve' | 'reject' | null>(null);
+    const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
+    const [selectedRequest, setSelectedRequest] = useState<CoMakerProps['coMakerRequests'][number] | null>(null);
+
+    const rejectForm = useForm({
+        rejection_reason: '',
+    });
 
     async function handleResponse(loanId: number, action: 'accept' | 'reject') {
         if (processingAction) return;
@@ -92,10 +109,14 @@ export default function CoMaker({ coMakerRequests }: CoMakerProps) {
             {
                 loan_id: loanId,
                 action: action,
+                rejection_reason: action === 'reject' ? rejectForm.data.rejection_reason : undefined,
             },
             {
                 onSuccess: () => {
                     setProcessingAction(null);
+                    setIsRejectDialogOpen(false);
+                    setSelectedRequest(null);
+                    rejectForm.reset();
                     if (action === 'accept') {
                         toast.success('You have accepted the co-maker request!');
                     } else {
@@ -119,6 +140,12 @@ export default function CoMaker({ coMakerRequests }: CoMakerProps) {
                 },
             }
         );
+    }
+
+    function openRejectDialog(request: CoMakerProps['coMakerRequests'][number]) {
+        if (processingAction) return;
+        setSelectedRequest(request);
+        setIsRejectDialogOpen(true);
     }
 
     return (
@@ -301,24 +328,82 @@ export default function CoMaker({ coMakerRequests }: CoMakerProps) {
                                                     </>
                                                 )}
                                             </Button>
-                                            <Button
-                                                onClick={() => handleResponse(request.loan_id, 'reject')}
-                                                variant="destructive"
-                                                disabled={isProcessingThis || isRejectDisabled}
-                                                className="flex-1 sm:flex-none"
-                                            >
-                                                {processingAction === 'reject' ? (
-                                                    <>
-                                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                                        Rejecting...
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <XCircle className="h-4 w-4 mr-2" />
-                                                        Decline Request
-                                                    </>
-                                                )}
-                                            </Button>
+
+                                            <Dialog open={isRejectDialogOpen && selectedRequest?.loan_id === request.loan_id} onOpenChange={(open) => {
+                                                setIsRejectDialogOpen(open);
+                                                if (!open) {
+                                                    setSelectedRequest(null);
+                                                    rejectForm.reset();
+                                                }
+                                            }}>
+                                                <DialogContent>
+                                                    <DialogHeader>
+                                                        <DialogTitle>Decline Co-Maker Request</DialogTitle>
+                                                        <DialogDescription>
+                                                            Please provide a reason for declining the co-maker request from {request.requester.name}. This reason will be shared with the applicant.
+                                                        </DialogDescription>
+                                                    </DialogHeader>
+                                                    <div className="py-4">
+                                                        <Label htmlFor="rejection_reason">Rejection Reason *</Label>
+                                                        <Textarea
+                                                            id="rejection_reason"
+                                                            placeholder="Enter reason for declining..."
+                                                            value={rejectForm.data.rejection_reason}
+                                                            onChange={(e) => rejectForm.setData('rejection_reason', e.target.value)}
+                                                            className="mt-2 min-h-[100px]"
+                                                        />
+                                                        {rejectForm.errors.rejection_reason && (
+                                                            <p className="text-sm text-red-500 mt-1">{rejectForm.errors.rejection_reason}</p>
+                                                        )}
+                                                    </div>
+                                                    <DialogFooter>
+                                                        <Button variant="outline" onClick={() => {
+                                                            setIsRejectDialogOpen(false);
+                                                            setSelectedRequest(null);
+                                                            rejectForm.reset();
+                                                        }}>
+                                                            Cancel
+                                                        </Button>
+                                                        <Button
+                                                            variant="destructive"
+                                                            onClick={() => handleResponse(request.loan_id, 'reject')}
+                                                            disabled={!rejectForm.data.rejection_reason.trim() || processingAction !== null}
+                                                        >
+                                                            {processingAction === 'reject' ? (
+                                                                <>
+                                                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                                                    Declining...
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <XCircle className="h-4 w-4 mr-2" />
+                                                                    Confirm Decline
+                                                                </>
+                                                            )}
+                                                        </Button>
+                                                    </DialogFooter>
+                                                </DialogContent>
+                                                <DialogTrigger asChild>
+                                                    <Button
+                                                        variant="destructive"
+                                                        onClick={() => openRejectDialog(request)}
+                                                        disabled={isProcessingThis || isRejectDisabled}
+                                                        className="flex-1 sm:flex-none"
+                                                    >
+                                                        {processingAction === 'reject' ? (
+                                                            <>
+                                                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                                                Declining...
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <XCircle className="h-4 w-4 mr-2" />
+                                                                Decline Request
+                                                            </>
+                                                        )}
+                                                    </Button>
+                                                </DialogTrigger>
+                                            </Dialog>
                                         </div>
 
                                         <p className="text-xs text-muted-foreground text-center pt-1">

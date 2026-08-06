@@ -2,25 +2,30 @@
 
 namespace App\Imports;
 
-use App\Models\User;
+use App\Mail\SendMembersPass;
 use App\Models\MemberProfile;
+use App\Models\User;
+use Carbon\Carbon;
+use DateTimeInterface;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Maatwebsite\Excel\Concerns\Importable;
+use Maatwebsite\Excel\Concerns\SkipsEmptyRows;
 use Maatwebsite\Excel\Concerns\ToCollection;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
-use Maatwebsite\Excel\Concerns\SkipsEmptyRows;
-use Maatwebsite\Excel\Concerns\Importable;
-use App\Mail\SendMembersPass;
+use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
 
-class BulkMemberImport implements ToCollection, WithHeadingRow, SkipsEmptyRows
+class BulkMemberImport implements SkipsEmptyRows, ToCollection, WithHeadingRow
 {
     use Importable;
 
     public int $successCount = 0;
+
     public int $sentEmailCount = 0;
+
     /** @var array<int, array{row: int, email: string, error: string}> */
     public array $failures = [];
 
@@ -38,7 +43,7 @@ class BulkMemberImport implements ToCollection, WithHeadingRow, SkipsEmptyRows
         'basic_salary',
     ];
 
-    protected int|null $nextEmployeeIdCounter = null;
+    protected ?int $nextEmployeeIdCounter = null;
 
     /**
      * Generate a cryptographically secure temporary password.
@@ -256,15 +261,59 @@ class BulkMemberImport implements ToCollection, WithHeadingRow, SkipsEmptyRows
 
         // Date validations
         foreach (['date_of_birth'] as $field) {
-            if (! empty($row[$field])) {
-                $ts = strtotime($row[$field]);
-                if ($ts === false) {
-                    $errors[] = "Invalid date format for {$field}: {$row[$field]} (use YYYY-MM-DD)";
+            $rawDate = $row[$field] ?? null;
+
+            if ($rawDate !== null && $rawDate !== '') {
+                $normalisedDate = $this->normaliseDate($rawDate);
+
+                if ($normalisedDate === null) {
+                    $errors[] = "Invalid date format for {$field}: {$rawDate} (use YYYY-MM-DD)";
+                } else {
+                    $row[$field] = $normalisedDate;
                 }
             }
         }
 
         return $errors;
+    }
+
+    protected function normaliseDate(mixed $value): ?string
+    {
+        if ($value instanceof Carbon) {
+            return $value->toDateString();
+        }
+
+        if ($value instanceof DateTimeInterface) {
+            return Carbon::instance($value)->toDateString();
+        }
+
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        if (is_numeric($value)) {
+            return Carbon::instance(ExcelDate::excelToDateTimeObject((float) $value))->toDateString();
+        }
+
+        $value = trim((string) $value);
+
+        foreach (['Y-m-d', 'd/m/Y', 'd-m-Y', 'm/d/Y', 'm-d-Y'] as $format) {
+            try {
+                $date = Carbon::createFromFormat($format, $value);
+
+                if ($date && $date->format($format) === $value) {
+                    return $date->toDateString();
+                }
+            } catch (\Throwable) {
+                // Try the next supported spreadsheet/user-entered date format.
+            }
+        }
+
+        try {
+            return Carbon::parse($value)->toDateString();
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     /**
@@ -290,6 +339,8 @@ class BulkMemberImport implements ToCollection, WithHeadingRow, SkipsEmptyRows
         if (isset($row['spouse_income_type'])) {
             $row['spouse_income_type'] = strtolower($row['spouse_income_type']);
         }
+
+        $row['date_of_birth'] = $this->normaliseDate($row['date_of_birth'] ?? null);
 
         // Numeric casts
         $numericFields = [
@@ -408,6 +459,7 @@ class BulkMemberImport implements ToCollection, WithHeadingRow, SkipsEmptyRows
                     'email' => $normalised['email'] ?? 'N/A',
                     'error' => implode('; ', $validationErrors),
                 ];
+
                 continue;
             }
 
@@ -425,4 +477,3 @@ class BulkMemberImport implements ToCollection, WithHeadingRow, SkipsEmptyRows
         }
     }
 }
-

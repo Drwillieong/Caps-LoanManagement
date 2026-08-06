@@ -482,6 +482,20 @@ class PayrollDeductionService
             return Carbon::instance(ExcelDate::excelToDateTimeObject((float) $value));
         }
 
+        $value = trim((string) $value);
+
+        foreach (['Y-m-d', 'd/m/Y', 'd-m-Y', 'm/d/Y', 'm-d-Y'] as $format) {
+            try {
+                $date = Carbon::createFromFormat($format, $value);
+
+                if ($date && $date->format($format) === $value) {
+                    return $date;
+                }
+            } catch (Throwable) {
+                // Try the next supported spreadsheet/user-entered date format.
+            }
+        }
+
         try {
             return Carbon::parse($value);
         } catch (Throwable) {

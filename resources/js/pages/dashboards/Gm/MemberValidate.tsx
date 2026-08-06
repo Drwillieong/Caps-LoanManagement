@@ -97,7 +97,7 @@ interface Props {
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Dashboard', href: '/dashboards/Gm/GmDashboard' },
+    { title: 'Dashboard', href: '/dashboard' },
     { title: 'Member Validation', href: '/dashboards/Gm/MemberValidate' },
 ];
 

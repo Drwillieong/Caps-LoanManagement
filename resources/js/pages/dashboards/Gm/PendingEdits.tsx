@@ -37,7 +37,7 @@ import {
 } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'GM Dashboard', href: '/dashboards/Gm/GmDashboard' },
+    { title: 'GM Dashboard', href: '/dashboard' },
     { title: 'Pending Profile Edits', href: '/dashboards/Gm/PendingEdits' },
 ];
 

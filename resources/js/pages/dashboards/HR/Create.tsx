@@ -1,5 +1,5 @@
-import { Form, Head, Link } from '@inertiajs/react';
-import { useState, useCallback, ReactNode } from 'react';
+import { Head, Link, useForm } from '@inertiajs/react';
+import { useState, useCallback, type ReactNode, type FormEvent } from 'react';
 import toast from 'react-hot-toast';
 import {
     ArrowLeft,
@@ -124,6 +124,8 @@ const SELECT_CLASS =
 // ──────────────────────────────────────────────────
 
 export default function Create({ roles }: Props) {
+    const { post, processing, errors, setError, clearErrors, transform } = useForm({});
+
     const [formData, setFormData] = useState({
         // ── Identity ──
         first_name: '',
@@ -404,6 +406,79 @@ export default function Create({ roles }: Props) {
         return errors;
     };
 
+    const buildPayload = () => {
+        const parseNum = (val: string) => {
+            const num = parseFloat(val.replace(/,/g, ''));
+            return isNaN(num) ? 0 : num;
+        };
+        const parseNullableNum = (val: string) => {
+            const cleaned = val.replace(/,/g, '');
+            return cleaned ? parseFloat(cleaned) : null;
+        };
+
+        const cleanedPhone = parsePhone(formData.permanent_mobile_number);
+        const tc = (v: string) => titleCase(v.trim());
+        const firstBeneficiary = formData.beneficiaries.find((b) => b.full_name);
+
+        return {
+            first_name: tc(formData.first_name),
+            middle_name: formData.middle_name ? tc(formData.middle_name) : null,
+            last_name: tc(formData.last_name),
+            email: formData.email.trim().toLowerCase(),
+            role: 'member',
+            place_of_birth: tc(formData.place_of_birth),
+            date_of_birth: formData.date_of_birth,
+            civil_status: formData.civil_status,
+            sex: formData.sex,
+            educational_attainment: formData.educational_attainment,
+            mobile_number: cleanedPhone,
+            permanent_mobile_number: cleanedPhone,
+            present_address: formData.present_address.trim(),
+            present_zip_code: formData.present_zip_code.trim(),
+            permanent_address: formData.permanent_address.trim(),
+            permanent_zip_code: formData.permanent_zip_code.trim(),
+            position: formData.position.trim(),
+            basic_salary: parseNum(formData.basic_salary),
+            income_type: formData.income_type,
+            net_income: parseNum(formData.net_income),
+            share_capital_balance: parseNum(formData.share_capital_balance),
+            other_source_of_income: formData.other_source_of_income.trim() || null,
+            facebook_account_name: formData.facebook_account_name.trim() || null,
+            spouse_occupation: formData.spouse_occupation.trim() || null,
+            spouse_gross_income: parseNullableNum(formData.spouse_gross_income),
+            spouse_income_type: formData.spouse_income_type,
+            spouse_net_income: parseNullableNum(formData.spouse_net_income),
+            real_properties_owned: formData.real_properties_owned.trim() || null,
+            legal_beneficiary_1_name: firstBeneficiary?.full_name
+                ? tc(firstBeneficiary.full_name)
+                : null,
+        };
+    };
+
+    const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        clearErrors();
+
+        const spouseConditionalErrors = getSpouseConditionalErrors();
+        if (Object.keys(spouseConditionalErrors).length > 0) {
+            setError(spouseConditionalErrors);
+            toast.error('Please complete the highlighted spouse fields.');
+            return;
+        }
+
+        transform(() => buildPayload());
+        post('/dashboards/HR/SeeUsers', {
+            onSuccess: () => {
+                toast.success(
+                    'Member created successfully! The application has been submitted for GM validation.',
+                );
+            },
+            onError: () => {
+                toast.error('Failed to create member. Please check the form for errors.');
+            },
+        });
+    };
+
     return (
         <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
             <Head title="Create Member" />
@@ -426,73 +501,9 @@ export default function Create({ roles }: Props) {
                     </div>
                 </div>
 
-                <Form
-                    method="post"
-                    action="/dashboards/HR/SeeUsers"
-                    transform={() => {
-                        const parseNum = (val: string) => {
-                            const num = parseFloat(val.replace(/,/g, ''));
-                            return isNaN(num) ? 0 : num;
-                        };
-                        const parseNullableNum = (val: string) => {
-                            const cleaned = val.replace(/,/g, '');
-                            return cleaned ? parseFloat(cleaned) : null;
-                        };
-
-                        const cleanedPhone = parsePhone(formData.permanent_mobile_number);
-                        const tc = (v: string) => titleCase(v.trim());
-                        const firstBeneficiary = formData.beneficiaries.find((b) => b.full_name);
-
-                        return {
-                            first_name: tc(formData.first_name),
-                            middle_name: formData.middle_name ? tc(formData.middle_name) : null,
-                            last_name: tc(formData.last_name),
-                            email: formData.email.trim().toLowerCase(),
-                            role: 'member',
-                            place_of_birth: tc(formData.place_of_birth),
-                            date_of_birth: formData.date_of_birth,
-                            civil_status: formData.civil_status,
-                            sex: formData.sex,
-                            educational_attainment: formData.educational_attainment,
-                            mobile_number: cleanedPhone,
-                            permanent_mobile_number: cleanedPhone,
-                            present_address: formData.present_address.trim(),
-                            present_zip_code: formData.present_zip_code.trim(),
-                            permanent_address: formData.permanent_address.trim(),
-                            permanent_zip_code: formData.permanent_zip_code.trim(),
-                            position: formData.position.trim(),
-                            basic_salary: parseNum(formData.basic_salary),
-                            income_type: formData.income_type,
-                            net_income: parseNum(formData.net_income),
-                            share_capital_balance: parseNum(formData.share_capital_balance),
-                            other_source_of_income: formData.other_source_of_income.trim() || null,
-                            facebook_account_name: formData.facebook_account_name.trim() || null,
-                            spouse_occupation: formData.spouse_occupation.trim() || null,
-                            spouse_gross_income: parseNullableNum(formData.spouse_gross_income),
-                            spouse_income_type: formData.spouse_income_type,
-                            spouse_net_income: parseNullableNum(formData.spouse_net_income),
-                            real_properties_owned: formData.real_properties_owned.trim() || null,
-                            legal_beneficiary_1_name: firstBeneficiary?.full_name
-                                ? tc(firstBeneficiary.full_name)
-                                : null,
-                        };
-                    }}
-                    className="space-y-6"
-                    onSuccess={() => {
-                        toast.success(
-                            'Member created successfully! The application has been submitted for GM validation.',
-                        );
-                    }}
-                    onError={() => {
-                        toast.error(
-                            'Failed to create member. Please check the form for errors.',
-                        );
-                    }}
-                >
-                    {({ processing, errors }: { processing: boolean; errors: Record<string, string> }) => {
-                        const serverErrors = errors as Record<string, string>;
-                        const spouseConditionalErrors = getSpouseConditionalErrors();
-                        const err = { ...serverErrors, ...spouseConditionalErrors };
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    {(() => {
+                        const err = errors as Record<string, string>;
 
                         return (
                             <>
@@ -983,10 +994,9 @@ export default function Create({ roles }: Props) {
                                 </div>
                             </>
                         );
-                    }}
-                </Form>
+                    })()}
+                </form>
             </div>
         </AppLayout>
     );
 }
-

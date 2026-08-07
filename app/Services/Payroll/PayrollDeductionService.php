@@ -239,7 +239,7 @@ class PayrollDeductionService
                     'payroll_id' => $payload['payroll_id'] ?? null,
                     'employee_name' => $payload['employee_name'] ?? null,
                     'cutoff_date' => $cutoffDate->toDateString(),
-                    'deduction_amount' => $deductionAmount,
+                    'deduction_amount' => $deductionAmount ?? 0,
                     'raw_payload' => $rawRow->toArray(),
                     'remarks' => $payload['remarks'] ?? null,
                 ];
@@ -293,7 +293,7 @@ class PayrollDeductionService
                 try {
                     $result = $this->postingService->applyMemberPayrollDeduction(
                         $memberProfile,
-                        $deductionAmount,
+                        $deductionAmount ?? 0,
                         $cutoffDate,
                         $processedBy,
                         [
@@ -306,10 +306,10 @@ class PayrollDeductionService
                         ],
                     );
 
-                    if ($result['status'] === 'skipped' && $deductionAmount > 0) {
+                    if ($result['status'] === 'skipped' && ($deductionAmount ?? 0) > 0) {
                         $this->failRow($uploadRow, [$result['message']], [
                             'applied_amount' => 0,
-                            'unapplied_amount' => $deductionAmount,
+                            'unapplied_amount' => $deductionAmount ?? 0,
                         ]);
                         $stats['failed_rows']++;
 
@@ -351,7 +351,7 @@ class PayrollDeductionService
         ]);
     }
 
-    private function validatePayload(array $payload, float $deductionAmount, mixed $rawCutoffDate, ?Carbon $parsedCutoffDate): array
+    private function validatePayload(array $payload, ?float $deductionAmount, mixed $rawCutoffDate, ?Carbon $parsedCutoffDate): array
     {
         $errors = [];
 
@@ -360,7 +360,9 @@ class PayrollDeductionService
             $errors[] = 'Provide employee_id or payroll_id.';
         }
 
-        if ($deductionAmount < 0) {
+        if ($deductionAmount === null) {
+            $errors[] = 'Deduction amount is invalid.';
+        } elseif ($deductionAmount < 0) {
             $errors[] = 'Deduction amount cannot be negative.';
         }
 
@@ -445,7 +447,7 @@ class PayrollDeductionService
         return null;
     }
 
-    private function parseMoney(mixed $value): float
+    private function parseMoney(mixed $value): ?float
     {
         if ($value === null || $value === '') {
             return 0.0;
@@ -458,7 +460,11 @@ class PayrollDeductionService
         $normalized = preg_replace('/[^\d.\-]/', '', (string) $value);
 
         if ($normalized === '' || $normalized === '-') {
-            return 0.0;
+            return null;
+        }
+
+        if (! preg_match('/^-?\d+(\.\d+)?$/', $normalized)) {
+            return null;
         }
 
         return round((float) $normalized, 2);

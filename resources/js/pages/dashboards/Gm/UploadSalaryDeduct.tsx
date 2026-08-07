@@ -157,6 +157,7 @@ export default function UploadSalaryDeduct({
     const [historySearch, setHistorySearch] = useState('');
     const [exceptionSearch, setExceptionSearch] = useState('');
     const [manualOpen, setManualOpen] = useState(false);
+    const [uploadInputKey, setUploadInputKey] = useState(0);
 
     const uploadForm = useForm<{
         payroll_file: File | null;
@@ -203,7 +204,18 @@ export default function UploadSalaryDeduct({
         uploadForm.post('/dashboards/Gm/UploadSalaryDeduct', {
             forceFormData: true,
             preserveScroll: true,
-            onSuccess: () => uploadForm.reset('payroll_file', 'remarks'),
+            headers: {
+                Accept: 'text/html, application/xhtml+xml',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            onSuccess: () => {
+                uploadForm.reset('payroll_file', 'remarks');
+                setUploadInputKey((key) => key + 1);
+                toast.success('File uploaded successfully. Emails are being sent in the background.');
+            },
+            onError: () => {
+                toast.error('Upload failed. Please review the file and highlighted fields.');
+            },
         });
     }
 
@@ -556,9 +568,11 @@ export default function UploadSalaryDeduct({
                                     <div className="space-y-2">
                                         <Label htmlFor="payroll_file">Excel / CSV File</Label>
                                         <Input
+                                            key={uploadInputKey}
                                             id="payroll_file"
                                             type="file"
                                             accept=".xlsx,.xls,.csv,.ods"
+                                            disabled={uploadForm.processing || processing.active}
                                             onChange={(event) =>
                                                 uploadForm.setData(
                                                     'payroll_file',
@@ -604,7 +618,7 @@ export default function UploadSalaryDeduct({
                                     ) : (
                                         <Upload className="size-4" />
                                     )}
-                                    Process Payroll
+                                    {uploadForm.processing ? 'Uploading and processing...' : 'Process Payroll'}
                                 </Button>
                             </form>
                         </CardContent>
@@ -803,7 +817,7 @@ export default function UploadSalaryDeduct({
                                                 </TableCell>
                                                 <TableCell>
                                                     <div className="flex flex-wrap gap-1">
-                                                        <Badge variant="outline">{upload.paid_count} paid</Badge>
+                                                        <Badge variant="outline">{upload.paid_count} complete</Badge>
                                                         <Badge variant="outline">{upload.partial_count} partial</Badge>
                                                         <Badge variant="outline">{upload.missed_count} missed</Badge>
                                                         {upload.failed_rows > 0 && (
@@ -893,7 +907,7 @@ function InfoTile({
 }
 
 function StatusBadge({ status }: { status: string }) {
-    const normalized = status.replaceAll('_', ' ');
+    const normalized = status === 'paid' ? 'complete' : status.replaceAll('_', ' ');
 
     if (['failed', 'missed', 'overdue'].includes(status)) {
         return <Badge variant="destructive">{normalized}</Badge>;

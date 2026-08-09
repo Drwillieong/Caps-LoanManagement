@@ -234,6 +234,7 @@ export default function MembersProfile({ user, memberProfile, beneficiaries, isA
 
     // Initialize form data from existing profile or defaults
     const [formData, setFormData] = useState<any>({
+        email: user.email || '',
         employee_id: memberProfile?.employee_id || '',
         first_name: memberProfile?.first_name || '',
         middle_name: memberProfile?.middle_name || '',
@@ -698,15 +699,7 @@ export default function MembersProfile({ user, memberProfile, beneficiaries, isA
                                       </div>
                                     </div>
                                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                                        <div className="grid gap-2 md:col-span-2 lg:col-span-1">
-                                            <Label htmlFor="email">Email Address</Label>
-                                            <div className="relative">
-                                                <Mail className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground" />
-                                                <div className="rounded-md border bg-muted px-3 py-2 pl-9 text-sm">
-                                                    {user.email}
-                                                </div>
-                                            </div>
-                                        </div>
+                                       
 
                                         <div className="grid gap-2">
                                             <Label htmlFor="employee_id">
@@ -973,6 +966,25 @@ export default function MembersProfile({ user, memberProfile, beneficiaries, isA
                                                 />
                                             )}
                                             <InputError message={errors.present_zip_code} />
+                                        </div> 
+
+                                         <div className="grid gap-2 md:col-span-2 lg:col-span-1">
+                                            <Label htmlFor="email">Email Address</Label>
+                                            <div className="relative">
+                                                <Mail className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground" />
+                                                <Input
+                                                    id="email"
+                                                    name="email"
+                                                    type="email"
+                                                    value={formData.email}
+                                                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                                    placeholder="Email address"
+                                                    className="pl-9"
+                                                    disabled={!isEditing}
+                                                    aria-invalid={!!errors.email}
+                                                />
+                                            </div>
+                                            <InputError message={errors.email} />
                                         </div>
 
                                         <div className="grid gap-2">

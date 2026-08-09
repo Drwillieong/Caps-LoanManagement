@@ -118,6 +118,8 @@ class ProfileUpdateRequestController extends Controller
             unset($pendingData[$field]);
         }
 
+        $originalUser = $memberProfile->user?->toArray() ?? [];
+
         if (!array_key_exists('mobile_number', $pendingData)) {
             $pendingData['mobile_number'] = $originalData['mobile_number'] ?? null;
         }
@@ -128,7 +130,7 @@ class ProfileUpdateRequestController extends Controller
         // Filter pending_data to ONLY include fields that actually changed
         // This prevents unchanged fields (with formatting differences) from appearing as diffs
         $filteredPending = [];
-        foreach (self::COMPARABLE_FIELDS as $field) {
+        foreach (array_merge(self::COMPARABLE_FIELDS, self::USER_FIELDS) as $field) {
             $origVal = $this->normalizeDiffValue($field, $originalData[$field] ?? null);
             $pendVal = $this->normalizeDiffValue($field, $pendingData[$field] ?? null);
 
@@ -423,6 +425,16 @@ class ProfileUpdateRequestController extends Controller
 
         // Update the member profile with the sanitized changes
         $memberProfile->update($pendingData);
+
+        // Apply any user-account field changes (e.g. email)
+        $userData = collect($rawPendingData)
+            ->only(self::USER_FIELDS)
+            ->filter(fn ($value) => ! is_null($value) && $value !== '')
+            ->toArray();
+
+        if (! empty($userData) && $memberProfile->user) {
+            $memberProfile->user->update($userData);
+        }
 
         if (isset($rawPendingData['beneficiaries']) && is_array($rawPendingData['beneficiaries'])) {
             $memberProfile->beneficiaries()->delete();

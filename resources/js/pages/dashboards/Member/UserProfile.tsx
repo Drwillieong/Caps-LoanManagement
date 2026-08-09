@@ -153,84 +153,7 @@ export default function UserProfile({ memberProfile, beneficiaries, isNewUser, i
     // For HR editing, always enable editing
 const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
 
-    // ── Email editing state ──
-    // Kept separate from `isEditing` so the email can be edited independently
-    // of the main profile form (which submits to a different endpoint).
-    const [isEditingEmail, setIsEditingEmail] = useState(false);
-    const [email, setEmail] = useState(userEmail);
-    const [emailDraft, setEmailDraft] = useState(userEmail);
-    const [emailError, setEmailError] = useState<string | null>(null);
-    const [isSavingEmail, setIsSavingEmail] = useState(false);
-    const [emailSaved, setEmailSaved] = useState(false);
-
-    // Keep local email in sync if the shared auth prop changes (e.g. after a reload)
-    useEffect(() => {
-        setEmail(userEmail);
-        setEmailDraft(userEmail);
-    }, [userEmail]);
-
-    /**
-     * Placeholder for the backend/API update.
-     *
-     * TODO: Replace this stub with the real persistence call, e.g.
-     *   router.patch('/settings/profile', { email: newEmail }, { preserveScroll: true })
-     * or a dedicated endpoint such as PATCH /dashboards/Member/UserProfile/email.
-     * It should return/throw so the caller can surface validation errors.
-     */
-    const updateEmailOnServer = async (newEmail: string): Promise<void> => {
-        // eslint-disable-next-line no-console
-        console.log('[placeholder] updateEmailOnServer called with:', newEmail);
-        // Simulates async latency so the loading state is exercised.
-        await new Promise((resolve) => setTimeout(resolve, 400));
-    };
-
-    const handleEditEmail = () => {
-        setEmailDraft(email);
-        setEmailError(null);
-        setEmailSaved(false);
-        setIsEditingEmail(true);
-    };
-
-    const handleCancelEmail = () => {
-        setEmailDraft(email);
-        setEmailError(null);
-        setIsEditingEmail(false);
-    };
-
-    const handleSaveEmail = async () => {
-        const trimmed = emailDraft.trim();
-
-        if (!trimmed) {
-            setEmailError('Email address is required.');
-            return;
-        }
-
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
-            setEmailError('Please enter a valid email address.');
-            return;
-        }
-
-        if (trimmed === email) {
-            setIsEditingEmail(false);
-            setEmailError(null);
-            return;
-        }
-
-        setIsSavingEmail(true);
-        setEmailError(null);
-
-        try {
-            await updateEmailOnServer(trimmed);
-            setEmail(trimmed);
-            setIsEditingEmail(false);
-            setEmailSaved(true);
-        } catch {
-            setEmailError('Failed to update email address. Please try again.');
-        } finally {
-            setIsSavingEmail(false);
-        }
-    };
-
+   
     const [previewUrl, setPreviewUrl] = useState('');
     
     useEffect(() => {
@@ -273,6 +196,7 @@ const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
 
     // Initialize form data from existing profile or defaults
     const [formData, setFormData] = useState<any>({
+        email: userEmail || '',
         employee_id: memberProfile?.employee_id || '',
         first_name: memberProfile?.first_name || '',
         middle_name: memberProfile?.middle_name || '',
@@ -538,7 +462,17 @@ const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
             <Form
                 method={formMethod}
                 action={formActionUrl}
-                transform={() => formData as any}
+                transform={() => {
+                    const data = { ...formData } as any;
+
+                    CURRENCY_FIELDS.forEach((field) => {
+                        if (data[field] !== undefined && data[field] !== '') {
+                            data[field] = cleanNumericValue(data[field]);
+                        }
+                    });
+
+                    return data;
+                }}
                 className="space-y-6"
             >
                 {({ processing, recentlySuccessful, errors }) => (
@@ -649,70 +583,8 @@ const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
                                         />
                                     <InputError message={errors.employee_id} />
                                     </div>
-
-                                    <div className="grid gap-2 md:col-span-2 lg:col-span-1">
-                                        <Label htmlFor="email">Email Address</Label>
-                                        {!isEditingEmail ? (
-                                            <div className="flex items-center gap-2">
-                                                <div className="relative flex-1">
-                                                    <Mail className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground" />
-                                                    <div className="rounded-md border bg-muted px-3 py-2 pl-9 text-sm">
-                                                        {email}
-                                                    </div>
-                                                </div>
-                                                <Button
-                                                    type="button"
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={handleEditEmail}
-                                                >
-                                                    Edit
-                                                </Button>
-                                            </div>
-                                        ) : (
-                                            <div className="grid gap-2">
-                                                <div className="relative">
-                                                    <Mail className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground" />
-                                                    <Input
-                                                        id="email"
-                                                        type="email"
-                                                        autoComplete="email"
-                                                        value={emailDraft}
-                                                        onChange={(e) => setEmailDraft(e.target.value)}
-                                                        placeholder="you@example.com"
-                                                        className="pl-9"
-                                                        disabled={isSavingEmail}
-                                                        aria-invalid={!!emailError}
-                                                    />
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <Button
-                                                        type="button"
-                                                        size="sm"
-                                                        onClick={handleSaveEmail}
-                                                        disabled={isSavingEmail}
-                                                    >
-                                                        {isSavingEmail ? 'Saving...' : 'Save'}
-                                                    </Button>
-                                                    <Button
-                                                        type="button"
-                                                        variant="outline"
-                                                        size="sm"
-                                                        onClick={handleCancelEmail}
-                                                        disabled={isSavingEmail}
-                                                    >
-                                                        Cancel
-                                                    </Button>
-                                                </div>
-                                            </div>
-                                        )}
-                                        <InputError message={emailError ?? undefined} />
-                                        {emailSaved && !isEditingEmail && (
-                                            <p className="text-sm text-green-600">
-                                                Email updated successfully!
-                                            </p>
-                                        )}
-                                    </div>
+ 
+                                    
 
                                   
                                     <div className="grid gap-2">
@@ -972,6 +844,22 @@ const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
                                             />
                                         )}
                                         <InputError message={errors.present_zip_code} />
+                                    </div>
+
+                                     <div className="grid gap-2">
+                                        <Label htmlFor="email">
+                                            Email <span className="text-red-500">*</span>
+                                        </Label>
+                                        <Input
+                                            id="email"
+                                            name="email"
+                                            value={formData.email}
+                                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                            required={isRequired('email')}
+                                            placeholder="Email address"
+                                            disabled={!isEditing}
+                                        />
+                                        <InputError message={errors.email} />
                                     </div>
 
                                     <div className="grid gap-2">

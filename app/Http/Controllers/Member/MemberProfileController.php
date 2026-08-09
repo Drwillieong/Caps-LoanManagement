@@ -102,9 +102,17 @@ class MemberProfileController extends Controller
             'beneficiaries.*.full_name' => 'nullable|string|max:255',
             'beneficiaries.*.relationship' => 'nullable|string|max:255',
             'beneficiaries.*.date_of_birth' => 'nullable|date|before:today',
+
+            // Account
+            'email' => 'nullable|email|max:255|unique:users,email,'.$request->user()->id,
         ]);
 
         $user = $request->user();
+
+        if (! empty($validated['email']) && $validated['email'] !== $user->email) {
+            $user->email = $validated['email'];
+            $user->save();
+        }
 
         if ($request->hasFile('profile_picture')) {
             $memberProfile = MemberProfile::firstOrNew(['user_id' => $user->id]);
@@ -189,7 +197,15 @@ class MemberProfileController extends Controller
             'beneficiaries.*.full_name' => 'nullable|string|max:255',
             'beneficiaries.*.relationship' => 'nullable|string|max:255',
             'beneficiaries.*.date_of_birth' => 'nullable|date|before:today',
+
+            // Account
+            'email' => 'nullable|email|max:255|unique:users,email,'.$targetUser->id,
         ]);
+
+        if (! empty($validated['email']) && $validated['email'] !== $targetUser->email) {
+            $targetUser->email = $validated['email'];
+            $targetUser->save();
+        }
 
         if ($request->hasFile('profile_picture')) {
             $memberProfile = MemberProfile::firstOrNew(['employee_id' => $employeeId]);

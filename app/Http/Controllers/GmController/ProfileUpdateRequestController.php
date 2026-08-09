@@ -8,6 +8,7 @@ use App\Models\ProfileUpdateRequest;
 use App\Services\ActivityLogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class ProfileUpdateRequestController extends Controller
@@ -26,6 +27,13 @@ class ProfileUpdateRequestController extends Controller
         'facebook_account_name',
         'spouse_occupation', 'spouse_gross_income', 'spouse_income_type', 'spouse_net_income',
         'legal_beneficiary_1_name', 'real_properties_owned',
+    ];
+
+    /**
+     * Fields stored on the linked users table that may be changed via profile edits.
+     */
+    private const USER_FIELDS = [
+        'email',
     ];
 
     /**
@@ -88,10 +96,53 @@ class ProfileUpdateRequestController extends Controller
      */
     public function store(Request $request)
     {
+        $memberId = (string) $request->input('member_id');
+        $memberProfile = MemberProfile::with(['user', 'beneficiaries'])->findOrFail($memberId);
+        $memberUserId = $memberProfile->user?->id;
+
         $validated = $request->validate([
             'member_id' => 'required|string|exists:member_profiles,employee_id',
             'pending_data' => 'required|array',
         ]);
+
+        $validatedPendingData = validator($request->input('pending_data', []), [
+            'email' => [
+                'nullable',
+                'email',
+                'max:255',
+                Rule::unique('users', 'email')->ignore($memberUserId),
+            ],
+            'first_name' => 'nullable|string|max:255',
+            'middle_name' => 'nullable|string|max:255',
+            'last_name' => 'nullable|string|max:255',
+            'place_of_birth' => 'nullable|string|max:255',
+            'date_of_birth' => 'nullable|date|before:today',
+            'sex' => 'nullable|in:male,female',
+            'civil_status' => 'nullable|in:single,married,widowed,separated',
+            'educational_attainment' => 'nullable|string|max:255',
+            'mobile_number' => 'nullable|string|max:20',
+            'permanent_mobile_number' => 'nullable|string|max:20',
+            'present_address' => 'nullable|string|max:2000',
+            'present_zip_code' => 'nullable|string|max:20',
+            'permanent_address' => 'nullable|string|max:2000',
+            'permanent_zip_code' => 'nullable|string|max:20',
+            'position' => 'nullable|string|max:255',
+            'basic_salary' => 'nullable|numeric|min:10000',
+            'income_type' => 'nullable|in:monthly,daily,yearly',
+            'net_income' => 'nullable|numeric|min:10000',
+            'share_capital_balance' => 'nullable|numeric|min:10000',
+            'other_source_of_income' => 'nullable|string|max:255',
+            'facebook_account_name' => 'nullable|string|max:255',
+            'spouse_occupation' => 'nullable|string|max:255',
+            'spouse_gross_income' => 'required_with:spouse_occupation|nullable|numeric|min:0',
+            'spouse_income_type' => 'required_with:spouse_occupation|nullable|in:monthly,daily,yearly',
+            'spouse_net_income' => 'required_with:spouse_occupation|nullable|numeric|min:0',
+            'real_properties_owned' => 'nullable|string|max:2000',
+            'beneficiaries' => 'nullable|array',
+            'beneficiaries.*.full_name' => 'nullable|string|max:255',
+            'beneficiaries.*.relationship' => 'nullable|string|max:255',
+            'beneficiaries.*.date_of_birth' => 'nullable|date|before:today',
+        ])->validate();
 
         // Check if there's already a pending update request for this member
         $existingPending = ProfileUpdateRequest::where('member_id', $validated['member_id'])
@@ -103,8 +154,6 @@ class ProfileUpdateRequestController extends Controller
                 ->with('error', 'An update request for this profile is already awaiting GM approval.');
         }
 
-        // Get the current member profile data as snapshot
-        $memberProfile = MemberProfile::with('beneficiaries')->findOrFail($validated['member_id']);
         $originalData = $memberProfile->toArray();
         $originalData['beneficiaries'] = $this->normalizeBeneficiaries($memberProfile->beneficiaries->toArray());
 
@@ -113,7 +162,7 @@ class ProfileUpdateRequestController extends Controller
 
         // Ensure mobile_number and legal_beneficiary_1_name are present in pending_data
         // so they don't cause false-positives when compared.
-        $pendingData = $validated['pending_data'];
+        $pendingData = $validatedPendingData;
         foreach (self::IMMUTABLE_FIELDS as $field) {
             unset($pendingData[$field]);
         }
@@ -131,7 +180,8 @@ class ProfileUpdateRequestController extends Controller
         // This prevents unchanged fields (with formatting differences) from appearing as diffs
         $filteredPending = [];
         foreach (array_merge(self::COMPARABLE_FIELDS, self::USER_FIELDS) as $field) {
-            $origVal = $this->normalizeDiffValue($field, $originalData[$field] ?? null);
+            $source = in_array($field, self::USER_FIELDS, true) ? $originalUser : $originalData;
+            $origVal = $this->normalizeDiffValue($field, $source[$field] ?? null);
             $pendVal = $this->normalizeDiffValue($field, $pendingData[$field] ?? null);
 
             // If both are null/empty after normalization — skip
@@ -150,6 +200,7 @@ class ProfileUpdateRequestController extends Controller
         foreach ($pendingData as $key => $value) {
             if (
                 !in_array($key, self::COMPARABLE_FIELDS)
+                && !in_array($key, self::USER_FIELDS)
                 && !in_array($key, self::IMMUTABLE_FIELDS)
                 && !is_null($value)
                 && $value !== ''
@@ -166,6 +217,11 @@ class ProfileUpdateRequestController extends Controller
             if ($originalBeneficiaries !== $pendingBeneficiaries) {
                 $filteredPending['beneficiaries'] = $pendingBeneficiaries;
             }
+        }
+
+        if (empty($filteredPending)) {
+            return redirect()->back()
+                ->with('error', 'No profile changes were detected.');
         }
 
         // Create the pending update request with only the changed data

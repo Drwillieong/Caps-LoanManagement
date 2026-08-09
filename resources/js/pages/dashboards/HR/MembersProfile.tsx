@@ -109,10 +109,36 @@ function parsePhone(formatted: string): string {
     return digits;
 }
 
+function normalizeBeneficiariesForSubmit(beneficiaries: Beneficiary[] = []) {
+    return beneficiaries
+        .map((beneficiary) => {
+            const normalized: Beneficiary = {
+                full_name: beneficiary.full_name?.trim() || '',
+                relationship: beneficiary.relationship?.trim() || '',
+            };
+            const rawDate = String(beneficiary.date_of_birth || '').slice(0, 10);
+            const parsedDate = rawDate ? new Date(rawDate) : null;
+
+            if (
+                rawDate &&
+                /^\d{4}-\d{2}-\d{2}$/.test(rawDate) &&
+                parsedDate &&
+                !Number.isNaN(parsedDate.getTime()) &&
+                rawDate < getTodayISO()
+            ) {
+                normalized.date_of_birth = rawDate;
+            }
+
+            return normalized;
+        })
+        .filter((beneficiary) => beneficiary.full_name || beneficiary.relationship || beneficiary.date_of_birth);
+}
+
 interface Beneficiary {
     id?: number;
     full_name: string;
     relationship: string;
+    date_of_birth?: string;
 }
 
 interface MemberProfileData {
@@ -587,12 +613,20 @@ export default function MembersProfile({ user, memberProfile, beneficiaries, isA
                     action={formActionUrl}
                     transform={() => {
                         const { employee_id, ...pendingData } = formData as any;
+                        const cleanedPhone = parsePhone(
+                            pendingData.permanent_mobile_number || pendingData.mobile_number || '',
+                        );
 
                         CURRENCY_FIELDS.forEach((field) => {
                             if (pendingData[field] !== undefined && pendingData[field] !== '') {
                                 pendingData[field] = cleanNumericValue(pendingData[field]);
                             }
                         });
+
+                        pendingData.email = String(pendingData.email || '').trim().toLowerCase();
+                        pendingData.mobile_number = cleanedPhone;
+                        pendingData.permanent_mobile_number = cleanedPhone;
+                        pendingData.beneficiaries = normalizeBeneficiariesForSubmit(pendingData.beneficiaries || []);
 
                         return {
                             member_id: targetEmployeeId,

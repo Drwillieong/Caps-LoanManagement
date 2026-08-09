@@ -9,11 +9,55 @@ use App\Services\ActivityLogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class MemberProfileController extends Controller
 {
     use \App\Traits\HasNotificationCount;
+
+    private function profileRules(?string $employeeId = null, ?int $userId = null): array
+    {
+        return [
+            'employee_id' => ['required', 'string', 'max:255', Rule::unique('member_profiles', 'employee_id')->ignore($employeeId, 'employee_id')],
+            'payroll_id' => ['nullable', 'string', 'max:255', Rule::unique('member_profiles', 'payroll_id')->ignore($employeeId, 'employee_id')],
+            'profile_picture' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'first_name' => 'required|string|max:255',
+            'middle_name' => 'nullable|string|max:255',
+            'last_name' => 'required|string|max:255',
+            'place_of_birth' => 'required|string|max:255',
+            'date_of_birth' => 'required|date|before:today',
+            'sex' => 'required|in:male,female',
+            'civil_status' => 'required|in:single,married,widowed,separated',
+            'educational_attainment' => 'required|string|max:255',
+            'spouse_name' => 'nullable|string|max:255',
+            'mobile_number' => 'required|string|max:20',
+            'permanent_mobile_number' => 'required|string|max:20',
+            'present_address' => 'required|string|max:2000',
+            'present_zip_code' => 'required|string|max:20',
+            'permanent_address' => 'required|string|max:2000',
+            'permanent_zip_code' => 'required|string|max:20',
+            'position' => 'required|string|max:255',
+            'basic_salary' => 'required|numeric|min:10000',
+            'income_type' => 'required|in:monthly,daily,yearly',
+            'net_income' => 'required|numeric|min:10000',
+            'share_capital_balance' => 'required|numeric|min:10000',
+            'other_source_of_income' => 'nullable|string|max:255',
+            'facebook_account_name' => 'required|string|max:255',
+            'spouse_occupation' => 'nullable|string|max:255',
+            'spouse_gross_income' => 'required_with:spouse_occupation|nullable|numeric|min:0',
+            'spouse_income_type' => 'required_with:spouse_occupation|nullable|in:monthly,daily,yearly',
+            'spouse_net_income' => 'required_with:spouse_occupation|nullable|numeric|min:0',
+            'real_properties_owned' => 'nullable|string|max:2000',
+            'bank_account_number' => 'nullable|string|max:50',
+            'tin_number' => 'nullable|string|max:50',
+            'beneficiaries' => 'nullable|array',
+            'beneficiaries.*.full_name' => 'nullable|string|max:255',
+            'beneficiaries.*.relationship' => 'nullable|string|max:255',
+            'beneficiaries.*.date_of_birth' => 'nullable|date|before:today',
+            'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($userId)],
+        ];
+    }
 
     /**
      * Display the user's profile form.
@@ -70,44 +114,8 @@ class MemberProfileController extends Controller
      */
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            // Identity
-            'employee_id' => 'required|string|max:255|unique:member_profiles,employee_id,'.($request->user()->memberProfile?->employee_id ?? 'NULL').',employee_id',
-            'payroll_id' => 'nullable|string|max:255|unique:member_profiles,payroll_id,'.($request->user()->memberProfile?->employee_id ?? 'NULL').',employee_id',
-            'profile_picture' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'first_name' => 'required|string|max:255',
-            'middle_name' => 'nullable|string|max:255',
-            'last_name' => 'required|string|max:255',
-            'date_of_birth' => 'required|date|before:today',
-            'sex' => 'required|in:male,female',
-            'civil_status' => 'required|in:single,married,widowed,separated',
-            'spouse_name' => 'nullable|string|max:255',
-
-            // Contact & Address
-            'mobile_number' => 'required|string|max:20',
-            'present_address' => 'required|string',
-            'permanent_address' => 'nullable|string',
-
-            // Employment
-            'position' => 'required|string|max:255',
-            'basic_salary' => 'required|numeric|min:10000',
-
-            // Financials
-            'share_capital_balance' => 'nullable|numeric|min:10000',
-            'bank_account_number' => 'nullable|string|max:50',
-            'tin_number' => 'nullable|string|max:50',
-
-            // Beneficiaries - now optional
-            'beneficiaries' => 'nullable|array',
-            'beneficiaries.*.full_name' => 'nullable|string|max:255',
-            'beneficiaries.*.relationship' => 'nullable|string|max:255',
-            'beneficiaries.*.date_of_birth' => 'nullable|date|before:today',
-
-            // Account
-            'email' => 'nullable|email|max:255|unique:users,email,'.$request->user()->id,
-        ]);
-
         $user = $request->user();
+        $validated = $request->validate($this->profileRules($user->memberProfile?->employee_id, $user->id));
 
         if (! empty($validated['email']) && $validated['email'] !== $user->email) {
             $user->email = $validated['email'];
@@ -165,42 +173,7 @@ class MemberProfileController extends Controller
             abort(403, 'Unauthorized');
         }
 
-        $validated = $request->validate([
-            // Identity
-            'employee_id' => 'required|string|max:255|unique:member_profiles,employee_id,'.$employeeId.',employee_id',
-            'payroll_id' => 'nullable|string|max:255|unique:member_profiles,payroll_id,'.$employeeId.',employee_id',
-            'profile_picture' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'first_name' => 'required|string|max:255',
-            'middle_name' => 'nullable|string|max:255',
-            'last_name' => 'required|string|max:255',
-            'date_of_birth' => 'required|date|before:today',
-            'sex' => 'required|in:male,female',
-            'civil_status' => 'required|in:single,married,widowed,separated',
-            'spouse_name' => 'nullable|string|max:255',
-
-            // Contact & Address
-            'mobile_number' => 'required|string|max:20',
-            'present_address' => 'required|string',
-            'permanent_address' => 'nullable|string',
-
-            // Employment
-            'position' => 'required|string|max:255',
-            'basic_salary' => 'required|numeric|min:10000',
-
-            // Financials
-            'share_capital_balance' => 'nullable|numeric|min:10000',
-            'bank_account_number' => 'nullable|string|max:50',
-            'tin_number' => 'nullable|string|max:50',
-
-            // Beneficiaries - now optional
-            'beneficiaries' => 'nullable|array',
-            'beneficiaries.*.full_name' => 'nullable|string|max:255',
-            'beneficiaries.*.relationship' => 'nullable|string|max:255',
-            'beneficiaries.*.date_of_birth' => 'nullable|date|before:today',
-
-            // Account
-            'email' => 'nullable|email|max:255|unique:users,email,'.$targetUser->id,
-        ]);
+        $validated = $request->validate($this->profileRules($employeeId, $targetUser->id));
 
         if (! empty($validated['email']) && $validated['email'] !== $targetUser->email) {
             $targetUser->email = $validated['email'];

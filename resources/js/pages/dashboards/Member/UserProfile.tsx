@@ -1,6 +1,7 @@
 import { Transition } from '@headlessui/react';
 import { Form, Head, Link, usePage } from '@inertiajs/react';
 import { useState, useEffect, useCallback } from 'react';
+import toast from 'react-hot-toast';
 import { 
     User, 
     MapPin, 
@@ -97,10 +98,36 @@ function parsePhone(formatted: string): string {
     return digits;
 }
 
+function normalizeBeneficiariesForSubmit(beneficiaries: Beneficiary[] = []) {
+    return beneficiaries
+        .map((beneficiary) => {
+            const normalized: Beneficiary = {
+                full_name: beneficiary.full_name?.trim() || '',
+                relationship: beneficiary.relationship?.trim() || '',
+            };
+            const rawDate = String(beneficiary.date_of_birth || '').slice(0, 10);
+            const parsedDate = rawDate ? new Date(rawDate) : null;
+
+            if (
+                rawDate &&
+                /^\d{4}-\d{2}-\d{2}$/.test(rawDate) &&
+                parsedDate &&
+                !Number.isNaN(parsedDate.getTime()) &&
+                rawDate < getTodayISO()
+            ) {
+                normalized.date_of_birth = rawDate;
+            }
+
+            return normalized;
+        })
+        .filter((beneficiary) => beneficiary.full_name || beneficiary.relationship || beneficiary.date_of_birth);
+}
+
 interface Beneficiary {
     id?: number;
     full_name: string;
     relationship: string;
+    date_of_birth?: string;
 }
 
 interface MemberProfile {
@@ -258,8 +285,8 @@ const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
         'basic_salary'
     ] : [];
 
-    // Determine if user can edit employment - admins can always edit, members only when isEditing
-    const canEditEmployment = isAdmin;
+    // Admins can always edit employment fields; members can edit them while editing their profile.
+    const canEditEmployment = isAdmin || isEditing;
 
     const exportPDF = () => {
         if (!memberProfile) return;
@@ -464,6 +491,7 @@ const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
                 action={formActionUrl}
                 transform={() => {
                     const data = { ...formData } as any;
+                    const cleanedPhone = parsePhone(data.permanent_mobile_number || data.mobile_number || '');
 
                     CURRENCY_FIELDS.forEach((field) => {
                         if (data[field] !== undefined && data[field] !== '') {
@@ -471,9 +499,27 @@ const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
                         }
                     });
 
+                    data.email = String(data.email || '').trim().toLowerCase();
+                    data.mobile_number = cleanedPhone;
+                    data.permanent_mobile_number = cleanedPhone;
+                    if (typeof data.profile_picture === 'string') {
+                        delete data.profile_picture;
+                    }
+                    data.beneficiaries = normalizeBeneficiariesForSubmit(data.beneficiaries || []);
+
                     return data;
                 }}
                 className="space-y-6"
+                onSuccess={() => {
+                    toast.success('Profile updated successfully.');
+                    if (!isNewUser) {
+                        setIsEditing(false);
+                    }
+                }}
+                onError={(errors) => {
+                    const firstError = Object.values(errors)[0];
+                    toast.error(firstError || 'Please check the highlighted profile fields.');
+                }}
             >
                 {({ processing, recentlySuccessful, errors }) => (
                     <>

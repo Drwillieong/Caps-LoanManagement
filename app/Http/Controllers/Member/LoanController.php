@@ -248,7 +248,9 @@ class LoanController extends Controller
                     trim($coMaker->first_name . ($coMaker->middle_name ? ' ' . $coMaker->middle_name : '') . ' ' . $coMaker->last_name),
                     trim($borrower->first_name . ($borrower->middle_name ? ' ' . $borrower->middle_name : '') . ' ' . $borrower->last_name),
                     $loanTypeName,
-                    $loan->principal_amount
+                    $loan->principal_amount,
+                    $borrower,
+                    $loan
                 ));
             }
         }
@@ -340,7 +342,9 @@ class LoanController extends Controller
                     trim($coMaker->first_name . ($coMaker->middle_name ? ' ' . $coMaker->middle_name : '') . ' ' . $coMaker->last_name),
                     trim($borrower->first_name . ($borrower->middle_name ? ' ' . $borrower->middle_name : '') . ' ' . $borrower->last_name),
                     $loanTypeName,
-                    $loan->principal_amount
+                    $loan->principal_amount,
+                    $borrower,
+                    $loan
                 ));
             }
         }

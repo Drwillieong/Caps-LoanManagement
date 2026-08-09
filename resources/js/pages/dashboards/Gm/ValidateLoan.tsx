@@ -131,7 +131,7 @@ export default function ValidateLoan({ pendingLoans }: GmValidateLoanProps) {
 
         approveForm.post(`/dashboards/Gm/Loan/${loanId}/approve`, {
             onSuccess: () => {
-                toast.success('Loan application approved successfully!');
+                toast.success('Loan approved and decision email sent.');
             },
             onError: (errors) => {
                 console.error('Error approving loan:', errors);
@@ -154,7 +154,7 @@ export default function ValidateLoan({ pendingLoans }: GmValidateLoanProps) {
 
         rejectForm.post(`/dashboards/Gm/Loan/${loanId}/reject`, {
             onSuccess: () => {
-                toast.success('Loan application rejected.');
+                toast.success('Loan rejected and decision email sent.');
                 setIsRejectDialogOpen(false);
                 setSelectedLoan(null);
                 rejectForm.reset();

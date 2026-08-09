@@ -11,6 +11,7 @@ use App\Service\ApplyLoan\LoanEligibilityService;
 use App\Services\ActivityLogService;
 use App\Mail\SendMembersPass;
 use App\Mail\MemberRejectedMail;
+use App\Mail\GmApplicationDecision;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
@@ -143,6 +144,25 @@ class GmController extends Controller
             'remarks' => $validated['remarks'] ?? 'Approved by GM, pending Credit Coordinator validation',
         ]);
 
+        $loan->loadMissing('loanType');
+
+        try {
+            Mail::to($borrower->email)->send(new GmApplicationDecision(
+                $borrower->name,
+                $loan->loanType->name ?? 'N/A',
+                $loan->created_at->format('F d, Y'),
+                (int) $loan->terms_months,
+                (float) $loan->principal_amount,
+                (float) $loan->interest_amount,
+                (float) $loan->monthly_amortization,
+                (float) $loan->total_amount_due,
+                'approved',
+                $validated['remarks'] ?? null
+            ));
+        } catch (\Exception $e) {
+            \Log::error('Failed to send GM loan approval email: '.$e->getMessage());
+        }
+
         app(ActivityLogService::class)->logActivity(
             'loan_approved',
             $loan->id,
@@ -192,6 +212,25 @@ class GmController extends Controller
             'rejected_by' => 'gm',
             'rejected_at' => now(),
         ]);
+
+        $loan->loadMissing('loanType');
+
+        try {
+            Mail::to($borrower->email)->send(new GmApplicationDecision(
+                $borrower->name,
+                $loan->loanType->name ?? 'N/A',
+                $loan->created_at->format('F d, Y'),
+                (int) $loan->terms_months,
+                (float) $loan->principal_amount,
+                (float) $loan->interest_amount,
+                (float) $loan->monthly_amortization,
+                (float) $loan->total_amount_due,
+                'rejected',
+                $validated['remarks']
+            ));
+        } catch (\Exception $e) {
+            \Log::error('Failed to send GM loan rejection email: '.$e->getMessage());
+        }
 
         app(ActivityLogService::class)->logActivity(
             'loan_rejected',

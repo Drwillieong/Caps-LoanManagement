@@ -50,6 +50,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('dashboards/HR/SeeUsers', [CreateMemberController::class, 'store'])->middleware('role:hr')->name('users.store');
     Route::patch('dashboards/HR/users/{user}/status', [CreateMemberController::class, 'updateStatus'])->middleware('role:hr')->name('users.status.update');
 
+    // HR - Rejected Member Resubmit Workflow (rejected list merged into SeeUsers)
+    Route::get('dashboards/HR/RejectedMembers', [CreateMemberController::class, 'index'])
+        ->middleware('role:hr')
+        ->name('hr.rejected-members');
+    Route::get('dashboards/HR/RejectedMembers/{user}/edit', [CreateMemberController::class, 'editRejected'])->middleware('role:hr')->name('hr.rejected-members.edit');
+    Route::put('dashboards/HR/RejectedMembers/{user}', [CreateMemberController::class, 'resubmit'])->middleware('role:hr')->name('hr.rejected-members.update');
+
     Route::get('dashboards/HR/HRActiveLoan', [HrDashboardController::class, 'activeLoans'])
         ->middleware('role:hr')
         ->name('hr.active-loan');

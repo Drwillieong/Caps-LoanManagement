@@ -30,6 +30,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 
@@ -168,6 +176,7 @@ export default function MembersProfile({ user, memberProfile, beneficiaries, isA
     const isRejected = user.status === 'rejected'
     const isPending = user.status === 'pending'
     const [isEditing, setIsEditing] = useState(false);
+    const [isStatusConfirmOpen, setIsStatusConfirmOpen] = useState(false);
     
     const [previewUrl, setPreviewUrl] = useState('');
     
@@ -282,21 +291,23 @@ export default function MembersProfile({ user, memberProfile, beneficiaries, isA
     // Can edit employment fields (HR can always edit)
     const canEditEmployment = true;
 
+    const currentAccountStatus = memberProfile?.account_status || 'active';
+    const proposedStatus = currentAccountStatus === 'active' ? 'inactive' : 'active';
+    const statusVerb = proposedStatus === 'inactive' ? 'deactivate' : 'reactivate';
+
     const requestAccountStatusChange = () => {
         if (!memberProfile) return;
+        setIsStatusConfirmOpen(true);
+    };
 
-        const currentStatus = memberProfile.account_status || 'active';
-        const proposedStatus = currentStatus === 'active' ? 'inactive' : 'active';
-        const verb = proposedStatus === 'inactive' ? 'deactivate' : 'reactivate';
-
-        if (!confirm(`Submit a GM approval request to ${verb} ${memberProfile.first_name} ${memberProfile.last_name}'s account?`)) {
-            return;
-        }
+    const handleConfirmStatusChange = () => {
+        if (!memberProfile) return;
 
         router.post(`/dashboards/HR/Members/${targetEmployeeId}/status-change-request`, {
             proposed_status: proposedStatus,
         }, {
             preserveScroll: true,
+            onSuccess: () => setIsStatusConfirmOpen(false),
         });
     };
 
@@ -514,7 +525,7 @@ export default function MembersProfile({ user, memberProfile, beneficiaries, isA
                                         <strong>Reason:</strong> {user.rejection_reason}
                                     </p>
                                     <p className="mt-1 text-xs text-red-500">
-                                        Please review the rejection reason and contact the General Manager if you need further clarification.
+                                        Please review the rejection reason.
                                     </p>
                                 </div>
                             </div>
@@ -1473,6 +1484,37 @@ export default function MembersProfile({ user, memberProfile, beneficiaries, isA
                                     </div>
                                 </CardContent>
                             </Card>
+
+                            {/* Status Change Confirmation Modal */}
+                            <Dialog open={isStatusConfirmOpen} onOpenChange={setIsStatusConfirmOpen}>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle>
+                                            Confirm {statusVerb === 'deactivate' ? 'Deactivation' : 'Reactivation'}
+                                        </DialogTitle>
+                                        <DialogDescription>
+                                            Submit a GM approval request to {statusVerb}{' '}
+                                            {memberProfile?.first_name} {memberProfile?.last_name}&apos;s account?
+                                        </DialogDescription>
+                                    </DialogHeader>
+                                    <DialogFooter>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={() => setIsStatusConfirmOpen(false)}
+                                        >
+                                            Cancel
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            variant={statusVerb === 'deactivate' ? 'destructive' : 'default'}
+                                            onClick={handleConfirmStatusChange}
+                                        >
+                                            Confirm
+                                        </Button>
+                                    </DialogFooter>
+                                </DialogContent>
+                            </Dialog>
                         </>
                     )}
                 </Form>

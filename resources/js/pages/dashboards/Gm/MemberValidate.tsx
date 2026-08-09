@@ -576,7 +576,7 @@ export default function MemberValidate({ pendingMembers }: Props) {
                                     <SectionCard title="Employment & Financial Assessment" icon={Briefcase} description="Employment and income details">
                                         <InfoGrid>
                                             <InfoField label="Employee ID" value={profile.employee_id} />
-                                            <InfoField label="Payroll ID" value={profile.payroll_id} />
+                                           
                                             <InfoField label="Position" value={profile.position} />
                                             <InfoField label="Basic Salary" value={profile.basic_salary} />
                                             <InfoField label="Income Type" value={profile.income_type} />

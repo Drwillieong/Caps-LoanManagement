@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\HrController;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ResubmitMemberRequest;
 use App\Models\MemberProfile;
 use App\Models\ProfileUpdateRequest;
 use App\Models\User;
@@ -338,7 +339,7 @@ class CreateMemberController extends Controller
             [$password[$i], $password[$j]] = [$password[$j], $password[$i]];
         }
 
-        return implode('', $password);
+return implode('', $password);
     }
 
     public function updateStatus(Request $request, User $user)
@@ -362,5 +363,140 @@ class CreateMemberController extends Controller
         );
 
         return redirect()->route('users')->with('success', 'User status updated successfully.');
+    }
+
+    // ======================================================================
+    // Rejected Member Resubmit Workflow
+    // ======================================================================
+
+    /**
+     * Fetch a single rejected member with full profile for editing.
+     * (The list of rejected members now lives in SeeUsers.)
+     */
+    public function editRejected($userId)
+    {
+        $user = User::where('id', $userId)
+            ->where('status', 'rejected')
+            ->where('role', 'member')
+            ->with('memberProfile')
+            ->firstOrFail();
+
+        $profile = $user->memberProfile;
+
+        return Inertia::render('dashboards/HR/RejectedMemberEdit', [
+            'member' => [
+                'id' => $user->id,
+                'first_name' => $user->first_name,
+                'middle_name' => $user->middle_name,
+                'last_name' => $user->last_name,
+                'email' => $user->email,
+                'status' => $user->status,
+                'rejection_reason' => $user->rejection_reason,
+                'member_profile' => $profile ? [
+                    'employee_id' => $profile->employee_id,
+                    'payroll_id' => $profile->payroll_id,
+                    'first_name' => $profile->first_name,
+                    'middle_name' => $profile->middle_name,
+                    'last_name' => $profile->last_name,
+                    'place_of_birth' => $profile->place_of_birth,
+                    'date_of_birth' => $profile->date_of_birth?->format('Y-m-d'),
+                    'sex' => $profile->sex,
+                    'civil_status' => $profile->civil_status,
+                    'educational_attainment' => $profile->educational_attainment,
+                    'position' => $profile->position,
+                    'basic_salary' => $profile->basic_salary,
+                    'income_type' => $profile->income_type,
+                    'net_income' => $profile->net_income,
+                    'share_capital_balance' => $profile->share_capital_balance,
+                    'other_source_of_income' => $profile->other_source_of_income,
+                    'facebook_account_name' => $profile->facebook_account_name,
+                    'mobile_number' => $profile->mobile_number,
+                    'permanent_mobile_number' => $profile->permanent_mobile_number,
+                    'present_address' => $profile->present_address,
+                    'present_zip_code' => $profile->present_zip_code,
+                    'permanent_address' => $profile->permanent_address,
+                    'permanent_zip_code' => $profile->permanent_zip_code,
+                    'spouse_occupation' => $profile->spouse_occupation,
+                    'spouse_gross_income' => $profile->spouse_gross_income,
+                    'spouse_income_type' => $profile->spouse_income_type,
+                    'spouse_net_income' => $profile->spouse_net_income,
+                    'legal_beneficiary_1_name' => $profile->legal_beneficiary_1_name,
+                    'real_properties_owned' => $profile->real_properties_owned,
+                ] : null,
+            ],
+        ]);
+    }
+
+    /**
+     * Update a rejected member's details and change status back to 'pending'.
+     */
+    public function resubmit(ResubmitMemberRequest $request, $userId)
+    {
+        $validated = $request->validated();
+
+        $user = User::where('id', $userId)
+            ->where('status', 'rejected')
+            ->where('role', 'member')
+            ->with('memberProfile')
+            ->firstOrFail();
+
+        $profileFields = [
+            'first_name' => $validated['first_name'],
+            'middle_name' => $validated['middle_name'] ?? null,
+            'last_name' => $validated['last_name'],
+            'place_of_birth' => $validated['place_of_birth'],
+            'date_of_birth' => $validated['date_of_birth'],
+            'civil_status' => $validated['civil_status'],
+            'sex' => $validated['sex'],
+            'educational_attainment' => $validated['educational_attainment'],
+            'mobile_number' => $validated['mobile_number'],
+            'permanent_mobile_number' => $validated['permanent_mobile_number'],
+            'present_address' => $validated['present_address'],
+            'present_zip_code' => $validated['present_zip_code'],
+            'permanent_address' => $validated['permanent_address'],
+            'permanent_zip_code' => $validated['permanent_zip_code'],
+            'position' => $validated['position'],
+            'basic_salary' => $validated['basic_salary'],
+            'income_type' => $validated['income_type'],
+            'net_income' => $validated['net_income'],
+            'share_capital_balance' => $validated['share_capital_balance'],
+            'other_source_of_income' => $validated['other_source_of_income'] ?? null,
+            'facebook_account_name' => $validated['facebook_account_name'] ?? null,
+            'spouse_occupation' => $validated['spouse_occupation'] ?? null,
+            'spouse_gross_income' => $validated['spouse_gross_income'] ?? null,
+            'spouse_income_type' => $validated['spouse_income_type'],
+            'spouse_net_income' => $validated['spouse_net_income'] ?? null,
+            'legal_beneficiary_1_name' => $validated['legal_beneficiary_1_name'] ?? null,
+            'real_properties_owned' => $validated['real_properties_owned'] ?? null,
+        ];
+
+        DB::transaction(function () use ($user, $validated, $profileFields) {
+            // Update the user account details
+            $user->update([
+                'first_name' => $validated['first_name'],
+                'middle_name' => $validated['middle_name'] ?? null,
+                'last_name' => $validated['last_name'],
+                'email' => strtolower($validated['email']),
+                // Resubmit → back to pending for the GM to review again
+                'status' => 'pending',
+                'rejection_reason' => null,
+                'is_active' => false,
+            ]);
+
+            // Update the member profile
+            if ($user->memberProfile) {
+                $user->memberProfile->update($profileFields);
+            }
+        });
+
+        app(ActivityLogService::class)->logActivity(
+            'member_resubmitted',
+            null,
+            'HR resubmitted rejected member registration for '.$user->name.' (ID #'.$user->id.'). Status is now pending GM validation.'
+        );
+
+        return redirect()
+            ->route('users')
+            ->with('success', 'Member details updated and resubmitted for GM validation.');
     }
 }

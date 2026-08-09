@@ -1,5 +1,5 @@
 import { Head, Link, router } from '@inertiajs/react'
-import { Plus, Search, Download } from 'lucide-react'
+import { Plus, Search, Download, Pencil } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
@@ -395,20 +395,15 @@ export default function SeeUsers({ users, filters }: Props) {
 
                                         <td className="px-6 py-4 text-right">
                                             {user.status === 'rejected' ? (
-                                                <TooltipProvider>
-                                                    <Tooltip>
-                                                        <TooltipTrigger asChild>
-                                                            <span>
-                                                                <Button variant="ghost" size="sm" disabled>
-                                                                    Edit
-                                                                </Button>
-                                                            </span>
-                                                        </TooltipTrigger>
-                                                        <TooltipContent>
-                                                            <p>{user.rejection_reason || 'Rejected accounts cannot be edited'}</p>
-                                                        </TooltipContent>
-                                                    </Tooltip>
-                                                </TooltipProvider>
+                                                <Button variant="outline" size="sm" asChild>
+                                                    <Link
+                                                        href={`/dashboards/HR/RejectedMembers/${user.id}/edit`}
+                                                        className="flex items-center gap-1.5"
+                                                    >
+                                                        <Pencil className="mr-1.5 h-3.5 w-3.5" />
+                                                        Edit &amp; Resubmit
+                                                    </Link>
+                                                </Button>
                                             ) : user.status === 'pending' || user.status === 'pending_approval' || user.has_pending_update_request ? (
                                                 <TooltipProvider>
                                                     <Tooltip>

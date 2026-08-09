@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Payroll;
 
 use App\Exports\SalaryDeductionReportExport;
 use App\Http\Controllers\Controller;
+use App\Jobs\SendPayrollDeductionNotifications;
 use App\Models\Loan;
 use App\Services\ActivityLogService;
 use App\Services\Payroll\LoanPaymentPostingService;
@@ -56,6 +57,8 @@ class PayrollDeductionController extends Controller
             $validated['remarks'] ?? null,
         );
 
+        SendPayrollDeductionNotifications::dispatch($upload->id);
+
         $cutoffDate = $upload->cutoff_date?->toDateString() ?? 'N/A';
 
         app(ActivityLogService::class)->logActivity(
@@ -66,7 +69,7 @@ class PayrollDeductionController extends Controller
 
         return redirect()
             ->route('gm.payroll-deductions')
-            ->with('success', "Payroll upload #{$upload->id} processed. {$upload->processed_rows} row(s) applied, {$upload->failed_rows} failed.");
+            ->with('success', "Payroll upload #{$upload->id} processed. {$upload->processed_rows} row(s) applied, {$upload->failed_rows} failed. Member emails are being sent in the background.");
     }
 
     public function manualPayment(Request $request, LoanPaymentPostingService $postingService)

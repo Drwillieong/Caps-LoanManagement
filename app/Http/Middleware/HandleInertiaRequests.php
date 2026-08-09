@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Services\Payroll\SystemSettingService;
+use App\Services\SidebarNotificationBadgeService;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -36,16 +37,26 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $user = $request->user();
+        $badgeService = app(SidebarNotificationBadgeService::class);
+
+        if ($user) {
+            $badgeService->markCurrentRouteRead($user, $request->path());
+        }
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
             'auth' => [
-                'user' => $request->user() ? $request->user()->load('memberProfile') : null,
-                'hasCompletedProfile' => $request->user() ? $request->user()->hasCompletedProfile() : null,
+                'user' => $user ? $user->load('memberProfile') : null,
+                'hasCompletedProfile' => $user ? $user->hasCompletedProfile() : null,
             ],
             'system' => [
                 'payrollProcessing' => app(SystemSettingService::class)->payrollProcessingState(),
             ],
+            'notificationBadges' => fn () => $user
+                ? $badgeService->countsFor($user)
+                : [],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
 
         ];

@@ -249,6 +249,15 @@
                 We regret to inform you that your selected co-maker, <strong>{{ $coMakerName }}</strong>, has declined the co-maker request for your loan application.
             </p>
             
+            @if (!empty($rejectionReason))
+                <div class="action-box action-box-decline">
+                    <div class="action-title action-title-decline">Reason for Declining</div>
+                    <p class="action-text action-text-decline">
+                        {{ $rejectionReason }}
+                    </p>
+                </div>
+            @endif
+            
             <!-- Next Steps Box -->
             <div class="action-box action-box-decline">
                 <div class="action-title action-title-decline">What You Need to Do</div>

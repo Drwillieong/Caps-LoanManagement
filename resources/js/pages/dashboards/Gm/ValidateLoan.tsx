@@ -131,7 +131,7 @@ export default function ValidateLoan({ pendingLoans }: GmValidateLoanProps) {
 
         approveForm.post(`/dashboards/Gm/Loan/${loanId}/approve`, {
             onSuccess: () => {
-                toast.success('Loan application approved successfully!');
+                toast.success('Loan approved and decision email sent.');
             },
             onError: (errors) => {
                 console.error('Error approving loan:', errors);
@@ -154,7 +154,7 @@ export default function ValidateLoan({ pendingLoans }: GmValidateLoanProps) {
 
         rejectForm.post(`/dashboards/Gm/Loan/${loanId}/reject`, {
             onSuccess: () => {
-                toast.success('Loan application rejected.');
+                toast.success('Loan rejected and decision email sent.');
                 setIsRejectDialogOpen(false);
                 setSelectedLoan(null);
                 rejectForm.reset();
@@ -232,10 +232,7 @@ export default function ValidateLoan({ pendingLoans }: GmValidateLoanProps) {
                                                     <p className="text-xs text-muted-foreground">Email</p>
                                                     <p className="font-medium">{loan.member.email}</p>
                                                 </div>
-                                                <div>
-                                                    <p className="text-xs text-muted-foreground">Date Hired</p>
-                                                    <p className="font-medium">{loan.member.date_hired || 'N/A'}</p>
-                                                </div>
+                                              
                                             </div>
                                             <div className="grid grid-cols-2 gap-4 mt-3 pt-3 border-t text-sm">
                                                 <div>
@@ -285,6 +282,14 @@ export default function ValidateLoan({ pendingLoans }: GmValidateLoanProps) {
                                                     <p className="font-medium text-base">{loan.active_loans_count}</p>
                                                 </div>
                                             </div>
+                                            {loan.disbursement_method && (
+                                                <div className="grid grid-cols-2 gap-4 mt-3 pt-3 border-t text-sm">
+                                                    <div>
+                                                        <p className="text-xs text-muted-foreground">Disbursement Method</p>
+                                                        <p className="font-medium capitalize">{loan.disbursement_method.replace('_', ' ')}</p>
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
 
                                         <Separator />

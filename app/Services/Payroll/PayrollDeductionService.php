@@ -34,23 +34,21 @@ class PayrollDeductionService
 
         return [
             'required_identifier' => $hasPayrollId
-                ? 'employee_id preferred; payroll_id or member_id accepted as fallback'
-                : 'employee_id preferred; member_id accepted as fallback',
+                ? 'employee_id preferred; payroll_id accepted as fallback'
+                : 'employee_id is required',
             'required_amount' => 'deduction_amount',
             'required_cutoff' => 'cutoff_date can be supplied per row, otherwise the upload cutoff date is used',
             'accepted_columns' => [
                 'employee_id',
                 'payroll_id',
-                'member_id',
                 'employee_name',
                 'cutoff_date',
                 'deduction_amount',
                 'remarks',
             ],
             'matching_order' => $hasPayrollId
-                ? ['employee_id', 'payroll_id', 'member_id']
-                : ['employee_id', 'member_id'],
-            'member_id_format' => 'MEM-0001 or the numeric users.id value',
+                ? ['employee_id', 'payroll_id']
+                : ['employee_id'],
         ];
     }
 
@@ -165,7 +163,6 @@ class PayrollDeductionService
         return implode(',', [
             'employee_id',
             'payroll_id',
-            'member_id',
             'employee_name',
             'cutoff_date',
             'deduction_amount',
@@ -194,7 +191,7 @@ class PayrollDeductionService
         $headings = array_keys($rows->first()->toArray());
         $aliases = $this->columnAliases();
 
-        $hasIdentifier = collect(['employee_id', 'payroll_id', 'member_id'])
+        $hasIdentifier = collect(['employee_id', 'payroll_id'])
             ->contains(fn ($column) => $this->hasAnyHeading($headings, $aliases[$column]));
         $hasAmount = $this->hasAnyHeading($headings, $aliases['deduction_amount']);
 
@@ -235,18 +232,23 @@ class PayrollDeductionService
                 $parsedCutoffDate = $this->parseDate($rawCutoffDate);
                 $cutoffDate = $parsedCutoffDate ?? $defaultCutoffDate;
 
-                $uploadRow = PayrollUploadRow::create([
+                $uploadRowPayload = [
                     'payroll_upload_id' => $upload->id,
                     'row_number' => $rowNumber,
                     'employee_id' => $payload['employee_id'] ?? null,
                     'payroll_id' => $payload['payroll_id'] ?? null,
-                    'member_id' => $payload['member_id'] ?? null,
                     'employee_name' => $payload['employee_name'] ?? null,
                     'cutoff_date' => $cutoffDate->toDateString(),
-                    'deduction_amount' => $deductionAmount,
+                    'deduction_amount' => $deductionAmount ?? 0,
                     'raw_payload' => $rawRow->toArray(),
                     'remarks' => $payload['remarks'] ?? null,
-                ]);
+                ];
+
+                if (Schema::hasColumn('payroll_upload_rows', 'member_id')) {
+                    $uploadRowPayload['member_id'] = null;
+                }
+
+                $uploadRow = PayrollUploadRow::create($uploadRowPayload);
 
                 $errors = $this->validatePayload($payload, $deductionAmount, $rawCutoffDate, $parsedCutoffDate);
                 $dedupeKey = $this->dedupeKey($payload, $cutoffDate);
@@ -285,29 +287,29 @@ class PayrollDeductionService
 
                 $uploadRow->update([
                     'matched_user_id' => $memberProfile->user_id,
-                    'matched_member_profile_id' => $memberProfile->id,
+                    'matched_member_profile_id' => $memberProfile->employee_id,
                 ]);
 
                 try {
                     $result = $this->postingService->applyMemberPayrollDeduction(
                         $memberProfile,
-                        $deductionAmount,
+                        $deductionAmount ?? 0,
                         $cutoffDate,
                         $processedBy,
                         [
                             'payroll_upload_id' => $upload->id,
                             'payroll_upload_row_id' => $uploadRow->id,
-                            'member_profile_id' => $memberProfile->id,
+                            'member_profile_id' => $memberProfile->employee_id,
                             'cutoff_date' => $cutoffDate,
                             'reference_number' => 'PAYROLL-'.$upload->id.'-'.$rowNumber,
                             'remarks' => $payload['remarks'] ?? 'Payroll deduction upload.',
                         ],
                     );
 
-                    if ($result['status'] === 'skipped' && $deductionAmount > 0) {
+                    if ($result['status'] === 'skipped' && ($deductionAmount ?? 0) > 0) {
                         $this->failRow($uploadRow, [$result['message']], [
                             'applied_amount' => 0,
-                            'unapplied_amount' => $deductionAmount,
+                            'unapplied_amount' => $deductionAmount ?? 0,
                         ]);
                         $stats['failed_rows']++;
 
@@ -349,17 +351,18 @@ class PayrollDeductionService
         ]);
     }
 
-    private function validatePayload(array $payload, float $deductionAmount, mixed $rawCutoffDate, ?Carbon $parsedCutoffDate): array
+    private function validatePayload(array $payload, ?float $deductionAmount, mixed $rawCutoffDate, ?Carbon $parsedCutoffDate): array
     {
         $errors = [];
 
         if (! filled($payload['employee_id'] ?? null)
-            && ! filled($payload['payroll_id'] ?? null)
-            && ! filled($payload['member_id'] ?? null)) {
-            $errors[] = 'Provide employee_id, payroll_id, or member_id.';
+            && ! filled($payload['payroll_id'] ?? null)) {
+            $errors[] = 'Provide employee_id or payroll_id.';
         }
 
-        if ($deductionAmount < 0) {
+        if ($deductionAmount === null) {
+            $errors[] = 'Deduction amount is invalid.';
+        } elseif ($deductionAmount < 0) {
             $errors[] = 'Deduction amount cannot be negative.';
         }
 
@@ -392,14 +395,6 @@ class PayrollDeductionService
             }
         }
 
-        if (filled($payload['member_id'] ?? null)) {
-            $userId = $this->normalizeMemberId((string) $payload['member_id']);
-
-            if ($userId) {
-                return MemberProfile::query()->where('user_id', $userId)->first();
-            }
-        }
-
         return null;
     }
 
@@ -429,7 +424,6 @@ class PayrollDeductionService
         return [
             'employee_id' => ['employee_id', 'employee_no', 'employee_number', 'emp_id', 'id_number'],
             'payroll_id' => ['payroll_id', 'payroll_no', 'payroll_number', 'payroll_code'],
-            'member_id' => ['member_id', 'member_no', 'member_number', 'user_id'],
             'employee_name' => ['employee_name', 'member_name', 'full_name', 'name'],
             'cutoff_date' => ['cutoff_date', 'payroll_date', 'deduction_date', 'date'],
             'deduction_amount' => ['deduction_amount', 'loan_deduction', 'salary_deduction', 'deducted_amount', 'payment_amount', 'amount'],
@@ -444,7 +438,7 @@ class PayrollDeductionService
 
     private function dedupeKey(array $payload, Carbon $cutoffDate): ?string
     {
-        foreach (['employee_id', 'payroll_id', 'member_id'] as $identifier) {
+        foreach (['employee_id', 'payroll_id'] as $identifier) {
             if (filled($payload[$identifier] ?? null)) {
                 return $identifier.':'.strtolower((string) $payload[$identifier]).':'.$cutoffDate->toDateString();
             }
@@ -453,21 +447,7 @@ class PayrollDeductionService
         return null;
     }
 
-    private function normalizeMemberId(string $memberId): ?int
-    {
-        $normalized = strtoupper(trim($memberId));
-
-        if (str_starts_with($normalized, 'MEM-')) {
-            $normalized = substr($normalized, 4);
-        }
-
-        $normalized = ltrim($normalized, '#');
-        $normalized = ltrim($normalized, '0') ?: '0';
-
-        return ctype_digit($normalized) ? (int) $normalized : null;
-    }
-
-    private function parseMoney(mixed $value): float
+    private function parseMoney(mixed $value): ?float
     {
         if ($value === null || $value === '') {
             return 0.0;
@@ -480,7 +460,11 @@ class PayrollDeductionService
         $normalized = preg_replace('/[^\d.\-]/', '', (string) $value);
 
         if ($normalized === '' || $normalized === '-') {
-            return 0.0;
+            return null;
+        }
+
+        if (! preg_match('/^-?\d+(\.\d+)?$/', $normalized)) {
+            return null;
         }
 
         return round((float) $normalized, 2);
@@ -502,6 +486,20 @@ class PayrollDeductionService
 
         if (is_numeric($value)) {
             return Carbon::instance(ExcelDate::excelToDateTimeObject((float) $value));
+        }
+
+        $value = trim((string) $value);
+
+        foreach (['Y-m-d', 'd/m/Y', 'd-m-Y', 'm/d/Y', 'm-d-Y'] as $format) {
+            try {
+                $date = Carbon::createFromFormat($format, $value);
+
+                if ($date && $date->format($format) === $value) {
+                    return $date;
+                }
+            } catch (Throwable) {
+                // Try the next supported spreadsheet/user-entered date format.
+            }
         }
 
         try {
@@ -538,13 +536,12 @@ class PayrollDeductionService
 
     private function formatRow(PayrollUploadRow $row): array
     {
-        return [
+        $formatted = [
             'id' => $row->id,
             'upload_id' => $row->payroll_upload_id,
             'row_number' => $row->row_number,
             'employee_id' => $row->employee_id,
             'payroll_id' => $row->payroll_id,
-            'member_id' => $row->member_id,
             'employee_name' => $row->employee_name,
             'cutoff_date' => $row->cutoff_date?->format('Y-m-d'),
             'deduction_amount' => (float) $row->deduction_amount,
@@ -553,6 +550,12 @@ class PayrollDeductionService
             'errors' => $row->errors ?? [],
             'file_name' => $row->upload?->original_file_name,
         ];
+
+        if (Schema::hasColumn('payroll_upload_rows', 'member_id')) {
+            $formatted['member_id'] = $row->member_id;
+        }
+
+        return $formatted;
     }
 
     private function exceptionLoans(): Collection

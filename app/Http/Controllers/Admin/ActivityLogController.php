@@ -19,6 +19,11 @@ class ActivityLogController extends Controller
         return Inertia::render('dashboards/HR/SecActivityLog');
     }
 
+    public function creditCom()
+    {
+        return Inertia::render('dashboards/CreditCom/ActivityLog');
+    }
+
     public function index(Request $request, ActivityLogService $activityLogService)
     {
         $validated = $request->validate([
@@ -26,7 +31,9 @@ class ActivityLogController extends Controller
             'per_page' => 'sometimes|integer|min:1|max:500',
             'search' => 'nullable|string|max:255',
             'action_type' => 'nullable|string|max:100',
-            'actor_role' => 'nullable|string|in:all,gm,hr',
+            'actor_role' => 'nullable|string|in:all,gm,hr,creditcom',
+            'date_from' => 'nullable|date',
+            'date_to' => 'nullable|date|after_or_equal:date_from',
         ]);
 
         $actorRole = ($validated['actor_role'] ?? 'all') === 'all'
@@ -36,10 +43,12 @@ class ActivityLogController extends Controller
             ? null
             : $validated['action_type'];
         $search = $validated['search'] ?? null;
+        $dateFrom = $validated['date_from'] ?? null;
+        $dateTo = $validated['date_to'] ?? null;
         $perPage = (int) ($validated['per_page'] ?? 10);
 
         $baseQuery = $activityLogService->adminLogsQuery($actorRole);
-        $filteredQuery = $activityLogService->adminLogsQuery($actorRole, $actionType, $search);
+        $filteredQuery = $activityLogService->adminLogsQuery($actorRole, $actionType, $search, $dateFrom, $dateTo);
         $activities = $filteredQuery->paginate($perPage)->withQueryString();
 
         return response()->json([

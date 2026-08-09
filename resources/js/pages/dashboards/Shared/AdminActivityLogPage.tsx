@@ -1,11 +1,19 @@
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { format, parseISO } from 'date-fns';
-import { Activity, ArrowUpDown, Download, RefreshCw } from 'lucide-react';
+import {
+    Activity,
+    ArrowUpDown,
+    CalendarIcon,
+    Download,
+    RefreshCw,
+} from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { DateRange } from 'react-day-picker';
 
 import { LiveClock } from '@/components/live-clock';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
 import {
     Card,
     CardContent,
@@ -15,6 +23,11 @@ import {
 } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from '@/components/ui/popover';
 import {
     Select,
     SelectContent,
@@ -103,6 +116,23 @@ function csvCell(value: unknown) {
     return `"${String(value ?? '').replace(/"/g, '""')}"`;
 }
 
+function initialDateRange(): DateRange | undefined {
+    if (typeof window === 'undefined') {
+        return undefined;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const from = params.get('date_from');
+    const to = params.get('date_to');
+
+    return from
+        ? {
+              from: parseISO(from),
+              to: to ? parseISO(to) : undefined,
+          }
+        : undefined;
+}
+
 export default function AdminActivityLogPage({
     breadcrumbs,
     description,
@@ -116,6 +146,9 @@ export default function AdminActivityLogPage({
     const [searchTerm, setSearchTerm] = useState('');
     const [filterAction, setFilterAction] = useState('all');
     const [filterActor, setFilterActor] = useState('all');
+    const [dateRange, setDateRange] = useState<DateRange | undefined>(
+        initialDateRange,
+    );
     const [currentPage, setCurrentPage] = useState(1);
     const [selected, setSelected] = useState<Set<string>>(new Set());
     const [isLoading, setIsLoading] = useState(true);
@@ -140,10 +173,43 @@ export default function AdminActivityLogPage({
                 params.set('actor_role', filterActor);
             }
 
+            if (dateRange?.from) {
+                params.set('date_from', format(dateRange.from, 'yyyy-MM-dd'));
+            }
+
+            if (dateRange?.to) {
+                params.set('date_to', format(dateRange.to, 'yyyy-MM-dd'));
+            }
+
             return params;
         },
-        [currentPage, filterAction, filterActor, searchTerm],
+        [currentPage, dateRange, filterAction, filterActor, searchTerm],
     );
+
+    const syncDateFilterToUrl = (range?: DateRange) => {
+        const params = buildParams(1);
+
+        params.delete('date_from');
+        params.delete('date_to');
+
+        if (range?.from) {
+            params.set('date_from', format(range.from, 'yyyy-MM-dd'));
+        }
+
+        if (range?.to) {
+            params.set('date_to', format(range.to, 'yyyy-MM-dd'));
+        }
+
+        router.get(
+            window.location.pathname,
+            Object.fromEntries(params.entries()),
+            {
+                preserveScroll: true,
+                preserveState: true,
+                replace: true,
+            },
+        );
+    };
 
     const fetchActivities = useCallback(async () => {
         setIsLoading(true);
@@ -209,8 +275,18 @@ export default function AdminActivityLogPage({
         setSearchTerm('');
         setFilterAction('all');
         setFilterActor('all');
+        setDateRange(undefined);
         setCurrentPage(1);
         setSelected(new Set());
+        router.get(
+            window.location.pathname,
+            {},
+            {
+                preserveScroll: true,
+                preserveState: true,
+                replace: true,
+            },
+        );
     };
 
     const exportCSV = async () => {
@@ -237,12 +313,11 @@ export default function AdminActivityLogPage({
         const rows = payload.data;
         const headers = [
             'Date',
-            'Actor',
+            'Actor Email',
             'Role',
             'Action',
             'Details',
             'Loan',
-            'IP Address',
         ];
         const csv = [
             headers.map(csvCell).join(','),
@@ -254,7 +329,7 @@ export default function AdminActivityLogPage({
                         activity.created_at,
                         'MMM dd, yyyy HH:mm',
                     ),
-                    actor?.name ?? 'Unknown user',
+                    actor?.email ?? 'Unknown user',
                     formatRole(actor?.role),
                     formatAction(activity.action_type),
                     activity.reject_reason
@@ -263,7 +338,6 @@ export default function AdminActivityLogPage({
                     activity.loan
                         ? `#${activity.loan.id} - PHP ${activity.loan.principal_amount.toLocaleString()}`
                         : '-',
-                    activity.ip_address ?? '',
                 ]
                     .map(csvCell)
                     .join(',');
@@ -374,70 +448,140 @@ export default function AdminActivityLogPage({
                 )}
 
                 <Card className="overflow-hidden shadow-xl">
-                    <CardHeader className="flex flex-col gap-3 bg-gradient-to-r from-muted/50 p-6 pb-4 lg:flex-row lg:items-center">
-                        <Input
-                            placeholder="Search descriptions, actors, loans..."
-                            value={searchTerm}
-                            onChange={(event) => {
-                                setSearchTerm(event.target.value);
-                                setCurrentPage(1);
-                            }}
-                            className="h-10 flex-1 md:max-w-md"
-                        />
-                        <Select
-                            value={filterActor}
-                            onValueChange={(value) => {
-                                setFilterActor(value);
-                                setCurrentPage(1);
-                            }}
-                        >
-                            <SelectTrigger className="h-10 w-full lg:w-[150px]">
-                                <SelectValue placeholder="Actor role" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All Roles</SelectItem>
-                                <SelectItem value="gm">GM</SelectItem>
-                                <SelectItem value="hr">HR</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <Select
-                            value={filterAction}
-                            onValueChange={(value) => {
-                                setFilterAction(value);
-                                setCurrentPage(1);
-                            }}
-                        >
-                            <SelectTrigger className="h-10 w-full lg:w-[220px]">
-                                <SelectValue placeholder="Action type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All Actions</SelectItem>
-                                {actionTypes.map((actionType) => (
-                                    <SelectItem
-                                        key={actionType}
-                                        value={actionType}
+                    <CardHeader className="flex flex-col gap-4 border-b bg-muted/30 p-6">
+                        <div className="space-y-1">
+                            <CardTitle className="text-xl font-semibold tracking-tight">
+                                Activity History
+                            </CardTitle>
+                            <p className="text-sm text-muted-foreground">
+                                Filter and audit administrative actions by date,
+                                actor role, action type, or keyword.
+                            </p>
+                        </div>
+
+                        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+                            <Input
+                                placeholder="Search descriptions, actors, loans..."
+                                value={searchTerm}
+                                onChange={(event) => {
+                                    setSearchTerm(event.target.value);
+                                    setCurrentPage(1);
+                                }}
+                                className="h-10 flex-1 md:max-w-md"
+                            />
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        className="h-10 w-full justify-start gap-2 text-left font-normal lg:w-[280px]"
                                     >
-                                        {formatAction(actionType)}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        {(searchTerm ||
-                            filterAction !== 'all' ||
-                            filterActor !== 'all') && (
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={clearFilters}
-                                className="h-10 px-3"
+                                        <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                                        {dateRange?.from ? (
+                                            dateRange.to ? (
+                                                <>
+                                                    {format(
+                                                        dateRange.from,
+                                                        'MMM dd, yyyy',
+                                                    )}{' '}
+                                                    -{' '}
+                                                    {format(
+                                                        dateRange.to,
+                                                        'MMM dd, yyyy',
+                                                    )}
+                                                </>
+                                            ) : (
+                                                format(
+                                                    dateRange.from,
+                                                    'MMM dd, yyyy',
+                                                )
+                                            )
+                                        ) : (
+                                            <span className="text-muted-foreground">
+                                                Filter by date range
+                                            </span>
+                                        )}
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent
+                                    className="w-auto p-0"
+                                    align="start"
+                                >
+                                    <Calendar
+                                        mode="range"
+                                        numberOfMonths={2}
+                                        selected={dateRange}
+                                        onSelect={(range) => {
+                                            setDateRange(range);
+                                            setCurrentPage(1);
+                                            syncDateFilterToUrl(range);
+                                        }}
+                                    />
+                                </PopoverContent>
+                            </Popover>
+                            <Select
+                                value={filterActor}
+                                onValueChange={(value) => {
+                                    setFilterActor(value);
+                                    setCurrentPage(1);
+                                }}
                             >
-                                Clear
-                            </Button>
-                        )}
+                                <SelectTrigger className="h-10 w-full lg:w-[150px]">
+                                    <SelectValue placeholder="Actor role" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">
+                                        All Roles
+                                    </SelectItem>
+                                    <SelectItem value="gm">GM</SelectItem>
+                                    <SelectItem value="hr">HR</SelectItem>
+                                    <SelectItem value="creditcom">
+                                        CreditCom
+                                    </SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <Select
+                                value={filterAction}
+                                onValueChange={(value) => {
+                                    setFilterAction(value);
+                                    setCurrentPage(1);
+                                }}
+                            >
+                                <SelectTrigger className="h-10 w-full lg:w-[220px]">
+                                    <SelectValue placeholder="Action type" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">
+                                        All Actions
+                                    </SelectItem>
+                                    {actionTypes.map((actionType) => (
+                                        <SelectItem
+                                            key={actionType}
+                                            value={actionType}
+                                        >
+                                            {formatAction(actionType)}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            {(searchTerm ||
+                                filterAction !== 'all' ||
+                                filterActor !== 'all' ||
+                                dateRange?.from) && (
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={clearFilters}
+                                    className="h-10 px-3"
+                                >
+                                    Clear
+                                </Button>
+                            )}
+                        </div>
                     </CardHeader>
 
-                    <div className="overflow-hidden rounded-md border border-emerald-100">
+                    <div className="overflow-hidden">
                         <Table>
                             <TableHeader>
                                 <TableRow className="border-b border-emerald-200 hover:bg-transparent">
@@ -449,7 +593,7 @@ export default function AdminActivityLogPage({
                                         </div>
                                     </TableHead>
                                     <TableHead className="hidden font-semibold text-emerald-800 sm:table-cell">
-                                        Actor
+                                        Actor Email
                                     </TableHead>
                                     <TableHead className="w-[90px] font-semibold text-emerald-800">
                                         Role
@@ -463,9 +607,6 @@ export default function AdminActivityLogPage({
                                     <TableHead className="w-[1%] max-w-[320px] font-semibold text-emerald-800">
                                         Details
                                     </TableHead>
-                                    <TableHead className="hidden w-[140px] font-semibold text-emerald-800 lg:table-cell">
-                                        IP Address
-                                    </TableHead>
                                     <TableHead className="hidden w-[150px] font-semibold text-emerald-800 md:table-cell">
                                         Loan
                                     </TableHead>
@@ -475,7 +616,7 @@ export default function AdminActivityLogPage({
                                 {isLoading && (
                                     <TableRow>
                                         <TableCell
-                                            colSpan={8}
+                                            colSpan={7}
                                             className="h-28 text-center text-muted-foreground"
                                         >
                                             Loading activity logs...
@@ -540,7 +681,7 @@ export default function AdminActivityLogPage({
                                                     </div>
                                                 </TableCell>
                                                 <TableCell className="hidden max-w-[160px] truncate text-sm font-medium sm:table-cell">
-                                                    {actor?.name ??
+                                                    {actor?.email ??
                                                         'Unknown user'}
                                                 </TableCell>
                                                 <TableCell>
@@ -586,9 +727,6 @@ export default function AdminActivityLogPage({
                                                             }
                                                         </div>
                                                     )}
-                                                </TableCell>
-                                                <TableCell className="hidden text-sm text-muted-foreground lg:table-cell">
-                                                    {activity.ip_address ?? '-'}
                                                 </TableCell>
                                                 <TableCell className="hidden md:table-cell">
                                                     {activity.loan ? (
@@ -696,7 +834,8 @@ export default function AdminActivityLogPage({
                         <p className="mx-auto mb-8 max-w-lg leading-relaxed text-muted-foreground">
                             {searchTerm ||
                             filterAction !== 'all' ||
-                            filterActor !== 'all'
+                            filterActor !== 'all' ||
+                            dateRange?.from
                                 ? 'No results match your current search and filter criteria. Try different terms.'
                                 : 'Activity log is empty. Administrative actions will appear here as they occur.'}
                         </p>

@@ -10,193 +10,388 @@
             padding: 0;
             box-sizing: border-box;
         }
+        
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f0f2f5;
-            padding: 20px 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f3f4f6;
+            padding: 40px 0;
             margin: 0;
+            line-height: 1.6;
         }
-        .email-container {
+        
+        .email-wrapper {
             max-width: 600px;
             margin: 0 auto;
             background: #ffffff;
-            border-radius: 12px;
+            border-radius: 16px;
             overflow: hidden;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.06);
         }
+        
+        /* Header Section */
         .header {
+           
+            padding: 40px 48px 32px;
             text-align: center;
-            margin-bottom: 30px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid #eee;
-            background-color: #ffffff;
-            padding: 30px 40px;
+            border-bottom: 4px solid #2563eb;
         }
-        .header img {
-            max-width: 250px;
+        
+        .header-logo {
+            max-width: 220px;
+            height: auto;
+            filter: brightness(0) invert(1);
         }
-        .email-body {
-            padding: 40px;
-        }
-        .greeting {
-            font-size: 18px;
-            color: #1f2937;
-            margin-bottom: 20px;
-        }
-        .welcome-badge {
+        
+        .header-badge {
             display: inline-block;
-            background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
-            color: #166534;
-            padding: 8px 20px;
-            border-radius: 25px;
+            background: rgba(37, 99, 235, 0.15);
+            color: #93bbfc;
+            padding: 6px 20px;
+            border-radius: 100px;
+            font-size: 12px;
             font-weight: 600;
-            font-size: 14px;
-            margin-bottom: 20px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            margin-top: 16px;
+            border: 1px solid rgba(37, 99, 235, 0.2);
         }
-        .info-box {
+        
+        /* Body Section */
+        .body-content {
+            padding: 48px 48px 32px;
+        }
+        
+        .greeting {
+            font-size: 22px;
+            font-weight: 600;
+            color: #0f172a;
+            margin-bottom: 8px;
+            letter-spacing: -0.3px;
+        }
+        
+        .greeting-sub {
+            font-size: 16px;
+            color: #475569;
+            margin-bottom: 24px;
+        }
+        
+        .message-text {
+            color: #334155;
+            font-size: 15px;
+            line-height: 1.8;
+            margin: 20px 0;
+        }
+        
+        .message-text strong {
+            color: #0f172a;
+            font-weight: 600;
+        }
+        
+        /* Credentials Card */
+        .credentials-card {
             background: #f8fafc;
-            border-radius: 10px;
-            padding: 25px;
-            margin: 25px 0;
+            border-radius: 12px;
+            padding: 28px 32px;
+            margin: 28px 0;
             border: 1px solid #e2e8f0;
+            position: relative;
         }
-        .info-box-title {
+        
+        .credentials-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #2563eb, #3b82f6);
+            border-radius: 12px 12px 0 0;
+        }
+        
+        .credentials-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
             font-size: 16px;
             font-weight: 600;
-            color: #1e293b;
-            margin-bottom: 15px;
+            color: #0f172a;
+            margin-bottom: 20px;
         }
+        
+        .credentials-title .icon {
+            font-size: 20px;
+        }
+        
         .credentials-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 15px;
+            gap: 12px;
         }
+        
         .credential-item {
             background: #ffffff;
-            padding: 15px;
+            padding: 16px 18px;
             border-radius: 8px;
             border: 1px solid #e2e8f0;
+            transition: border-color 0.2s;
         }
+        
+        .credential-item:hover {
+            border-color: #94a3b8;
+        }
+        
         .credential-label {
-            font-size: 12px;
+            font-size: 11px;
             color: #64748b;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.8px;
+            font-weight: 600;
             margin-bottom: 4px;
         }
+        
         .credential-value {
             font-size: 15px;
-            color: #1e293b;
+            color: #0f172a;
             font-weight: 500;
-            font-family: monospace;
+            font-family: 'SF Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
+            word-break: break-all;
         }
-        .message-text {
-            color: #4b5563;
-            font-size: 15px;
-            line-height: 1.7;
-            margin: 20px 0;
+        
+        .credential-value.password {
+            background: #f1f5f9;
+            padding: 2px 10px;
+            border-radius: 4px;
+            display: inline-block;
+            font-size: 14px;
+            letter-spacing: 0.5px;
         }
-        .security-box {
-            background: #fef3c7;
-            border: 1px solid #fcd34d;
-            border-radius: 10px;
-            padding: 20px;
-            margin: 25px 0;
+        
+        /* Divider */
+        .divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #e2e8f0, transparent);
+            margin: 32px 0;
         }
+        
+        /* Security Alert */
+        .security-alert {
+            background: #fefce8;
+            border: 1px solid #fde68a;
+            border-radius: 12px;
+            padding: 20px 24px;
+            margin: 24px 0;
+            position: relative;
+            padding-left: 56px;
+        }
+        
+        .security-alert::before {
+            content: '🔒';
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 20px;
+        }
+        
         .security-title {
-            font-size: 15px;
+            font-size: 14px;
             font-weight: 600;
             color: #92400e;
-            margin-bottom: 8px;
+            margin-bottom: 4px;
         }
+        
         .security-text {
             font-size: 14px;
-            color: #b45309;
+            color: #78350f;
+            line-height: 1.6;
         }
-        .btn-container {
+        
+        /* CTA Button */
+        .cta-container {
             text-align: center;
-            margin: 35px 0;
+            margin: 36px 0 28px;
         }
-        .btn {
-            background-color: #2563eb;
-            color: #ffffff;
-            padding: 14px 32px;
+        
+        .cta-button {
+            display: inline-block;
+            background: #2563eb;
+            color: #ffffff !important;
+            padding: 14px 40px;
             text-decoration: none;
             border-radius: 8px;
             font-weight: 600;
-            display: inline-block;
             font-size: 15px;
+            transition: all 0.2s;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
         }
-        .email-footer {
+        
+        .cta-button:hover {
+            background: #1d4ed8;
+            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.35);
+            transform: translateY(-1px);
+        }
+        
+        .cta-subtext {
+            font-size: 13px;
+            color: #64748b;
+            margin-top: 12px;
+        }
+        
+        /* Footer */
+        .footer {
             background: #f8fafc;
-            padding: 25px 40px;
-            text-align: center;
+            padding: 32px 48px 28px;
             border-top: 1px solid #e2e8f0;
+            text-align: center;
         }
+        
+        .footer-company {
+            font-size: 14px;
+            font-weight: 600;
+            color: #0f172a;
+            margin-bottom: 4px;
+        }
+        
         .footer-text {
             font-size: 13px;
             color: #64748b;
-            margin-bottom: 8px;
+            line-height: 1.8;
         }
-        .footer-contact {
-            font-size: 12px;
-            color: #94a3b8;
-        }
-        .footer-contact a {
+        
+        .footer-text a {
             color: #2563eb;
             text-decoration: none;
+            font-weight: 500;
         }
-        .divider {
-            height: 1px;
-            background: #e2e8f0;
-            margin: 25px 0;
+        
+        .footer-text a:hover {
+            text-decoration: underline;
         }
+        
+        .footer-social {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid #e2e8f0;
+        }
+        
+        .footer-social a {
+            color: #64748b;
+            text-decoration: none;
+            font-size: 13px;
+            transition: color 0.2s;
+        }
+        
+        .footer-social a:hover {
+            color: #2563eb;
+        }
+        
+        .footer-disclaimer {
+            font-size: 11px;
+            color: #94a3b8;
+            margin-top: 16px;
+            line-height: 1.6;
+        }
+        
+        /* Responsive */
         @media only screen and (max-width: 600px) {
-            .email-container {
-                margin: 10px;
+            body {
+                padding: 16px 0;
             }
-            .email-body {
-                padding: 25px;
+            
+            .email-wrapper {
+                border-radius: 12px;
+                margin: 0 12px;
             }
+            
+            .header {
+                padding: 32px 24px 24px;
+            }
+            
+            .header-logo {
+                max-width: 160px;
+            }
+            
+            .body-content {
+                padding: 32px 24px 24px;
+            }
+            
             .credentials-grid {
                 grid-template-columns: 1fr;
+                gap: 10px;
             }
-            .header {
-                padding: 25px 20px;
+            
+            .credentials-card {
+                padding: 20px;
+            }
+            
+            .footer {
+                padding: 24px 24px 20px;
+            }
+            
+            .greeting {
+                font-size: 20px;
+            }
+            
+            .cta-button {
+                padding: 12px 32px;
+                font-size: 14px;
+                display: block;
+            }
+            
+            .security-alert {
+                padding: 16px 16px 16px 48px;
+            }
+            
+            .security-alert::before {
+                left: 16px;
             }
         }
-        .a{
-              
-                color: black;
-               
+        
+        @media only screen and (max-width: 400px) {
+            .header-logo {
+                max-width: 130px;
+            }
+            
+            .body-content {
+                padding: 24px 16px 20px;
+            }
+            
+            .credential-item {
+                padding: 12px 14px;
+            }
         }
     </style>
 </head>
 <body>
 
-<div class="email-container">
-
-    <!-- HEADER with Logo -->
+<div class="email-wrapper">
+    
+    <!-- HEADER -->
     <div class="header">
-        <img src="{{ $message->embed(public_path('LEIMCO.png')) }}" alt="LEIMCO Logo">
+        <img src="{{ $message->embed(public_path('LEIMCO.png')) }}" alt="LEIMCO - Lending & Investment Cooperative" class="header-logo">
+       
     </div>
-
-    <!-- Body -->
-    <div class="email-body">
-
-        <div class="welcome-badge">🎉 Welcome to LEIMCO</div>
-
-        <p class="greeting">Dear <strong>{{ $name ?? 'Member' }}</strong>,</p>
-
+    
+    <!-- BODY -->
+    <div class="body-content">
+        
+        <h1 class="greeting">Welcome, {{ $name ?? 'Member' }}!</h1>
+        <p class="greeting-sub">Thank you for joining LEIMCO Cooperative</p>
+        
         <p class="message-text">
-            Welcome to <strong>LEIMCO - Lending & Investment Cooperative</strong>! 
-            Your account has been successfully created. Please find your login credentials below:
+            We are delighted to welcome you to <strong>LEIMCO - Lending & Investment Cooperative</strong>. 
+            Your membership has been successfully activated. Below are your login credentials to access 
+            your member portal and start enjoying the benefits of being a LEIMCO member.
         </p>
-
-        <!-- Credentials Box -->
-        <div class="info-box">
-            <div class="info-box-title">
-                🔐 Your Login Credentials
+        
+        <!-- Credentials Card -->
+        <div class="credentials-card">
+            <div class="credentials-title">
+                <span class="icon">🔐</span>
+                Your Login Credentials
             </div>
             
             <div class="credentials-grid">
@@ -206,48 +401,67 @@
                 </div>
                 <div class="credential-item">
                     <div class="credential-label">Temporary Password</div>
-                    <div class="credential-value">{{ $password }}</div>
+                    <div class="credential-value password">{{ $password }}</div>
                 </div>
             </div>
         </div>
-
+        
         <div class="divider"></div>
-
-        <!-- Security Notice Box -->
-        <div class="security-box">
-            <div class="security-title">🔒 Security Notice</div>
+        
+        <!-- Security Alert -->
+        <div class="security-alert">
+            <div class="security-title">Security Reminder</div>
             <p class="security-text">
-                For security reasons, please change your password immediately after your first login. 
-                Keep your credentials confidential and do not share them with anyone.
+                For your security, please change your password immediately after your first login. 
+                Never share your credentials with anyone. LEIMCO will never ask for your password.
             </p>
         </div>
-
+        
         <p class="message-text">
-            We're excited to have you as a member of LEIMCO. We look forward to serving you and helping you achieve your financial goals.
+            We're committed to helping you achieve your financial goals through our cooperative 
+            services. As a member, you'll have access to competitive loan products, investment 
+            opportunities, and a supportive community.
         </p>
-
-        <div class="btn-container">
-            <a href="{{ url('/login') }}" class="btn">Login to Portal</a>
+        
+        <!-- CTA Button -->
+        <div class="cta-container">
+            <a href="{{ url('/login') }}" class="cta-button">
+                Access Member Portal
+            </a>
+            <p class="cta-subtext">Click the button above to log in and get started</p>
         </div>
-
-        <p class="message-text" style="font-size: 13px; color: #6b7280;">
+        
+        <p class="message-text" style="font-size: 13px; color: #64748b; margin-top: 24px;">
+            <strong>Need assistance?</strong> Our support team is available to help you with any 
+            questions or concerns you may have about your membership.
+        </p>
+        
+    </div>
+    
+    <!-- FOOTER -->
+    <div class="footer">
+        <div class="footer-company">
+            LEIMCO - Lending & Investment Cooperative
+        </div>
+        <p class="footer-text">
+            &copy; {{ date('Y') }} LEIMCO. All rights reserved.<br>
+            <a href="mailto:support@leimco.com">support@leimco.com</a> &bull; 
+            <a href="tel:+6321234567">(02) 123-4567</a>
+        </p>
+        
+        <div class="footer-social">
+            <a href="#">About Us</a>
+            <a href="#">Services</a>
+            <a href="#">Contact</a>
+            <a href="#">Privacy Policy</a>
+        </div>
+        
+        <p class="footer-disclaimer">
             This is an automated notification from LEIMCO. Please do not reply directly to this email. 
             If you have any questions or need assistance, please contact our support team.
         </p>
-
     </div>
-
-    <!-- Footer -->
-    <div class="email-footer">
-        <p class="footer-text">
-            © {{ date('Y') }} LEIMCO - Lending & Investment Cooperative. All rights reserved.
-        </p>
-        <p class="footer-contact">
-            Need help? Contact us at <a href="mailto:support@leimco.com">support@leimco.com</a> 
-            or call (02) 123-4567
-        </p>
-    </div>
-
+    
 </div>
 
 </body>

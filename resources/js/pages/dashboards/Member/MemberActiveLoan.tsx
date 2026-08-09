@@ -422,14 +422,7 @@ export default function MemberActiveLoan({
                                                 Loan Details
                                             </h4>
                                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                                                <div className="p-3 rounded-lg bg-background border">
-                                                    <p className="text-sm text-muted-foreground">Voucher Number</p>
-                                                    <p className="font-medium">{loan.voucher_number || 'N/A'}</p>
-                                                </div>
-                                                <div className="p-3 rounded-lg bg-background border">
-                                                    <p className="text-sm text-muted-foreground">Check Number</p>
-                                                    <p className="font-medium">{loan.check_number || 'N/A'}</p>
-                                                </div>
+                                               
                                                 <div className="p-3 rounded-lg bg-background border">
                                                     <p className="text-sm text-muted-foreground">Release Date</p>
                                                     <p className="font-medium">{formatDate(loan.release_date)}</p>

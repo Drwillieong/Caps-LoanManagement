@@ -37,20 +37,41 @@ class FortifyServiceProvider extends ServiceProvider
         $this->configureRateLimiting();
 
         Fortify::authenticateUsing(function (Request $request) {
-    $user = User::where('email', $request->email)->first();
+            $user = User::where('email', $request->email)->first();
 
-    if (! $user || ! Hash::check($request->password, $user->password)) {
-        return null;
-    }
+            if (! $user || ! Hash::check($request->password, $user->password)) {
+                return null;
+            }
 
-    if (! $user->is_active) {
-        throw ValidationException::withMessages([
-            'email' => ['This account is inactive.'],
-        ]);
-    }
+            $user->refresh();
+            $memberProfile = $user->memberProfile()->first();
 
-    return $user;
-});
+            if ($memberProfile) {
+                $accountStatus = $memberProfile->account_status ?? 'active';
+
+                if ($accountStatus !== 'active') {
+                    throw ValidationException::withMessages([
+                        'email' => ['Your account is currently inactive. .'],
+                    ]);
+                }
+
+                if ($user->status !== 'active') {
+                    throw ValidationException::withMessages([
+                        'email' => ['This account is not active.'],
+                    ]);
+                }
+
+                return $user;
+            }
+
+            if (! $user->is_active || $user->status !== 'active') {
+                throw ValidationException::withMessages([
+                    'email' => ['This account is inactive.'],
+                ]);
+            }
+
+            return $user;
+        });
 
     }
 

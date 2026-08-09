@@ -49,6 +49,7 @@ interface LoanData {
     remarks: string | null;
     rejected_by: string | null;
     rejected_at: string | null;
+    co_maker_rejection_reason: string | null;
     created_at: string;
     has_edited: boolean;
     co_makers: Array<{
@@ -122,9 +123,9 @@ export default function PendingApplication({ loan, hasPendingLoan, loanHistory }
             case 'awaiting_comaker':
                 return <Badge className="bg-yellow-500">Awaiting Co-Maker</Badge>;
             case 'pending_gm_review':
-                return <Badge className="bg-blue-500">Pending GM Review</Badge>;
+                return <Badge className="bg-gray-500">Pending General Manager Review</Badge>;
             case 'pending_cc_review':
-                return <Badge className="bg-purple-500">Pending CC Review</Badge>;
+                return <Badge className="bg-gray-500">Pending Credit Committee Review</Badge>;
             default:
                 return <Badge>{status}</Badge>;
         }
@@ -173,14 +174,14 @@ export default function PendingApplication({ loan, hasPendingLoan, loanHistory }
                 };
             case 'pending_gm_review':
                 return {
-                    icon: <Clock className="h-12 w-12 text-blue-500" />,
+                    icon: <Clock className="h-12 w-12 text-gray-500" />,
                     title: 'Pending GM Review',
                     description: 'Your loan application is under review.',
                     color: 'bg-blue-50 border-blue-200'
                 };
             case 'pending_cc_review':
                 return {
-                    icon: <Clock className="h-12 w-12 text-purple-500" />,
+                    icon: <Clock className="h-12 w-12 text-gray-500" />,
                     title: 'Pending Credit Coordinator Review',
                     description: 'Your loan application is under final review.',
                     color: 'bg-purple-50 border-purple-200'
@@ -219,7 +220,7 @@ export default function PendingApplication({ loan, hasPendingLoan, loanHistory }
 }
 
     const [historyPage, setHistoryPage] = useState(1);
-    const historyPerPage = 5;
+    const historyPerPage = 2;
     const historyTotalPages = Math.max(1, Math.ceil((loanHistory?.length ?? 0) / historyPerPage));
     const historyStart = (historyPage - 1) * historyPerPage;
     const historyEnd = historyStart + historyPerPage;
@@ -394,6 +395,16 @@ export default function PendingApplication({ loan, hasPendingLoan, loanHistory }
                                 </p>
                             </div>
                         )}
+
+                        {rejectedByCoMaker && currentLoan.co_maker_rejection_reason && (
+                            <Alert className="mt-3 border-red-200 bg-red-50 text-red-800">
+                                <XCircle className="h-4 w-4 text-red-600" />
+                                <AlertTitle className="font-semibold text-red-900">Co-Maker's Reason for Declining</AlertTitle>
+                                <AlertDescription className="text-sm text-red-700 mt-1">
+                                    {currentLoan.co_maker_rejection_reason}
+                                </AlertDescription>
+                            </Alert>
+                        )}
                     </CardHeader>
                 </Card>
 
@@ -476,7 +487,7 @@ export default function PendingApplication({ loan, hasPendingLoan, loanHistory }
                                             ) : coMaker.status === 'rejected' ? (
                                                 <Badge className="bg-red-500">Rejected</Badge>
                                             ) : (
-                                                <Badge className="bg-yellow-500">Pending</Badge>
+                                                <Badge className="bg-gray-500">Pending</Badge>
                                             )}
                                         </div>
                                     </div>

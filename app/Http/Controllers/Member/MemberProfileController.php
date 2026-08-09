@@ -9,11 +9,55 @@ use App\Services\ActivityLogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class MemberProfileController extends Controller
 {
     use \App\Traits\HasNotificationCount;
+
+    private function profileRules(?string $employeeId = null, ?int $userId = null): array
+    {
+        return [
+            'employee_id' => ['required', 'string', 'max:255', Rule::unique('member_profiles', 'employee_id')->ignore($employeeId, 'employee_id')],
+            'payroll_id' => ['nullable', 'string', 'max:255', Rule::unique('member_profiles', 'payroll_id')->ignore($employeeId, 'employee_id')],
+            'profile_picture' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'first_name' => 'required|string|max:255',
+            'middle_name' => 'nullable|string|max:255',
+            'last_name' => 'required|string|max:255',
+            'place_of_birth' => 'required|string|max:255',
+            'date_of_birth' => 'required|date|before:today',
+            'sex' => 'required|in:male,female',
+            'civil_status' => 'required|in:single,married,widowed,separated',
+            'educational_attainment' => 'required|string|max:255',
+            'spouse_name' => 'nullable|string|max:255',
+            'mobile_number' => 'required|string|max:20',
+            'permanent_mobile_number' => 'required|string|max:20',
+            'present_address' => 'required|string|max:2000',
+            'present_zip_code' => 'required|string|max:20',
+            'permanent_address' => 'required|string|max:2000',
+            'permanent_zip_code' => 'required|string|max:20',
+            'position' => 'required|string|max:255',
+            'basic_salary' => 'required|numeric|min:10000',
+            'income_type' => 'required|in:monthly,daily,yearly',
+            'net_income' => 'required|numeric|min:10000',
+            'share_capital_balance' => 'required|numeric|min:10000',
+            'other_source_of_income' => 'nullable|string|max:255',
+            'facebook_account_name' => 'required|string|max:255',
+            'spouse_occupation' => 'nullable|string|max:255',
+            'spouse_gross_income' => 'required_with:spouse_occupation|nullable|numeric|min:0',
+            'spouse_income_type' => 'required_with:spouse_occupation|nullable|in:monthly,daily,yearly',
+            'spouse_net_income' => 'required_with:spouse_occupation|nullable|numeric|min:0',
+            'real_properties_owned' => 'nullable|string|max:2000',
+            'bank_account_number' => 'nullable|string|max:50',
+            'tin_number' => 'nullable|string|max:50',
+            'beneficiaries' => 'nullable|array',
+            'beneficiaries.*.full_name' => 'nullable|string|max:255',
+            'beneficiaries.*.relationship' => 'nullable|string|max:255',
+            'beneficiaries.*.date_of_birth' => 'nullable|date|before:today',
+            'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($userId)],
+        ];
+    }
 
     /**
      * Display the user's profile form.
@@ -40,10 +84,10 @@ class MemberProfileController extends Controller
     /**
      * Display a specific member's profile form (for HR).
      */
-    public function editMember(Request $request, $userId)
+    public function editMember(Request $request, $employeeId)
     {
-        $targetUser = User::with(['memberProfile', 'memberProfile.beneficiaries'])->findOrFail($userId);
-        $memberProfile = $targetUser->memberProfile;
+        $memberProfile = MemberProfile::with(['user', 'beneficiaries'])->findOrFail($employeeId);
+        $targetUser = $memberProfile->user;
 
         // Check if current user is HR
         $adminRoles = ['hr', 'gm', 'creditcom'];
@@ -59,7 +103,7 @@ class MemberProfileController extends Controller
             'isNewUser' => false,
             'isAdmin' => true,
             'profileCompleted' => $targetUser->hasCompletedProfile(),
-            'targetUserId' => $targetUser->id,
+            'targetEmployeeId' => $memberProfile->employee_id,
             'targetUserName' => $targetUser->first_name.' '.$targetUser->last_name,
             'unread_notifications_count' => $this->getMemberUnreadNotificationCount($request),
         ]);
@@ -70,42 +114,13 @@ class MemberProfileController extends Controller
      */
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            // Identity
-            'employee_id' => 'required|string|max:255|unique:member_profiles,employee_id,'.($request->user()->memberProfile?->id ?? 'NULL'),
-            'payroll_id' => 'nullable|string|max:255|unique:member_profiles,payroll_id,'.($request->user()->memberProfile?->id ?? 'NULL'),
-            'profile_picture' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'first_name' => 'required|string|max:255',
-            'middle_name' => 'nullable|string|max:255',
-            'last_name' => 'required|string|max:255',
-            'date_of_birth' => 'required|date|before:today',
-            'sex' => 'required|in:male,female',
-            'civil_status' => 'required|in:single,married,widowed,separated',
-            'spouse_name' => 'nullable|string|max:255',
-
-            // Contact & Address
-            'mobile_number' => 'required|string|max:20',
-            'present_address' => 'required|string',
-            'permanent_address' => 'nullable|string',
-
-            // Employment
-            'position' => 'required|string|max:255',
-            'date_hired' => 'required|date',
-            'basic_salary' => 'required|numeric|min:0',
-
-            // Financials
-            'share_capital_balance' => 'nullable|numeric|min:0',
-            'bank_account_number' => 'nullable|string|max:50',
-            'tin_number' => 'nullable|string|max:50',
-
-            // Beneficiaries - now optional
-            'beneficiaries' => 'nullable|array',
-            'beneficiaries.*.full_name' => 'nullable|string|max:255',
-            'beneficiaries.*.relationship' => 'nullable|string|max:255',
-            'beneficiaries.*.date_of_birth' => 'nullable|date|before:today',
-        ]);
-
         $user = $request->user();
+        $validated = $request->validate($this->profileRules($user->memberProfile?->employee_id, $user->id));
+
+        if (! empty($validated['email']) && $validated['email'] !== $user->email) {
+            $user->email = $validated['email'];
+            $user->save();
+        }
 
         if ($request->hasFile('profile_picture')) {
             $memberProfile = MemberProfile::firstOrNew(['user_id' => $user->id]);
@@ -145,9 +160,10 @@ class MemberProfileController extends Controller
     /**
      * Update a specific member's profile (for HR).
      */
-    public function updateMember(Request $request, $userId)
+    public function updateMember(Request $request, $employeeId)
     {
-        $targetUser = User::with('memberProfile')->findOrFail($userId);
+        $memberProfile = MemberProfile::with('user')->findOrFail($employeeId);
+        $targetUser = $memberProfile->user;
 
         // Check if current user is HR
         $adminRoles = ['hr', 'gm', 'creditcom'];
@@ -157,54 +173,26 @@ class MemberProfileController extends Controller
             abort(403, 'Unauthorized');
         }
 
-        $validated = $request->validate([
-            // Identity
-            'employee_id' => 'required|string|max:255|unique:member_profiles,employee_id,'.($targetUser->memberProfile?->id ?? 'NULL').',id',
-            'payroll_id' => 'nullable|string|max:255|unique:member_profiles,payroll_id,'.($targetUser->memberProfile?->id ?? 'NULL').',id',
-            'profile_picture' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'first_name' => 'required|string|max:255',
-            'middle_name' => 'nullable|string|max:255',
-            'last_name' => 'required|string|max:255',
-            'date_of_birth' => 'required|date|before:today',
-            'sex' => 'required|in:male,female',
-            'civil_status' => 'required|in:single,married,widowed,separated',
-            'spouse_name' => 'nullable|string|max:255',
+        $validated = $request->validate($this->profileRules($employeeId, $targetUser->id));
 
-            // Contact & Address
-            'mobile_number' => 'required|string|max:20',
-            'present_address' => 'required|string',
-            'permanent_address' => 'nullable|string',
-
-            // Employment
-            'position' => 'required|string|max:255',
-            'date_hired' => 'required|date',
-            'basic_salary' => 'required|numeric|min:0',
-
-            // Financials
-            'share_capital_balance' => 'nullable|numeric|min:0',
-            'bank_account_number' => 'nullable|string|max:50',
-            'tin_number' => 'nullable|string|max:50',
-
-            // Beneficiaries - now optional
-            'beneficiaries' => 'nullable|array',
-            'beneficiaries.*.full_name' => 'nullable|string|max:255',
-            'beneficiaries.*.relationship' => 'nullable|string|max:255',
-            'beneficiaries.*.date_of_birth' => 'nullable|date|before:today',
-        ]);
+        if (! empty($validated['email']) && $validated['email'] !== $targetUser->email) {
+            $targetUser->email = $validated['email'];
+            $targetUser->save();
+        }
 
         if ($request->hasFile('profile_picture')) {
-            $memberProfile = MemberProfile::firstOrNew(['user_id' => $targetUser->id]);
+            $memberProfile = MemberProfile::firstOrNew(['employee_id' => $employeeId]);
             if ($memberProfile->profile_picture) {
                 Storage::disk('public')->delete('profiles/'.$memberProfile->profile_picture);
             }
-            $filename = $targetUser->id.'_'.time().'.'.$request->file('profile_picture')->getClientOriginalExtension();
+            $filename = $employeeId.'_'.time().'.'.$request->file('profile_picture')->getClientOriginalExtension();
             $request->file('profile_picture')->storeAs('profiles', $filename, 'public');
             $validated['profile_picture'] = $filename;
         }
 
         // Update member profile
         $memberProfile = MemberProfile::updateOrCreate(
-            ['user_id' => $targetUser->id],
+            ['employee_id' => $employeeId],
             $validated
         );
 

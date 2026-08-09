@@ -16,7 +16,6 @@ class SalaryDeductionReportService
         return [
             'employee_id',
             'payroll_id',
-            'member_id',
             'employee_name',
             'cutoff_date',
             'deduction_amount',
@@ -25,27 +24,64 @@ class SalaryDeductionReportService
     }
 
     /**
-     * Export only the unpaid amortization installment for the selected billing period.
+     * Export unpaid amortization installments payable through the selected cutoff.
      *
-     * Schedules in this system are generated on the 10th and 25th. A selected cutoff
-     * from the 1st-10th maps to the 10th; any later cutoff maps to the 25th.
-     *
-     * CRITICAL: The result is strictly limited to the single installment whose
-     * `due_date` equals the targeted semi-monthly billing date. We must NOT pull
-     * every open amortization on a released loan (which would dump the entire loan
-     * term into one cutoff export).
+     * Schedules are generated on the 10th and 25th. A selected cutoff from the
+     * 1st-10th maps to the 10th, the 11th-25th maps to the 25th, and dates after
+     * the 25th map to the next month's 10th. We include open schedules due on or
+     * before that payroll date so prior missed/partial deductions are not hidden,
+     * while later future installments remain excluded.
      */
     public function rowsForCutoff(Carbon $cutoffDate): LazyCollection
     {
         $billingDate = $this->billingDateForCutoff($cutoffDate)->toDateString();
+        $query = $this->baseOpenAmortizationQuery()
+            ->whereDate('due_date', '<=', $billingDate);
+        $limitToNextSchedulePerLoan = false;
 
-        $query = LoanAmortization::query()
+        if (! $query->exists()) {
+            $query = $this->baseOpenAmortizationQuery();
+            $limitToNextSchedulePerLoan = true;
+        }
+
+        $rows = $query->lazy(1000);
+
+        if ($limitToNextSchedulePerLoan) {
+            $rows = $rows->unique('loan_id');
+        }
+
+        return $rows
+            ->map(function (LoanAmortization $amortization) use ($billingDate) {
+                if (! $amortization->loan?->user?->memberProfile) {
+                    return null;
+                }
+
+                $rowCutoffDate = $amortization->due_date?->gt(Carbon::parse($billingDate))
+                    ? $amortization->due_date->toDateString()
+                    : $billingDate;
+
+                return $this->mapRow($amortization, $rowCutoffDate);
+            })
+            ->filter()
+            ->values();
+    }
+
+    private function baseOpenAmortizationQuery()
+    {
+        return LoanAmortization::query()
             ->whereIn('status', LoanPaymentPostingService::OPEN_AMORTIZATION_STATUSES)
-            // Strictly target the installment belonging to THIS cutoff only.
-            ->whereDate('due_date', $billingDate)
             ->whereHas('loan', function ($q) {
                 $q->whereIn('status', ['approved', 'released'])
-                    ->whereHas('user', fn ($uq) => $uq->where('is_active', true));
+                    ->whereHas('user', function ($uq) {
+                        $uq->where('is_active', true)
+                            ->whereHas('memberProfile', function ($profileQuery) {
+                                $profileQuery->where(function ($statusQuery) {
+                                    $statusQuery
+                                        ->where('account_status', 'active')
+                                        ->orWhereNull('account_status');
+                                });
+                            });
+                    });
             })
             ->with([
                 'loan.user.memberProfile',
@@ -54,25 +90,12 @@ class SalaryDeductionReportService
             ->orderBy('loan_id')
             ->orderBy('due_date')
             ->orderBy('installment_number');
-
-        return $query
-            ->lazy(1000)
-            ->map(function (LoanAmortization $amortization) use ($billingDate) {
-                if (! $amortization->loan?->user?->memberProfile) {
-                    return null;
-                }
-
-                return $this->mapRow($amortization, $billingDate);
-            })
-            ->filter()
-            ->values();
     }
 
-    private function mapRow(LoanAmortization $amortization, string $billingDate): ?array
+    private function mapRow(LoanAmortization $amortization, string $cutoffDate): ?array
     {
-        // Safety net: only emit the single installment tied to this cutoff.
-        // Never pull other installments or the aggregate loan balance.
-        if (! $amortization->due_date || $amortization->due_date->toDateString() !== $billingDate) {
+        // Safety net: never pull installments after the row cutoff or aggregate loan balance.
+        if (! $amortization->due_date || $amortization->due_date->gt(Carbon::parse($cutoffDate))) {
             return null;
         }
 
@@ -89,7 +112,6 @@ class SalaryDeductionReportService
 
         $employeeId = (string) ($profile->employee_id ?? '');
         $payrollId = (string) ($profile->payroll_id ?? '');
-        $memberId = (string) ($profile->user_id ?? $user->id);
         $employeeName = trim(($profile->first_name ?? $user->first_name).' '.($profile->middle_name ?? $user->middle_name ?? '').' '.($profile->last_name ?? $user->last_name));
         $remarks = sprintf(
             'Salary deduction installment #%s due %s',
@@ -100,9 +122,8 @@ class SalaryDeductionReportService
         return [
             'employee_id' => $employeeId,
             'payroll_id' => $payrollId,
-            'member_id' => $memberId,
             'employee_name' => $employeeName,
-            'cutoff_date' => $billingDate,
+            'cutoff_date' => $cutoffDate,
             'deduction_amount' => $deductionAmount,
             'remarks' => $remarks,
         ];
@@ -116,7 +137,11 @@ class SalaryDeductionReportService
             return $billingDate->day(10);
         }
 
-        return $billingDate->day(25);
+        if ($billingDate->day <= 25) {
+            return $billingDate->day(25);
+        }
+
+        return $billingDate->addMonthNoOverflow()->day(10);
     }
 
     /**
@@ -136,11 +161,10 @@ class SalaryDeductionReportService
      * Key rules come from PayrollDeductionService::dedupeKey():
      * - prefer employee_id
      * - else payroll_id
-     * - else member_id
      */
     public function dedupeKey(array $row): ?string
     {
-        foreach (['employee_id', 'payroll_id', 'member_id'] as $identifier) {
+        foreach (['employee_id', 'payroll_id'] as $identifier) {
             if (filled($row[$identifier] ?? null)) {
                 return $identifier.':'.strtolower((string) $row[$identifier]).':'.(string) $row['cutoff_date'];
             }

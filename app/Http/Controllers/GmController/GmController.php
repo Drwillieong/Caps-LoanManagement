@@ -9,7 +9,13 @@ use App\Models\LoanPayment;
 use App\Models\User;
 use App\Service\ApplyLoan\LoanEligibilityService;
 use App\Services\ActivityLogService;
+use App\Mail\SendMembersPass;
+use App\Mail\MemberRejectedMail;
+use App\Mail\GmApplicationDecision;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 class GmController extends Controller
@@ -72,6 +78,7 @@ class GmController extends Controller
                     'interest_amount' => $loan->interest_amount,
                     'total_amount_due' => $loan->total_amount_due,
                     'monthly_amortization' => $loan->monthly_amortization,
+                    'disbursement_method' => $loan->disbursement_method,
                     'status' => $loan->status,
                     'created_at' => $loan->created_at->format('Y-m-d H:i:s'),
                     'member' => [
@@ -79,7 +86,6 @@ class GmController extends Controller
                         'name' => trim($user->first_name.($user->middle_name ? ' '.$user->middle_name : '').' '.$user->last_name),
                         'email' => $user->email,
                         'member_id' => 'MEM-'.str_pad($user->id, 4, '0', STR_PAD_LEFT),
-                        'date_hired' => $memberProfile?->date_hired?->format('Y-m-d'),
                         'basic_salary' => $memberProfile?->basic_salary ?? 0,
                         'share_capital_balance' => $memberProfile?->share_capital_balance ?? 0,
                     ],
@@ -138,6 +144,25 @@ class GmController extends Controller
             'remarks' => $validated['remarks'] ?? 'Approved by GM, pending Credit Coordinator validation',
         ]);
 
+        $loan->loadMissing('loanType');
+
+        try {
+            Mail::to($borrower->email)->send(new GmApplicationDecision(
+                $borrower->name,
+                $loan->loanType->name ?? 'N/A',
+                $loan->created_at->format('F d, Y'),
+                (int) $loan->terms_months,
+                (float) $loan->principal_amount,
+                (float) $loan->interest_amount,
+                (float) $loan->monthly_amortization,
+                (float) $loan->total_amount_due,
+                'approved',
+                $validated['remarks'] ?? null
+            ));
+        } catch (\Exception $e) {
+            \Log::error('Failed to send GM loan approval email: '.$e->getMessage());
+        }
+
         app(ActivityLogService::class)->logActivity(
             'loan_approved',
             $loan->id,
@@ -187,6 +212,25 @@ class GmController extends Controller
             'rejected_by' => 'gm',
             'rejected_at' => now(),
         ]);
+
+        $loan->loadMissing('loanType');
+
+        try {
+            Mail::to($borrower->email)->send(new GmApplicationDecision(
+                $borrower->name,
+                $loan->loanType->name ?? 'N/A',
+                $loan->created_at->format('F d, Y'),
+                (int) $loan->terms_months,
+                (float) $loan->principal_amount,
+                (float) $loan->interest_amount,
+                (float) $loan->monthly_amortization,
+                (float) $loan->total_amount_due,
+                'rejected',
+                $validated['remarks']
+            ));
+        } catch (\Exception $e) {
+            \Log::error('Failed to send GM loan rejection email: '.$e->getMessage());
+        }
 
         app(ActivityLogService::class)->logActivity(
             'loan_rejected',
@@ -282,7 +326,6 @@ class GmController extends Controller
                         'name' => trim($user->first_name.($user->middle_name ? ' '.$user->middle_name : '').' '.$user->last_name),
                         'email' => $user->email,
                         'member_id' => 'MEM-'.str_pad($user->id, 4, '0', STR_PAD_LEFT),
-                        'date_hired' => $memberProfile?->date_hired?->format('Y-m-d'),
                         'basic_salary' => $memberProfile?->basic_salary ?? 0,
                         'share_capital_balance' => $memberProfile?->share_capital_balance ?? 0,
                     ],
@@ -368,7 +411,6 @@ class GmController extends Controller
                 'name' => trim($user->first_name.($user->middle_name ? ' '.$user->middle_name : '').' '.$user->last_name),
                 'email' => $user->email,
                 'member_id' => 'MEM-'.str_pad($user->id, 4, '0', STR_PAD_LEFT),
-                'date_hired' => $memberProfile?->date_hired?->format('Y-m-d'),
                 'basic_salary' => $memberProfile?->basic_salary ?? 0,
                 'share_capital_balance' => $memberProfile?->share_capital_balance ?? 0,
             ],
@@ -600,5 +642,236 @@ class GmController extends Controller
             'message' => 'Loan application created. Status: pending GM review.',
             'loan' => $loan->load('loanType', 'user.memberProfile'),
         ]);
+    }
+
+    // ======================================================================
+    // GM Member Validation Methods
+    // ======================================================================
+
+    /**
+     * Display members pending GM validation.
+     */
+    public function pendingMembers()
+    {
+        $pendingUsers = User::where('status', 'pending')
+            ->where('role', 'member')
+            ->with('memberProfile')
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($user) {
+                $profile = $user->memberProfile;
+                return [
+                    'id' => $user->id,
+                    'first_name' => $user->first_name,
+                    'middle_name' => $user->middle_name,
+                    'last_name' => $user->last_name,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'status' => $user->status,
+                    'created_at' => $user->created_at->format('Y-m-d H:i:s'),
+                    'member_profile' => $profile ? [
+                        'employee_id' => $profile->employee_id,
+                        'payroll_id' => $profile->payroll_id,
+                        'first_name' => $profile->first_name,
+                        'middle_name' => $profile->middle_name,
+                        'last_name' => $profile->last_name,
+                        'place_of_birth' => $profile->place_of_birth,
+                        'date_of_birth' => $profile->date_of_birth?->format('Y-m-d'),
+                        'sex' => $profile->sex,
+                        'civil_status' => $profile->civil_status,
+                        'educational_attainment' => $profile->educational_attainment,
+                        'position' => $profile->position,
+                        'basic_salary' => $profile->basic_salary,
+                        'income_type' => $profile->income_type,
+                        'net_income' => $profile->net_income,
+                        'share_capital_balance' => $profile->share_capital_balance,
+                        'other_source_of_income' => $profile->other_source_of_income,
+                        'facebook_account_name' => $profile->facebook_account_name,
+                        'mobile_number' => $profile->mobile_number,
+                        'permanent_mobile_number' => $profile->permanent_mobile_number,
+                        'present_address' => $profile->present_address,
+                        'present_zip_code' => $profile->present_zip_code,
+                        'permanent_address' => $profile->permanent_address,
+                        'permanent_zip_code' => $profile->permanent_zip_code,
+                        'spouse_occupation' => $profile->spouse_occupation,
+                        'spouse_gross_income' => $profile->spouse_gross_income,
+                        'spouse_income_type' => $profile->spouse_income_type,
+                        'spouse_net_income' => $profile->spouse_net_income,
+                        'legal_beneficiary_1_name' => $profile->legal_beneficiary_1_name,
+                        'real_properties_owned' => $profile->real_properties_owned,
+                    ] : null,
+                ];
+            });
+
+        return Inertia::render('dashboards/Gm/MemberValidate', [
+            'pendingMembers' => $pendingUsers,
+        ]);
+    }
+
+    /**
+     * Approve a pending member — sends welcome email with credentials.
+     */
+    public function approveMember(Request $request, $userId)
+    {
+        $user = User::findOrFail($userId);
+
+        if ($user->status !== 'pending') {
+            return back()->with('error', 'This member is not in pending status.');
+        }
+
+        // Determine the temporary password — generate one if none exists (e.g., self-registered users)
+        $temporaryPassword = $user->temporary_password;
+        if (empty($temporaryPassword)) {
+            $temporaryPassword = $this->generateTemporaryPassword();
+
+            // Hash and store the generated password, and mark user as having it set
+            $user->update([
+                'password' => Hash::make($temporaryPassword),
+                'temporary_password' => $temporaryPassword,
+            ]);
+        }
+
+        // Update user status to active
+        $user->update([
+            'status' => 'active',
+            'is_active' => true,
+        ]);
+
+        // Send welcome email with the stored temporary password
+        try {
+            Mail::to($user->email)->send(new SendMembersPass(
+                $user->email,
+                $temporaryPassword,
+                $user->name
+            ));
+        } catch (\Exception $e) {
+            \Log::error('Failed to send welcome email on GM approval: '.$e->getMessage());
+        }
+
+        // Log activity
+        app(ActivityLogService::class)->logActivity(
+            'member_approved',
+            null,
+            'GM approved member registration for '.$user->name.' (ID #'.$user->id.'). Welcome email sent.'
+        );
+
+        // Notify the member
+        $notificationService = app(\App\Services\NotificationService::class);
+        $notificationService->createNotification(
+            $user,
+            'Membership Approved',
+            'Your membership has been approved by the General Manager. You can now log in using the credentials sent to your email.',
+            'system',
+            $user->id,
+            User::class
+        );
+
+        return redirect()
+            ->route('gm.pending-members')
+            ->with('success', 'Member approved successfully. Welcome email with credentials has been sent to '.$user->email.'.');
+    }
+
+    /**
+     * Generate a cryptographically secure temporary password.
+     */
+    private function generateTemporaryPassword(int $length = 14): string
+    {
+        $groups = [
+            'ABCDEFGHJKLMNPQRSTUVWXYZ',
+            'abcdefghijkmnopqrstuvwxyz',
+            '23456789',
+            '!@#$%^&*',
+        ];
+
+        $characters = implode('', $groups);
+        $password = [];
+
+        foreach ($groups as $group) {
+            $password[] = $group[random_int(0, strlen($group) - 1)];
+        }
+
+        while (count($password) < $length) {
+            $password[] = $characters[random_int(0, strlen($characters) - 1)];
+        }
+
+        for ($i = count($password) - 1; $i > 0; $i--) {
+            $j = random_int(0, $i);
+            [$password[$i], $password[$j]] = [$password[$j], $password[$i]];
+        }
+
+        return implode('', $password);
+    }
+
+    /**
+     * Reject a pending member — notifies HR with rejection reason.
+     */
+    public function rejectMember(Request $request, $userId)
+    {
+        $validated = $request->validate([
+            'rejection_reason' => 'required|string|max:2000',
+        ]);
+
+        $user = User::findOrFail($userId);
+
+        if ($user->status !== 'pending') {
+            return back()->with('error', 'This member is not in pending status.');
+        }
+
+        // Update user status to rejected
+        $user->update([
+            'status' => 'rejected',
+            'rejection_reason' => $validated['rejection_reason'],
+            'is_active' => false,
+        ]);
+
+        // Notify HR about the rejection
+        $hrUsers = User::where('role', 'hr')->get();
+        $notificationService = app(\App\Services\NotificationService::class);
+        foreach ($hrUsers as $hr) {
+            $notificationService->createNotification(
+                $hr,
+                'Member Registration Rejected',
+                'The registration of '.$user->name.' ('.$user->email.') has been rejected by GM. Reason: '.$validated['rejection_reason'],
+                'system',
+                $user->id,
+                User::class
+            );
+        }
+
+        // Send email to HR about rejection
+        try {
+            $hrEmails = $hrUsers->pluck('email')->filter()->unique()->values()->toArray();
+            if (! empty($hrEmails)) {
+                Mail::send('emails.member-rejected', [
+                    'memberName' => $user->name,
+                    'memberEmail' => $user->email,
+                    'rejectionReason' => $validated['rejection_reason'],
+                    'hrName' => 'HR Team',
+                ], function ($message) use ($hrEmails) {
+                    $message->to($hrEmails[0])
+                        ->subject('Member Registration Rejected — Action Required');
+                    // Add CC for additional HR users if any
+                    if (count($hrEmails) > 1) {
+                        for ($i = 1; $i < count($hrEmails); $i++) {
+                            $message->cc($hrEmails[$i]);
+                        }
+                    }
+                });
+            }
+        } catch (\Exception $e) {
+            \Log::error('Failed to send rejection email to HR: '.$e->getMessage());
+        }
+
+        // Log activity
+        app(ActivityLogService::class)->logActivity(
+            'member_rejected',
+            null,
+            'GM rejected member registration for '.$user->name.' (ID #'.$user->id.'). Reason: '.$validated['rejection_reason'],
+            $validated['rejection_reason']
+        );
+
+        return redirect()
+            ->route('gm.pending-members')
+            ->with('success', 'Member registration rejected. HR has been notified.');
     }
 }

@@ -233,6 +233,7 @@ class MemberController extends Controller
             'date_approved' => $loan->release_date?->format('Y-m-d') ?? $loan->created_at->format('Y-m-d'),
             'status' => $loan->status,
             'next_due_date' => $loan->amortizations->where('status', 'pending')->first()?->due_date?->format('Y-m-d') ?? null,
+            'disbursement_method' => $loan->disbursement_method,
             'co_maker' => $loan->coMakers->first()?->user ? [
                 'name' => trim($loan->coMakers->first()->user->first_name.' '.($loan->coMakers->first()->user->middle_name ?? '').' '.$loan->coMakers->first()->user->last_name),
                 'relationship' => $loan->coMakers->first()->user->memberProfile?->relationship ?? 'N/A',

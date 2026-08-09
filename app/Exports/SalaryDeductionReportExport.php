@@ -42,7 +42,6 @@ class SalaryDeductionReportExport implements FromCollection, ShouldAutoSize, Wit
         return [
             $row['employee_id'],
             $row['payroll_id'],
-            $row['member_id'],
             $row['employee_name'],
             $row['cutoff_date'],
             $row['deduction_amount'],
@@ -68,7 +67,7 @@ class SalaryDeductionReportExport implements FromCollection, ShouldAutoSize, Wit
         // Basic formatting to keep the export Excel-like.
         // If the system’s existing Excel template has specific formatting,
         // this style block can be adjusted to match exactly.
-        $headingRange = 'A1:G1';
+        $headingRange = 'A1:F1';
 
         $sheet->getStyle($headingRange)->applyFromArray([
             'font' => [
@@ -90,8 +89,8 @@ class SalaryDeductionReportExport implements FromCollection, ShouldAutoSize, Wit
             ],
         ]);
 
-        // Deduction amount column formatting (F).
-        $sheet->getStyle('F:F')->getNumberFormat()->setFormatCode('#,##0.00');
+        // Deduction amount column formatting (E).
+        $sheet->getStyle('E:E')->getNumberFormat()->setFormatCode('#,##0.00');
 
         return [];
 

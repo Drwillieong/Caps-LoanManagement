@@ -29,6 +29,9 @@ class User extends Authenticatable
     'password',
     'role',
     'is_active',
+    'status',
+    'rejection_reason',
+    'temporary_password',
 ];
 
     /**
@@ -95,7 +98,6 @@ class User extends Authenticatable
             'mobile_number',
             'present_address',
             'position',
-            'date_hired',
             'basic_salary',
         ];
         
@@ -156,5 +158,29 @@ class User extends Authenticatable
     public function getNameAttribute(): string
     {
         return trim($this->first_name.' '.($this->middle_name ? $this->middle_name.' ' : '').$this->last_name);
+    }
+
+    /**
+     * Check if user status is pending.
+     */
+    public function isPending(): bool
+    {
+        return $this->status === 'pending';
+    }
+
+    /**
+     * Check if user status is active.
+     */
+    public function isActiveStatus(): bool
+    {
+        return $this->status === 'active';
+    }
+
+    /**
+     * Check if user status is rejected.
+     */
+    public function isRejected(): bool
+    {
+        return $this->status === 'rejected';
     }
 }

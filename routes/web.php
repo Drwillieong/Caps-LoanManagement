@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\ActivityLogController as AdminActivityLogControll
 use App\Http\Controllers\CreditComController\CreditComController;
 use App\Http\Controllers\CreditComController\CreditComDashboardController;
 use App\Http\Controllers\DashBoardController;
+use App\Http\Controllers\GmController\BulkMemberUploadController;
 use App\Http\Controllers\GmController\GmController;
 use App\Http\Controllers\GmController\GmDashboardController;
 use App\Http\Controllers\HrController\CreateMemberController;
@@ -13,6 +14,7 @@ use App\Http\Controllers\Member\LoanController;
 use App\Http\Controllers\Member\MemberController;
 use App\Http\Controllers\Member\MemberProfileController;
 use App\Http\Controllers\Payroll\PayrollDeductionController;
+use App\Http\Controllers\SidebarNotificationBadgeController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
@@ -36,14 +38,24 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('dashboard')
         ->middleware('ensure.profile.completed');
 
+    Route::post('sidebar-notification-badges/mark-read', [SidebarNotificationBadgeController::class, 'markRead'])
+        ->name('sidebar-notification-badges.mark-read');
+
     // HR
     Route::get('dashboards/HR/SeeUsers', [CreateMemberController::class, 'index'])->middleware('role:hr')->name('users');
 
-    Route::get('dashboards/HR/MembersProfile/{userId}', [MemberProfileViewController::class, 'show'])->middleware('role:hr')->name('users.profile');
+    Route::get('dashboards/HR/MembersProfile/{employeeId}', [MemberProfileViewController::class, 'show'])->middleware('role:hr')->name('users.profile');
 
     Route::get('dashboards/HR/create', [CreateMemberController::class, 'create'])->middleware('role:hr')->name('users.create');
     Route::post('dashboards/HR/SeeUsers', [CreateMemberController::class, 'store'])->middleware('role:hr')->name('users.store');
     Route::patch('dashboards/HR/users/{user}/status', [CreateMemberController::class, 'updateStatus'])->middleware('role:hr')->name('users.status.update');
+
+    // HR - Rejected Member Resubmit Workflow (rejected list merged into SeeUsers)
+    Route::get('dashboards/HR/RejectedMembers', [CreateMemberController::class, 'index'])
+        ->middleware('role:hr')
+        ->name('hr.rejected-members');
+    Route::get('dashboards/HR/RejectedMembers/{user}/edit', [CreateMemberController::class, 'editRejected'])->middleware('role:hr')->name('hr.rejected-members.edit');
+    Route::put('dashboards/HR/RejectedMembers/{user}', [CreateMemberController::class, 'resubmit'])->middleware('role:hr')->name('hr.rejected-members.update');
 
     Route::get('dashboards/HR/HRActiveLoan', [HrDashboardController::class, 'activeLoans'])
         ->middleware('role:hr')
@@ -86,11 +98,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('dashboards/Member/UserProfile', [MemberProfileController::class, 'store'])->middleware('role:member')->name('member.user-profile.store');
 
     // HR - Edit Member Profile
-    Route::get('dashboards/HR/EditMember/{userId}', [MemberProfileController::class, 'editMember'])
+    Route::get('dashboards/HR/EditMember/{employeeId}', [MemberProfileController::class, 'editMember'])
         ->middleware('role:hr,gm,creditcom')
         ->name('hr.edit-member');
 
-    Route::put('dashboards/HR/EditMember/{userId}', [MemberProfileController::class, 'updateMember'])
+    Route::put('dashboards/HR/EditMember/{employeeId}', [MemberProfileController::class, 'updateMember'])
         ->middleware('role:hr,gm,creditcom')
         ->name('hr.update-member');
 
@@ -154,7 +166,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('api.members.eligible');
 
     Route::get('/api/admin/activity-logs', [AdminActivityLogController::class, 'index'])
-        ->middleware('role:gm,hr')
+        ->middleware('role:gm,hr,creditcom')
         ->name('api.admin.activity-logs.index');
 
     Route::post('/api/admin/loan-applications', [GmController::class, 'storeApplicationApi'])
@@ -231,6 +243,29 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware('role:gm')
         ->name('gm.payroll-deductions.template');
 
+    // GM - Profile Update Requests (Maker-Checker)
+    Route::get('dashboards/Gm/PendingEdits', [\App\Http\Controllers\GmController\ProfileUpdateRequestController::class, 'index'])
+        ->middleware('role:gm')
+        ->name('gm.pending-edits');
+
+    // HR - Submit Profile Update Request
+    Route::post('dashboards/HR/EditMember/{employeeId}/update-request', [\App\Http\Controllers\GmController\ProfileUpdateRequestController::class, 'store'])
+        ->middleware('role:hr')
+        ->name('hr.profile-update-request.store');
+
+    Route::post('dashboards/HR/Members/{employeeId}/status-change-request', [\App\Http\Controllers\GmController\ProfileUpdateRequestController::class, 'requestStatusChange'])
+        ->middleware('role:hr')
+        ->name('hr.member-status-change-request.store');
+
+    // API-like routes for GM actions on pending edits
+    Route::post('dashboards/Gm/PendingEdits/{id}/approve', [\App\Http\Controllers\GmController\ProfileUpdateRequestController::class, 'approve'])
+        ->middleware('role:gm')
+        ->name('gm.pending-edits.approve');
+
+    Route::post('dashboards/Gm/PendingEdits/{id}/reject', [\App\Http\Controllers\GmController\ProfileUpdateRequestController::class, 'reject'])
+        ->middleware('role:gm')
+        ->name('gm.pending-edits.reject');
+
     // GM - Create Application (NEW)
     Route::get('dashboards/Gm/CreateApplication', [GmController::class, 'createApplication'])
         ->middleware('role:gm')
@@ -240,11 +275,41 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware('role:gm')
         ->name('gm.create-application.store');
 
+    // GM - Member Validation
+    Route::get('dashboards/Gm/MemberValidate', [GmController::class, 'pendingMembers'])
+        ->middleware('role:gm')
+        ->name('gm.pending-members');
+
+    Route::post('dashboards/Gm/Member/{user}/approve', [GmController::class, 'approveMember'])
+        ->middleware('role:gm')
+        ->name('gm.member.approve');
+
+    Route::post('dashboards/Gm/Member/{user}/reject', [GmController::class, 'rejectMember'])
+        ->middleware('role:gm')
+        ->name('gm.member.reject');
+
+    // GM - Bulk Member Upload
+    Route::get('dashboards/Gm/BulkUploadMembers', [BulkMemberUploadController::class, 'index'])
+        ->middleware('role:gm')
+        ->name('gm.bulk-upload-members');
+
+    Route::post('dashboards/Gm/BulkUploadMembers', [BulkMemberUploadController::class, 'store'])
+        ->middleware('role:gm')
+        ->name('gm.bulk-upload-members.store');
+
+    Route::get('dashboards/Gm/BulkUploadMembers/template', [BulkMemberUploadController::class, 'template'])
+        ->middleware('role:gm')
+        ->name('gm.bulk-upload-members.template');
+
     Route::get('dashboards/HR/SecActivityLog', [AdminActivityLogController::class, 'hr'])
         ->middleware('role:hr')
         ->name('hr.activity-log');
 
     // Credit Coordinator
+    Route::get('dashboards/CreditCom/ActivityLog', [AdminActivityLogController::class, 'creditCom'])
+        ->middleware('role:creditcom')
+        ->name('creditcom.activity-log');
+
     Route::get('dashboards/CreditCom/ValidateLoan', [CreditComController::class, 'index'])
         ->middleware('role:creditcom')
         ->name('creditcom.validate-loan');

@@ -114,7 +114,6 @@ class DashboardService
                 'full_name' => trim($u->first_name.' '.$u->middle_name.' '.$u->last_name),
                 'email' => $u->email,
                 'position' => $u->memberProfile?->position ?? 'N/A',
-                'date_hired' => $u->memberProfile?->date_hired?->format('Y-m-d'),
                 'created_at' => $u->created_at->format('Y-m-d'),
             ]),
         ];
@@ -147,6 +146,85 @@ class DashboardService
         $totalAmountDue = Loan::active()->sum('total_amount_due');
         $actualCollectionRate = $totalAmountDue > 0 ? round(($totalPaidAmount / $totalAmountDue) * 100) : 0;
 
+        $shareCapitalModel = \App\Models\MemberProfile::query();
+        $totalShareCapital = $shareCapitalModel->sum('share_capital_balance');
+
+        $now = now();
+        $monthlyCollections = LoanPayment::where('created_at', '>=', $now->copy()->startOfMonth())
+            ->sum('amount');
+
+        $monthlyDisbursements = Loan::whereIn('status', ['released', 'active'])
+            ->where('release_date', '>=', $now->copy()->startOfMonth())
+            ->sum('principal_amount');
+
+        $activeLoanCount = Loan::active()->count();
+        $approvedLoanCount = Loan::where('status', 'approved')->count();
+
+        $pendingEditsCount = \App\Models\ProfileUpdateRequest::where('status', 'pending')->count();
+        $pendingMembersCount = User::where('role', 'member')->where('status', 'pending')->count();
+
+        $recentPendingEdits = \App\Models\ProfileUpdateRequest::with(['member.user', 'requester'])
+            ->where('status', 'pending')
+            ->orderBy('created_at', 'desc')
+            ->limit(5)
+            ->get()
+            ->map(fn ($r) => [
+                'id' => $r->id,
+                'member_name' => $r->member->user ? trim($r->member->user->first_name.' '.$r->member->user->last_name) : 'Unknown',
+                'request_type' => $r->request_type,
+                'proposed_status' => $r->proposed_status,
+                'requested_by_name' => $r->requester?->name ?? 'Unknown',
+                'created_at' => $r->created_at->format('Y-m-d H:i'),
+            ]);
+
+        $recentPendingMembers = User::where('role', 'member')
+            ->where('status', 'pending')
+            ->with('memberProfile')
+            ->orderBy('created_at', 'desc')
+            ->limit(5)
+            ->get()
+            ->map(fn ($u) => [
+                'id' => $u->id,
+                'name' => trim($u->first_name.' '.($u->middle_name ?? '').' '.$u->last_name),
+                'email' => $u->email,
+                'position' => $u->memberProfile?->position ?? 'N/A',
+                'created_at' => $u->created_at->format('Y-m-d H:i'),
+            ]);
+
+        $recentActiveLoans = Loan::whereIn('status', ['released', 'active'])
+            ->with(['user', 'loanType'])
+            ->orderBy('release_date', 'desc')
+            ->limit(5)
+            ->get()
+            ->map(fn ($l) => [
+                'id' => $l->id,
+                'member_name' => trim($l->user->first_name.' '.$l->user->middle_name.' '.$l->user->last_name),
+                'loan_type' => $l->loanType->name ?? 'N/A',
+                'principal' => $l->principal_amount,
+                'total_due' => $l->total_amount_due,
+                'status' => $l->status,
+                'release_date' => $l->release_date?->format('Y-m-d') ?? $l->created_at->format('Y-m-d'),
+            ]);
+
+        $recentApprovedLoans = Loan::where('status', 'approved')
+            ->with(['user', 'loanType'])
+            ->orderBy('updated_at', 'desc')
+            ->limit(5)
+            ->get()
+            ->map(fn ($l) => [
+                'id' => $l->id,
+                'member_name' => trim($l->user->first_name.' '.$l->user->middle_name.' '.$l->user->last_name),
+                'loan_type' => $l->loanType->name ?? 'N/A',
+                'principal' => $l->principal_amount,
+                'total_due' => $l->total_amount_due,
+                'status' => $l->status,
+            ]);
+
+        $pendingDeactivationRequests = \App\Models\ProfileUpdateRequest::where('status', 'pending')
+            ->where('request_type', 'status_change')
+            ->where('proposed_status', 'inactive')
+            ->count();
+
         return [
             'stats' => [
                 'total_loan_portfolio' => $totalLoanPortfolio,
@@ -165,6 +243,18 @@ class DashboardService
                 ->whereHas('loanType', fn ($q) => $q->where('name', 'like', '%Business%'))
                 ->where('principal_amount', '>', 100000)
                 ->count(),
+            'total_share_capital' => $totalShareCapital,
+            'monthly_collections' => $monthlyCollections,
+            'monthly_disbursements' => $monthlyDisbursements,
+            'active_loan_count' => $activeLoanCount,
+            'approved_loan_count' => $approvedLoanCount,
+            'pending_edits_count' => $pendingEditsCount,
+            'pending_deactivation_count' => $pendingDeactivationRequests,
+            'pending_members_count' => $pendingMembersCount,
+            'recent_pending_edits' => $recentPendingEdits,
+            'recent_pending_members' => $recentPendingMembers,
+            'recent_active_loans' => $recentActiveLoans,
+            'recent_approved_loans' => $recentApprovedLoans,
         ];
     }
 

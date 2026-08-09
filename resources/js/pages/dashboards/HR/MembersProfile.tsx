@@ -17,6 +17,7 @@ import {
     Power,
     RotateCcw,
     Shield,
+    Mail,
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -686,6 +687,16 @@ export default function MembersProfile({ user, memberProfile, beneficiaries, isA
                                       </div>
                                     </div>
                                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                                        <div className="grid gap-2 md:col-span-2 lg:col-span-1">
+                                            <Label htmlFor="email">Email Address</Label>
+                                            <div className="relative">
+                                                <Mail className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground" />
+                                                <div className="rounded-md border bg-muted px-3 py-2 pl-9 text-sm">
+                                                    {user.email}
+                                                </div>
+                                            </div>
+                                        </div>
+
                                         <div className="grid gap-2">
                                             <Label htmlFor="employee_id">
                                                 Member ID <span className="text-red-500">*</span>

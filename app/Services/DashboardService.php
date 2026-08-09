@@ -225,15 +225,11 @@ class DashboardService
             ->where('proposed_status', 'inactive')
             ->count();
 
-        $combinedPendingCount = $pendingApprovals
-            + $pendingEditsCount
-            + $pendingMembersCount;
-
         return [
             'stats' => [
                 'total_loan_portfolio' => $totalLoanPortfolio,
                 'active_members' => $activeMembers,
-                'pending_approvals' => $combinedPendingCount,
+                'pending_approvals' => $pendingApprovals,
                 'total_paid_amount' => $totalPaidAmount,
                 'total_amount_due' => $totalAmountDue,
             ],

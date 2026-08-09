@@ -193,7 +193,7 @@ class CreateMemberController extends Controller
             'position' => 'required|string|max:255',
             'basic_salary' => 'required|numeric|min:10000',
             'income_type' => 'required|in:monthly,daily,yearly',
-            'net_income' => 'required|numeric|min:1000',
+            'net_income' => 'required|numeric|min:10000',
             'share_capital_balance' => 'required|numeric|min:10000',
             'other_source_of_income' => 'nullable|string|max:255',
             'facebook_account_name' => 'nullable|string|max:255',

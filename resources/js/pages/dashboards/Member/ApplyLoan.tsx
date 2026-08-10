@@ -462,6 +462,9 @@ const computed = useMemo(() => {
         : 0;
 
     async function handleLoanSubmission() {
+        // Guard against double submission (spam clicks / double-confirm).
+        if (processing) return;
+
         const isConnected = await canSendEmail();
 
         if (!isConnected) {

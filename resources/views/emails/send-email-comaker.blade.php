@@ -13,7 +13,7 @@
             font-family: Arial, Helvetica, sans-serif;
             line-height: 1.6;
         }
-        .page { width: 100%; padding: 32px 12px; }
+ 
         .container {
             max-width: 680px;
             margin: 0 auto;
@@ -85,10 +85,10 @@
         .amount { color: #173d7a; font-size: 16px; }
         .notice {
             background: #fff7ed;
-            border: 1px solid #fed7aa;
-            border-left: 4px solid #c2410c;
+        
+            border-left: 4px solid ;
             border-radius: 8px;
-            color: #9a3412;
+           
             font-size: 14px;
             margin: 24px 0;
             padding: 18px 20px;
@@ -135,7 +135,7 @@
     </style>
 </head>
 <body>
-<div class="page">
+
     <div class="container">
         <div class="header">
             <img src="{{ $message->embed(public_path('LEIMCO.png')) }}" alt="LEIMCO Logo">
@@ -228,6 +228,6 @@
             Member Services: <a href="mailto:support@leimco.com">support@leimco.com</a>
         </div>
     </div>
-</div>
+
 </body>
 </html>

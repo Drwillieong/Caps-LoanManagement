@@ -208,6 +208,23 @@ class LoanController extends Controller
          *  CREATE LOAN
          * =============================== */
 
+        // Idempotency: block an identical pending application submitted within
+        // the last 10 seconds (covers double-clicks / spam beyond the throttle).
+        $duplicatePending = Loan::where('user_id', $user->id)
+            ->where('loan_type_id', $validated['loan_type_id'])
+            ->where('principal_amount', $validated['principal_amount'])
+            ->where('terms_months', $validated['terms_months'])
+            ->where('disbursement_method', $validated['disbursement_method'])
+            ->whereIn('status', ['awaiting_comaker', 'pending_gm_review', 'pending_cc_review'])
+            ->where('created_at', '>=', now()->subSeconds(10))
+            ->exists();
+
+        if ($duplicatePending) {
+            return back()->withErrors([
+                'principal_amount' => 'A similar loan application was just submitted. Please wait a moment before trying again.'
+            ])->withInput();
+        }
+
          $loan = Loan::create([
               'user_id' => $user->id,
               'loan_type_id' => $validated['loan_type_id'],
@@ -557,6 +574,9 @@ class LoanController extends Controller
                     'disbursement_method' => $loan->disbursement_method,
                     'status' => $loan->status,
                     'created_at' => $loan->created_at->format('Y-m-d H:i:s'),
+                    'expires_at' => $coMaker->expires_at
+                        ? \Carbon\Carbon::parse($coMaker->expires_at)->format('Y-m-d H:i:s')
+                        : null,
                     'requester' => [
                         'id' => $loanUser->id,
                         'name' => trim($loanUser->first_name . ($loanUser->middle_name ? ' ' . $loanUser->middle_name : '') . ' ' . $loanUser->last_name),

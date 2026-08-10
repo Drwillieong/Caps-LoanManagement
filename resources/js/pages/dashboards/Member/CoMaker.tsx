@@ -1,5 +1,5 @@
 import { Head, useForm, Link, router } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { LiveClock } from '@/components/live-clock';
 import { type BreadcrumbItem, type CoMakerProps } from '@/types';
@@ -83,8 +83,61 @@ function formatCurrency(amount: number | string): string {
     })}`;
 }
 
+const COMAKER_EXPIRATION_HOURS = 48;
+
+/**
+ * Returns the expiration timestamp for a co-maker request.
+ * Prefers the server-provided `expires_at`, falling back to
+ * created_at + 48h so the UI still works for older records.
+ */
+function getExpiration(expiresAt: string | null | undefined, createdAt: string): Date {
+    if (expiresAt) {
+        return new Date(expiresAt);
+    }
+    return new Date(new Date(createdAt).getTime() + COMAKER_EXPIRATION_HOURS * 60 * 60 * 1000);
+}
+
+/**
+ * Returns a human-friendly label for the remaining time until expiry,
+ * and whether the request is considered expired.
+ */
+function getExpirationInfo(
+    expiresAt: string | null | undefined,
+    createdAt: string,
+    now: number
+): { label: string; expired: boolean; urgent: boolean } {
+    const deadline = getExpiration(expiresAt, createdAt).getTime();
+    const diffMs = deadline - now;
+
+    if (diffMs <= 0) {
+        return { label: 'Expired', expired: true, urgent: true };
+    }
+
+    const totalMinutes = Math.floor(diffMs / (1000 * 60));
+    const days = Math.floor(totalMinutes / (60 * 24));
+    const hours = Math.floor((totalMinutes % (60 * 24)) / 60);
+    const minutes = totalMinutes % 60;
+
+    let label: string;
+    if (days > 0) {
+        label = `Expires in ${days}d ${hours}h`;
+    } else if (hours > 0) {
+        label = `Expires in ${hours}h ${minutes}m`;
+    } else {
+        label = `Expires in ${minutes}m`;
+    }
+
+    return { label, expired: false, urgent: diffMs <= 12 * 60 * 60 * 1000 };
+}
+
 export default function CoMaker({ coMakerRequests }: CoMakerProps) {
     const [processingAction, setProcessingAction] = useState<'approve' | 'reject' | null>(null);
+    const [now, setNow] = useState(() => Date.now());
+
+    useEffect(() => {
+        const timer = setInterval(() => setNow(Date.now()), 60 * 1000);
+        return () => clearInterval(timer);
+    }, []);
     const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
     const [selectedRequest, setSelectedRequest] = useState<CoMakerProps['coMakerRequests'][number] | null>(null);
 
@@ -199,6 +252,26 @@ export default function CoMaker({ coMakerRequests }: CoMakerProps) {
                                                 <Clock className="h-3.5 w-3.5 mr-1" />
                                                 Awaiting Response
                                             </Badge>
+                                            {(() => {
+                                                const info = getExpirationInfo(request.expires_at, request.created_at, now);
+                                                const variant = info.expired
+                                                    ? 'destructive'
+                                                    : info.urgent
+                                                      ? 'destructive'
+                                                      : 'secondary';
+                                                const className = info.expired
+                                                    ? 'border-red-200 text-red-700 bg-red-50'
+                                                    : info.urgent
+                                                      ? 'border-orange-200 text-orange-700 bg-orange-50'
+                                                      : 'border-slate-200 text-slate-600 bg-slate-50';
+
+                                                return (
+                                                    <Badge variant={variant} className={className}>
+                                                        <Clock className="h-3.5 w-3.5 mr-1" />
+                                                        {info.label}
+                                                    </Badge>
+                                                );
+                                            })()}
                                         </div>
                                     </CardHeader>
 

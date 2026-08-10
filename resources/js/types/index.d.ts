@@ -182,6 +182,7 @@ export interface CoMakerRequest {
     disbursement_method?: string;
     status: string;
     created_at: string;
+    expires_at?: string | null;
     requester: {
         id: number;
         name: string;

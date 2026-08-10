@@ -86,7 +86,7 @@
         .notice {
             background: #fff7ed;
             border: 1px solid #fed7aa;
-            border-left: 4px solid #c2410c;
+            border-left: 4px solid ;
             border-radius: 8px;
             color: #9a3412;
             font-size: 14px;

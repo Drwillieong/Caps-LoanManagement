@@ -129,5 +129,10 @@ class FortifyServiceProvider extends ServiceProvider
 
             return Limit::perMinute(5)->by($throttleKey);
         });
+
+        // Loan application submission: max 1 request every 10 seconds per user.
+        RateLimiter::for('loan-application', function (Request $request) {
+            return Limit::perMinute(6)->by('loan-app:'.($request->user()?->id ?? $request->ip()));
+        });
     }
 }

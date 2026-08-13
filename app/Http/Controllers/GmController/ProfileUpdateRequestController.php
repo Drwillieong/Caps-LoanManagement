@@ -251,7 +251,12 @@ class ProfileUpdateRequestController extends Controller
 
         $validated = $request->validate([
             'proposed_status' => 'required|string|in:active,inactive',
-            'reason' => 'nullable|string|max:2000',
+            // A reason is mandatory when HR requests a deactivation (inactive).
+            'reason' => [
+                $request->input('proposed_status') === 'inactive' ? 'required' : 'nullable',
+                'string',
+                'max:2000',
+            ],
         ]);
 
         if ($memberProfile->account_status === $validated['proposed_status']) {

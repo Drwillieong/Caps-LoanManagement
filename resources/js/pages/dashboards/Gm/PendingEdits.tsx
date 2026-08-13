@@ -447,6 +447,14 @@ export default function PendingEdits({ pendingEdits }: Props) {
                                                     <ChevronRight className="h-5 w-5 text-muted-foreground" />
                                                 </div>
                                             </div>
+                                            {edit.request_type === 'status_change' && edit.proposed_status === 'inactive' && edit.reason && (
+                                                <div className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3">
+                                                    <p className="text-xs font-semibold uppercase tracking-wider text-red-700">
+                                                        Deactivation Reason
+                                                    </p>
+                                                    <p className="mt-1 text-sm text-red-800">{edit.reason}</p>
+                                                </div>
+                                            )}
                                         </CardContent>
                                     </Card>
                                 ))}

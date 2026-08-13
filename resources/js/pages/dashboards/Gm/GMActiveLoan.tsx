@@ -164,7 +164,7 @@ export default function GMActiveLoan({ active_loans = [], stats = { total_active
         `;
 
         let tableHtml = '<table style="width: 100%; border-collapse: collapse; margin-top: 1rem;"><thead><tr style="background: #f3f4f6; border-bottom: 2px solid #d1d5db;">';
-        const headers = ['ID', 'Member', 'Type', 'Principal', 'Terms', 'Total Due', 'Date', 'Status', 'Next Due'];
+        const headers = ['Member ID', 'Member', 'Type', 'Principal', 'Terms', 'Total Due', 'Date', 'Status', 'Next Due'];
         headers.forEach(header => {
             tableHtml += `<th style="padding: 12px 8px; text-align: left; font-weight: 600; border: 1px solid #d1d5db; font-size: 0.875rem;">${header}</th>`;
         });
@@ -285,7 +285,7 @@ export default function GMActiveLoan({ active_loans = [], stats = { total_active
                             <Table>
                                 <TableHeader>
                                     <TableRow className="hover:bg-transparent border-b border-emerald-200">
-                                        <TableHead className="w-16 font-semibold text-emerald-800">ID</TableHead>
+                                        <TableHead className="w-16 font-semibold text-emerald-800"> Member ID</TableHead>
                                         <TableHead className="font-semibold text-emerald-800">Member</TableHead>
                                         <TableHead className="font-semibold text-emerald-800">Type</TableHead>
                                         <TableHead className="font-semibold text-emerald-800 text-right">Principal</TableHead>

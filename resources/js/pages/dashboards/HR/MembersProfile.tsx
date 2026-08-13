@@ -28,6 +28,7 @@ import { LiveClock } from '@/components/live-clock';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import {
@@ -203,6 +204,8 @@ export default function MembersProfile({ user, memberProfile, beneficiaries, isA
     const isPending = user.status === 'pending'
     const [isEditing, setIsEditing] = useState(false);
     const [isStatusConfirmOpen, setIsStatusConfirmOpen] = useState(false);
+    const [deactivationReason, setDeactivationReason] = useState('');
+    const [reasonError, setReasonError] = useState('');
     
     const [previewUrl, setPreviewUrl] = useState('');
     
@@ -324,14 +327,23 @@ export default function MembersProfile({ user, memberProfile, beneficiaries, isA
 
     const requestAccountStatusChange = () => {
         if (!memberProfile) return;
+        setDeactivationReason('');
+        setReasonError('');
         setIsStatusConfirmOpen(true);
     };
 
     const handleConfirmStatusChange = () => {
         if (!memberProfile) return;
 
+        // Deactivation requires a reason; reactivation does not.
+        if (proposedStatus === 'inactive' && !deactivationReason.trim()) {
+            setReasonError('A reason for deactivation is required.');
+            return;
+        }
+
         router.post(`/dashboards/HR/Members/${targetEmployeeId}/status-change-request`, {
             proposed_status: proposedStatus,
+            reason: proposedStatus === 'inactive' ? deactivationReason.trim() : null,
         }, {
             preserveScroll: true,
             onSuccess: () => setIsStatusConfirmOpen(false),
@@ -1543,6 +1555,29 @@ export default function MembersProfile({ user, memberProfile, beneficiaries, isA
                                             {memberProfile?.first_name} {memberProfile?.last_name}&apos;s account?
                                         </DialogDescription>
                                     </DialogHeader>
+
+                                    {proposedStatus === 'inactive' && (
+                                        <div className="space-y-2 py-2">
+                                            <Label htmlFor="deactivation_reason" className="text-red-700">
+                                                Reason for Deactivation <span className="text-red-500">*</span>
+                                            </Label>
+                                            <Textarea
+                                                id="deactivation_reason"
+                                                placeholder="Explain why this account should be deactivated..."
+                                                value={deactivationReason}
+                                                onChange={(e) => {
+                                                    setDeactivationReason(e.target.value);
+                                                    if (e.target.value.trim()) setReasonError('');
+                                                }}
+                                                className="min-h-[120px] resize-y border-red-200 focus-visible:ring-red-500/30"
+                                                aria-invalid={!!reasonError}
+                                            />
+                                            {reasonError && (
+                                                <p className="text-sm text-red-600">{reasonError}</p>
+                                            )}
+                                        </div>
+                                    )}
+
                                     <DialogFooter>
                                         <Button
                                             type="button"

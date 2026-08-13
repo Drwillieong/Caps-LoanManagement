@@ -2,7 +2,6 @@
 
 namespace App\Mail;
 
-use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
@@ -10,7 +9,7 @@ use Illuminate\Queue\SerializesModels;
 
 class GmApplicationDecision extends Mailable
 {
-    use Queueable, SerializesModels;
+    use SerializesModels;
 
     public string $borrowerName;
     public string $loanType;
@@ -50,7 +49,7 @@ class GmApplicationDecision extends Mailable
     public function envelope(): Envelope
     {
         $subject = $this->decision === 'approved'
-            ? 'Loan Application Approved – For Check Voucher Processing'
+            ? 'Loan Application Approved - Forwarded for Credit Review'
             : 'Loan Application Decision Update';
 
         return new Envelope(

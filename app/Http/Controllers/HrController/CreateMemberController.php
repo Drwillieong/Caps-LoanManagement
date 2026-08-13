@@ -3,6 +3,9 @@
 namespace App\Http\Controllers\HrController;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ResubmitMemberRequest;
+use App\Models\MemberProfile;
+use App\Models\ProfileUpdateRequest;
 use App\Models\User;
 use App\Services\ActivityLogService;
 use Illuminate\Http\Request;
@@ -60,8 +63,13 @@ class CreateMemberController extends Controller
                         'last_name' => $user->last_name,
                         'email' => $user->email,
                         'role' => $user->role,
+                        'status' => $user->status,
+                        'rejection_reason' => $user->rejection_reason,
                         'is_active' => $user->is_active,
                         'created_at' => $user->created_at,
+                        'has_pending_update_request' => $user->has_pending_update_request ?? false,
+                        'has_rejected_update_request' => $user->has_rejected_update_request ?? false,
+                        'update_request_rejection_reason' => $user->update_request_rejection_reason ?? null,
                         'member_profile' => $user->memberProfile ? [
                             'employee_id' => $user->memberProfile->employee_id,
                             'payroll_id' => $user->memberProfile->payroll_id,
@@ -78,7 +86,7 @@ class CreateMemberController extends Controller
                             'place_of_birth' => $user->memberProfile->place_of_birth,
                             'educational_attainment' => $user->memberProfile->educational_attainment,
                             'position' => $user->memberProfile->position,
-                            'date_hired' => $user->memberProfile->date_hired,
+                            
                             'basic_salary' => $user->memberProfile->basic_salary,
                             'income_type' => $user->memberProfile->income_type,
                             'net_income' => $user->memberProfile->net_income,
@@ -93,6 +101,7 @@ class CreateMemberController extends Controller
                             'real_properties_owned' => $user->memberProfile->real_properties_owned,
                             'bank_account_number' => $user->memberProfile->bank_account_number,
                             'tin_number' => $user->memberProfile->tin_number,
+                            'account_status' => $user->memberProfile->account_status ?? 'active',
                         ] : null,
                     ];
                 }),
@@ -103,6 +112,31 @@ class CreateMemberController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate(10)
             ->withQueryString();
+
+        // Attach pending and rejected update request status for each user
+        $pendingRequestMemberIds = ProfileUpdateRequest::where('status', 'pending')
+            ->pluck('member_id')
+            ->toArray();
+
+        $rejectedUpdateRequests = ProfileUpdateRequest::where('status', 'rejected')
+            ->whereNotNull('rejection_reason')
+            ->get(['member_id', 'rejection_reason'])
+            ->mapWithKeys(function ($request) {
+                return [$request->member_id => $request->rejection_reason];
+            })
+            ->toArray();
+
+        $users->getCollection()->transform(function ($user) use ($pendingRequestMemberIds, $rejectedUpdateRequests) {
+            $memberProfile = $user->memberProfile;
+            $user->has_pending_update_request = $memberProfile && in_array($memberProfile->employee_id, $pendingRequestMemberIds);
+            $user->has_rejected_update_request = false;
+            $user->update_request_rejection_reason = null;
+            if ($memberProfile && isset($rejectedUpdateRequests[$memberProfile->employee_id])) {
+                $user->has_rejected_update_request = true;
+                $user->update_request_rejection_reason = $rejectedUpdateRequests[$memberProfile->employee_id];
+            }
+            return $user;
+        });
 
         return Inertia::render('dashboards/HR/SeeUsers', [
             'users' => $users,
@@ -141,10 +175,6 @@ class CreateMemberController extends Controller
             'email' => 'required|string|lowercase|email|max:255|unique:users',
             'role' => 'required|in:member',
 
-            // Employee ID
-            'employee_id' => 'required|string|max:255|unique:member_profiles,employee_id',
-            'payroll_id' => 'nullable|string|max:255|unique:member_profiles,payroll_id',
-
             // Personal fields
             'place_of_birth' => 'required|string|max:255',
             'date_of_birth' => 'required|date|before:today',
@@ -162,27 +192,57 @@ class CreateMemberController extends Controller
 
             // Employment fields
             'position' => 'required|string|max:255',
-            'date_hired' => 'required|date',
             'basic_salary' => 'required|numeric|min:10000',
             'income_type' => 'required|in:monthly,daily,yearly',
-            'net_income' => 'required|numeric|min:0',
+            'net_income' => 'required|numeric|min:10000',
             'share_capital_balance' => 'required|numeric|min:10000',
             'other_source_of_income' => 'nullable|string|max:255',
             'facebook_account_name' => 'nullable|string|max:255',
             'spouse_occupation' => 'nullable|string|max:255',
             'spouse_gross_income' => 'nullable|numeric|min:0',
-            'spouse_income_type' => 'required|in:monthly,daily,yearly',
+            'spouse_income_type' => 'required_with:spouse_occupation|in:monthly,daily,yearly',
             'spouse_net_income' => 'nullable|numeric|min:0',
             'legal_beneficiary_1_name' => 'nullable|string|max:255',
             'real_properties_owned' => 'nullable|string|max:2000',
         ], [
             'basic_salary.min' => 'Income (Gross) must be at least 10,000.',
             'share_capital_balance.min' => 'Share capital balance must be at least 10,000.',
+            'spouse_income_type.required_with' => 'Spouse Income Type is required when Spouse Occupation is provided.',
         ]);
 
-        $temporaryPassword = $this->generateTemporaryPassword();
+        // Conditional spouse validation: if spouse_occupation is provided,
+        // spouse_gross_income and spouse_net_income become required
+        $request->validate([
+            'spouse_gross_income' => [
+                'nullable',
+                'numeric',
+                'min:0',
+                function ($attribute, $value, $fail) use ($request) {
+                    if ($request->filled('spouse_occupation') && empty($value)) {
+                        $fail('Spouse Income (Gross) is required when Spouse Occupation is provided.');
+                    }
+                },
+            ],
+            'spouse_net_income' => [
+                'nullable',
+                'numeric',
+                'min:0',
+                function ($attribute, $value, $fail) use ($request) {
+                    if ($request->filled('spouse_occupation') && empty($value)) {
+                        $fail('Spouse Net Income is required when Spouse Occupation is provided.');
+                    }
+                },
+            ],
+        ]);
 
-        $user = DB::transaction(function () use ($validated, $temporaryPassword) {
+        // Merge the re-validated values back
+        $validated['spouse_gross_income'] = $request->input('spouse_gross_income');
+        $validated['spouse_net_income'] = $request->input('spouse_net_income');
+
+        $temporaryPassword = $this->generateTemporaryPassword();
+        $nextEmployeeId = $this->generateNextEmployeeId();
+
+        $user = DB::transaction(function () use ($validated, $temporaryPassword, $nextEmployeeId) {
             $user = User::create([
                 'first_name' => $validated['first_name'],
                 'middle_name' => $validated['middle_name'] ?? null,
@@ -196,7 +256,7 @@ class CreateMemberController extends Controller
             ]);
 
             $user->memberProfile()->create([
-                'employee_id' => $validated['employee_id'],
+                'employee_id' => $nextEmployeeId,
                 'payroll_id' => $validated['payroll_id'] ?? null,
                 'first_name' => $validated['first_name'],
                 'middle_name' => $validated['middle_name'] ?? null,
@@ -213,7 +273,6 @@ class CreateMemberController extends Controller
                 'permanent_address' => $validated['permanent_address'],
                 'permanent_zip_code' => $validated['permanent_zip_code'],
                 'position' => $validated['position'],
-                'date_hired' => $validated['date_hired'],
                 'basic_salary' => $validated['basic_salary'],
                 'income_type' => $validated['income_type'],
                 'net_income' => $validated['net_income'],
@@ -226,6 +285,7 @@ class CreateMemberController extends Controller
                 'spouse_net_income' => $validated['spouse_net_income'] ?? null,
                 'legal_beneficiary_1_name' => $validated['legal_beneficiary_1_name'] ?? null,
                 'real_properties_owned' => $validated['real_properties_owned'] ?? null,
+                'account_status' => 'active',
             ]);
 
             return $user;
@@ -239,6 +299,19 @@ class CreateMemberController extends Controller
 
         // Email dispatch is deferred — will be sent when GM approves the member
         return redirect()->route('users')->with('success', 'Member created successfully. The application has been submitted for GM validation. The welcome email with credentials will be sent upon GM approval.');
+    }
+
+    private function generateNextEmployeeId(): string
+    {
+        $maxNum = MemberProfile::query()
+            ->select('employee_id')
+            ->get()
+            ->filter(fn ($id) => preg_match('/\d/', $id))
+            ->max(fn ($id) => (int) preg_replace('/\D/', '', $id));
+
+        $nextNum = ($maxNum ?? 0) + 1;
+
+        return str_pad($nextNum, 3, '0', STR_PAD_LEFT);
     }
 
     private function generateTemporaryPassword(int $length = 14): string
@@ -266,7 +339,7 @@ class CreateMemberController extends Controller
             [$password[$i], $password[$j]] = [$password[$j], $password[$i]];
         }
 
-        return implode('', $password);
+return implode('', $password);
     }
 
     public function updateStatus(Request $request, User $user)
@@ -290,5 +363,140 @@ class CreateMemberController extends Controller
         );
 
         return redirect()->route('users')->with('success', 'User status updated successfully.');
+    }
+
+    // ======================================================================
+    // Rejected Member Resubmit Workflow
+    // ======================================================================
+
+    /**
+     * Fetch a single rejected member with full profile for editing.
+     * (The list of rejected members now lives in SeeUsers.)
+     */
+    public function editRejected($userId)
+    {
+        $user = User::where('id', $userId)
+            ->where('status', 'rejected')
+            ->where('role', 'member')
+            ->with('memberProfile')
+            ->firstOrFail();
+
+        $profile = $user->memberProfile;
+
+        return Inertia::render('dashboards/HR/RejectedMemberEdit', [
+            'member' => [
+                'id' => $user->id,
+                'first_name' => $user->first_name,
+                'middle_name' => $user->middle_name,
+                'last_name' => $user->last_name,
+                'email' => $user->email,
+                'status' => $user->status,
+                'rejection_reason' => $user->rejection_reason,
+                'member_profile' => $profile ? [
+                    'employee_id' => $profile->employee_id,
+                    'payroll_id' => $profile->payroll_id,
+                    'first_name' => $profile->first_name,
+                    'middle_name' => $profile->middle_name,
+                    'last_name' => $profile->last_name,
+                    'place_of_birth' => $profile->place_of_birth,
+                    'date_of_birth' => $profile->date_of_birth?->format('Y-m-d'),
+                    'sex' => $profile->sex,
+                    'civil_status' => $profile->civil_status,
+                    'educational_attainment' => $profile->educational_attainment,
+                    'position' => $profile->position,
+                    'basic_salary' => $profile->basic_salary,
+                    'income_type' => $profile->income_type,
+                    'net_income' => $profile->net_income,
+                    'share_capital_balance' => $profile->share_capital_balance,
+                    'other_source_of_income' => $profile->other_source_of_income,
+                    'facebook_account_name' => $profile->facebook_account_name,
+                    'mobile_number' => $profile->mobile_number,
+                    'permanent_mobile_number' => $profile->permanent_mobile_number,
+                    'present_address' => $profile->present_address,
+                    'present_zip_code' => $profile->present_zip_code,
+                    'permanent_address' => $profile->permanent_address,
+                    'permanent_zip_code' => $profile->permanent_zip_code,
+                    'spouse_occupation' => $profile->spouse_occupation,
+                    'spouse_gross_income' => $profile->spouse_gross_income,
+                    'spouse_income_type' => $profile->spouse_income_type,
+                    'spouse_net_income' => $profile->spouse_net_income,
+                    'legal_beneficiary_1_name' => $profile->legal_beneficiary_1_name,
+                    'real_properties_owned' => $profile->real_properties_owned,
+                ] : null,
+            ],
+        ]);
+    }
+
+    /**
+     * Update a rejected member's details and change status back to 'pending'.
+     */
+    public function resubmit(ResubmitMemberRequest $request, $userId)
+    {
+        $validated = $request->validated();
+
+        $user = User::where('id', $userId)
+            ->where('status', 'rejected')
+            ->where('role', 'member')
+            ->with('memberProfile')
+            ->firstOrFail();
+
+        $profileFields = [
+            'first_name' => $validated['first_name'],
+            'middle_name' => $validated['middle_name'] ?? null,
+            'last_name' => $validated['last_name'],
+            'place_of_birth' => $validated['place_of_birth'],
+            'date_of_birth' => $validated['date_of_birth'],
+            'civil_status' => $validated['civil_status'],
+            'sex' => $validated['sex'],
+            'educational_attainment' => $validated['educational_attainment'],
+            'mobile_number' => $validated['mobile_number'],
+            'permanent_mobile_number' => $validated['permanent_mobile_number'],
+            'present_address' => $validated['present_address'],
+            'present_zip_code' => $validated['present_zip_code'],
+            'permanent_address' => $validated['permanent_address'],
+            'permanent_zip_code' => $validated['permanent_zip_code'],
+            'position' => $validated['position'],
+            'basic_salary' => $validated['basic_salary'],
+            'income_type' => $validated['income_type'],
+            'net_income' => $validated['net_income'],
+            'share_capital_balance' => $validated['share_capital_balance'],
+            'other_source_of_income' => $validated['other_source_of_income'] ?? null,
+            'facebook_account_name' => $validated['facebook_account_name'] ?? null,
+            'spouse_occupation' => $validated['spouse_occupation'] ?? null,
+            'spouse_gross_income' => $validated['spouse_gross_income'] ?? null,
+            'spouse_income_type' => $validated['spouse_income_type'],
+            'spouse_net_income' => $validated['spouse_net_income'] ?? null,
+            'legal_beneficiary_1_name' => $validated['legal_beneficiary_1_name'] ?? null,
+            'real_properties_owned' => $validated['real_properties_owned'] ?? null,
+        ];
+
+        DB::transaction(function () use ($user, $validated, $profileFields) {
+            // Update the user account details
+            $user->update([
+                'first_name' => $validated['first_name'],
+                'middle_name' => $validated['middle_name'] ?? null,
+                'last_name' => $validated['last_name'],
+                'email' => strtolower($validated['email']),
+                // Resubmit → back to pending for the GM to review again
+                'status' => 'pending',
+                'rejection_reason' => null,
+                'is_active' => false,
+            ]);
+
+            // Update the member profile
+            if ($user->memberProfile) {
+                $user->memberProfile->update($profileFields);
+            }
+        });
+
+        app(ActivityLogService::class)->logActivity(
+            'member_resubmitted',
+            null,
+            'HR resubmitted rejected member registration for '.$user->name.' (ID #'.$user->id.'). Status is now pending GM validation.'
+        );
+
+        return redirect()
+            ->route('users')
+            ->with('success', 'Member details updated and resubmitted for GM validation.');
     }
 }

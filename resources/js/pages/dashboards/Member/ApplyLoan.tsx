@@ -15,6 +15,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from '@/components/ui/popover';
+import {
+  Command,
+  CommandInput,
+  CommandList,
+  CommandEmpty,
+  CommandGroup,
+  CommandItem,
+} from '@/components/ui/command';
 import { Badge } from '@/components/ui/badge';
 import { useMemo, useState, useEffect } from 'react';
 import UserAgreementModal from '@/components/modals/UserAgreementModal';
@@ -24,7 +37,7 @@ import { canSendEmail } from '@/hooks/use-internet-check';
 
 // PreviousLoanWithPercent type now in index.d.ts
 
-import { Search, User, Calendar, AlertCircle, CheckCircle2, Clock, ArrowRight, CheckCircle, EyeOff, Eye,ShieldAlert, Lock, ArrowLeft } from 'lucide-react';
+import { Search, User, Calendar, AlertCircle, CheckCircle2, Clock, ArrowRight, CheckCircle, EyeOff, Eye,ShieldAlert, Lock, ArrowLeft, Check } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
    
@@ -54,13 +67,18 @@ export default function ApplyLoan({
         principal_amount: editingLoan?.principal_amount?.toString() || '',
         terms_months: editingLoan?.terms_months?.toString() || '',
         co_maker_user_id: editingLoan?.co_maker_user_id?.toString() || '',
+        disbursement_method: editingLoan?.disbursement_method || 'cash',
     });
 
     // UI state
     const [showApplicantInfo, setShowApplicantInfo] = useState(false);
+    const [showBasicSalary, setShowBasicSalary] = useState(true);
+    const [showShareCapital, setShareCapital] = useState(true);
+    const [showMaxLoan, setShowMaxLoan] = useState(true);
     const [coMakerSearch, setCoMakerSearch] = useState('');
     const [preSelectedCoMaker, setPreSelectedCoMaker] = useState<EligibleCoMaker | null>(null);
     const [isPreSelecting, setIsPreSelecting] = useState(false);
+    const [isComakerPopoverOpen, setIsComakerPopoverOpen] = useState(false);
     const [isAgreementModalOpen, setIsAgreementModalOpen] = useState(false);
     const [lockoutRemaining, setLockoutRemaining] = useState<number | null>(null);
 
@@ -82,6 +100,17 @@ export default function ApplyLoan({
         }
     }, [eligibleCoMakers, setData]);
 
+    
+ // Auto-select cash loan when not editing
+    useEffect(() => {
+        if (!isEditing && !data.loan_type_id && loanTypes.length > 0) {
+            const cashLoan = loanTypes.find((type) => type.name.toLowerCase().includes('cash'));
+            if (cashLoan) {
+                setData('loan_type_id', cashLoan.id.toString());
+            }
+        }
+    }, [isEditing, data.loan_type_id, loanTypes, setData]);
+    
     const LOCKOUT_MS = 3 * 60 * 60 * 1000;
 
     const isReapplicationLocked = useMemo(() => {
@@ -386,6 +415,21 @@ const computed = useMemo(() => {
         };
     }, [data.principal_amount, data.terms_months, data.loan_type_id, loanTypes]);
 
+    const maxTerm = useMemo(() => {
+        const principal = parseNumber(data.principal_amount);
+        if (principal <= 0) return 24;
+        if (principal <= 50000) return 12;
+        if (principal < 100000) return 18;
+        return 24;
+    }, [data.principal_amount]);
+
+    useEffect(() => {
+        const currentTerm = parseInt(data.terms_months);
+        if (currentTerm > maxTerm) {
+            setData('terms_months', maxTerm.toString());
+        }
+    }, [data.terms_months, maxTerm, setData]);
+
     const activeMonthlyTotal = useMemo(() => 
     (previousLoans || [])
         ?.filter((loan) => ['approved', 'released'].includes(loan.status as string))
@@ -418,6 +462,9 @@ const computed = useMemo(() => {
         : 0;
 
     async function handleLoanSubmission() {
+        // Guard against double submission (spam clicks / double-confirm).
+        if (processing) return;
+
         const isConnected = await canSendEmail();
 
         if (!isConnected) {
@@ -439,6 +486,20 @@ const computed = useMemo(() => {
             return;
         }
 
+        const hasInputs =
+            data.loan_type_id &&
+            data.principal_amount &&
+            data.terms_months &&
+            data.disbursement_method;
+        const hasCoMaker = !!data.co_maker_user_id;
+
+        if (!hasInputs || !hasCoMaker) {
+            toast.error(
+                'Please fill in all loan details and select a Co-Maker before proceeding.',
+            );
+            return;
+        }
+
         setIsAgreementModalOpen(true);
     }
 
@@ -457,6 +518,96 @@ const computed = useMemo(() => {
                         </Link>
                     )}
                 </div>
+                 {/* =========================================
+                    APPLICANT INFORMATION CARD
+                    ========================================= */}
+                    <Card className="border-emerald-100 bg-white/50 dark:bg-emerald-950/10 shadow-sm">
+                        <CardHeader className="pb-3 flex flex-row items-center justify-between">
+                            <CardTitle className="text-base text-emerald-900 dark:text-emerald-100">
+                                Applicant Information
+                            </CardTitle>
+
+                            {/* Show / Hide Toggle */}
+                        <button
+                            type="button"
+                            onClick={() => {
+                                const next = !showApplicantInfo;
+                                setShowApplicantInfo(next);
+                                setShowBasicSalary(next);
+                                setShareCapital(next);
+                                setShowMaxLoan(next);
+                            }}
+                            disabled={isFormLocked}
+                            className="text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {showApplicantInfo ? <EyeOff size={18} /> : <Eye size={18} />}
+                        </button>
+                        </CardHeader>
+
+                        <CardContent>
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                                <div className="rounded-lg bg-emerald-50 border border-emerald-100 p-3">
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-xs text-emerald-600">Basic Salary</p>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowBasicSalary((prev) => !prev)}
+                                            className="text-muted-foreground hover:text-foreground"
+                                        >
+                                            {showBasicSalary ? (
+                                                <EyeOff size={16} />
+                                            ) : (
+                                                <Eye size={16} />
+                                            )}
+                                        </button>
+                                    </div>
+                                    <p className="font-semibold text-lg text-emerald-700">
+                                        {maskCurrency(memberProfile.basic_salary, showBasicSalary)}
+                                    </p>
+                                </div>
+
+                                <div className="rounded-lg bg-emerald-50 border border-emerald-100 p-3">
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-xs text-emerald-600">Share Capital</p>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShareCapital((prev) => !prev)}
+                                            className="text-muted-foreground hover:text-foreground"
+                                        >
+                                            {showShareCapital ? (
+                                                <EyeOff size={16} />
+                                            ) : (
+                                                <Eye size={16} />
+                                            )}
+                                        </button>
+                                    </div>
+                                    <p className="font-semibold text-lg text-emerald-700">
+                                        {maskCurrency(memberProfile.share_capital_balance || 0, showShareCapital)}
+                                    </p>
+                                </div>
+
+                                <div className="rounded-lg bg-emerald-50 border border-emerald-100 p-3">
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-xs text-emerald-600">Max Loan Allowed</p>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowMaxLoan((prev) => !prev)}
+                                            className="text-muted-foreground hover:text-foreground"
+                                        >
+                                            {showMaxLoan ? (
+                                                <EyeOff size={16} />
+                                            ) : (
+                                                <Eye size={16} />
+                                            )}
+                                        </button>
+                                    </div>
+                                    <p className="font-semibold text-lg text-emerald-700">
+                                        {maskCurrency(maxLoanAllowed, showMaxLoan)}
+                                    </p>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
 
                 {/* =========================================
                     TOP SECTION: ENHANCED ELIGIBILITY CHECK
@@ -638,51 +789,7 @@ const computed = useMemo(() => {
 
                 <form onSubmit={submit} className="space-y-6">
 
-                   {/* =========================================
-                    APPLICANT INFORMATION CARD
-                    ========================================= */}
-                    <Card className="border-emerald-100 bg-white/50 dark:bg-emerald-950/10 shadow-sm">
-                        <CardHeader className="pb-3 flex flex-row items-center justify-between">
-                            <CardTitle className="text-base text-emerald-900 dark:text-emerald-100">
-                                Applicant Information
-                            </CardTitle>
-
-                            {/* Show / Hide Toggle */}
-                        <button
-                            type="button"
-                            onClick={() => setShowApplicantInfo(!showApplicantInfo)}
-                            disabled={isFormLocked}
-                            className="text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            {showApplicantInfo ? <EyeOff size={18} /> : <Eye size={18} />}
-                        </button>
-                        </CardHeader>
-
-                        <CardContent>
-                            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                                <div className="rounded-lg bg-emerald-50 border border-emerald-100 p-3">
-                                    <p className="text-xs text-emerald-600">Basic Salary</p>
-                                    <p className="font-semibold text-lg text-emerald-700">
-                                        {maskCurrency(memberProfile.basic_salary, showApplicantInfo)}
-                                    </p>
-                                </div>
-
-                                <div className="rounded-lg bg-emerald-50 border border-emerald-100 p-3">
-                                    <p className="text-xs text-emerald-600">Share Capital</p>
-                                    <p className="font-semibold text-lg text-emerald-700">
-                                        {maskCurrency(memberProfile.share_capital_balance || 0, showApplicantInfo)}
-                                    </p>
-                                </div>
-
-                                <div className="rounded-lg bg-emerald-50 border border-emerald-100 p-3">
-                                    <p className="text-xs text-emerald-600">Max Loan Allowed</p>
-                                    <p className="font-semibold text-lg text-emerald-700">
-                                        {maskCurrency(maxLoanAllowed, showApplicantInfo)}
-                                    </p>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
+                  
                     
                     {/* =========================================
                         LOAN DETAILS CARD
@@ -695,10 +802,10 @@ const computed = useMemo(() => {
                             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                                 <div className="space-y-2">
                                     <Label>Loan Type</Label>
-                                    <Select value={data.loan_type_id} onValueChange={(value) => setData('loan_type_id', value)} disabled={isFormLocked}>
-                                        <SelectTrigger className="w-full">
-                                            <SelectValue placeholder="Select loan type" />
-                                        </SelectTrigger>
+                                     <Select value={data.loan_type_id} onValueChange={(value) => setData('loan_type_id', value)} disabled aria-invalid={!!errors.loan_type_id}>
+                                         <SelectTrigger className="w-full">
+                                             <SelectValue placeholder="Select loan type" />
+                                         </SelectTrigger>
                                         <SelectContent>
                                             {loanTypes.map((type) => (
                                                 <SelectItem key={type.id} value={type.id.toString()}>
@@ -712,7 +819,7 @@ const computed = useMemo(() => {
 
                                 <div className="space-y-2">
                                     <Label>Loan Amount (₱)</Label>
- <Input
+  <Input
                                         type="text"
                                         inputMode="numeric"
                                         placeholder="0"
@@ -724,40 +831,56 @@ const computed = useMemo(() => {
                                             }
                                         }}
                                         disabled={isFormLocked}
+                                        aria-invalid={!!errors.principal_amount}
                                     />
                                     <InputError message={errors.principal_amount} />
                                 </div>
 
-                              <div className="space-y-2">
-  <Label>Term (Months)</Label>
+                               <div className="space-y-2">
+   <Label>Term (Months)</Label>
 
-  <Select
-    value={data.terms_months}
-    onValueChange={(value) => setData("terms_months", value)}
-    disabled={isFormLocked}
-  >
-    <SelectTrigger className="w-full">
-      <SelectValue placeholder="Select term" />
-    </SelectTrigger>
+    <Select
+      value={data.terms_months}
+      onValueChange={(value) => setData("terms_months", value)}
+      disabled={isFormLocked}
+      aria-invalid={!!errors.terms_months}
+    >
+      <SelectTrigger className="w-full">
+        <SelectValue placeholder="Select term" />
+      </SelectTrigger>
 
-    <SelectContent className="max-h-48 overflow-y-auto">
-      {[...Array(24)].map((_, i) => (
-        <SelectItem key={i + 1} value={(i + 1).toString()}>
-          {i + 1} {i + 1 === 1 ? "Month" : "Months"}
-        </SelectItem>
-      ))}
-    </SelectContent>
-  </Select>
+     <SelectContent className="max-h-48 overflow-y-auto">
+       {[...Array(maxTerm)].map((_, i) => (
+         <SelectItem key={i + 1} value={(i + 1).toString()}>
+           {i + 1} {i + 1 === 1 ? "Month" : "Months"}
+         </SelectItem>
+       ))}
+     </SelectContent>
+   </Select>
 
-  <InputError message={errors.terms_months} />
+   <InputError message={errors.terms_months} />
+</div>
+
+<div className="space-y-2">
+    <Label>Disbursement Method</Label>
+    <Select value={data.disbursement_method} onValueChange={(value) => setData('disbursement_method', value)} disabled={isFormLocked} aria-invalid={!!errors.disbursement_method}>
+        <SelectTrigger className="w-full">
+            <SelectValue placeholder="Select method" />
+        </SelectTrigger>
+        <SelectContent>
+            <SelectItem value="cash">Cash</SelectItem>
+            <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+        </SelectContent>
+    </Select>
+    <InputError message={errors.disbursement_method} />
 </div>
                             </div>
                         </CardContent>
                     </Card>
 
                   {/* =========================================
-                    CO-MAKER SELECTION WITH SEARCH
-                    ========================================= */}
+                     CO-MAKER SELECTION WITH SEARCH
+                     ========================================= */}
                     <Card className="border-emerald-100 bg-white/50 dark:bg-emerald-950/10 shadow-sm">
                         <CardHeader className="pb-3">
                             <CardTitle className="flex items-center gap-2 text-base text-emerald-900 dark:text-emerald-100">
@@ -771,39 +894,72 @@ const computed = useMemo(() => {
 
                         <CardContent>
                             <div className="space-y-4">
-                                {/* Search input */}
-                                <div className="relative">
-                                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-emerald-500" />
-                                    <Input
-                                        type="text"
-                                        placeholder="Search co-maker by name, ID, or email..."
-                                        className="pl-10"
-                                        value={coMakerSearch}
-                                        onChange={(e) => setCoMakerSearch(e.target.value)}
-                                        disabled={isPreSelecting || isFormLocked}
-                                    />
-                                </div>
-
-                                {/* Co-maker dropdown */}
-                                <Select value={data.co_maker_user_id} onValueChange={(value) => setData('co_maker_user_id', value)} disabled={isFormLocked}>
-                                    <SelectTrigger className="w-full">
-                                        {isPreSelecting && preSelectedCoMaker ? (
-                                            <div className="flex items-center gap-2 p-2">
-                                                <CheckCircle className="h-4 w-4 text-emerald-500" />
-                                                <span>{preSelectedCoMaker.name} ({preSelectedCoMaker.email})</span>
-                                            </div>
-                                        ) : (
-                                            <SelectValue placeholder={filteredCoMakers.length > 0 ? `Select co-maker (${filteredCoMakers.length} available)` : 'No matching co-makers found'} />
-                                        )}
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {filteredCoMakers.map((coMaker: EligibleCoMaker) => (
-                                            <SelectItem key={coMaker.id} value={coMaker.id.toString()}>
-                                                {coMaker.name} ({coMaker.email})
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                <Popover open={isComakerPopoverOpen} onOpenChange={setIsComakerPopoverOpen}>
+                                    <PopoverTrigger asChild>
+                                        <Button 
+                                            variant="outline" 
+                                            className="w-full justify-between font-normal h-auto min-h-10"
+                                            disabled={isFormLocked || isPreSelecting}
+                                            aria-invalid={!!errors.co_maker_user_id}
+                                        >
+                                            {data.co_maker_user_id && isPreSelecting && preSelectedCoMaker && preSelectedCoMaker.id.toString() === data.co_maker_user_id ? (
+                                                <div className="flex items-center gap-2 truncate">
+                                                    <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                                                    <span className="truncate">{preSelectedCoMaker.name} ({preSelectedCoMaker.id})</span>
+                                                </div>
+                                            ) : data.co_maker_user_id ? (
+                                                <div className="flex items-center gap-2 truncate">
+                                                    <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+                                                    <span className="truncate">
+                                                        {(() => {
+                                                            const selected = eligibleCoMakers.find(cm => cm.id.toString() === data.co_maker_user_id);
+                                                            return selected ? `${selected.name} (${selected.id})` : "Search co-maker by name, ID, or email...";
+                                                        })()}
+                                                    </span>
+                                                </div>
+                                            ) : (
+                                                <span className="text-muted-foreground">
+                                                    Select co-maker ({filteredCoMakers.length} available)
+                                                </span>
+                                            )}
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-full p-0" align="start" sideOffset={4}>
+                                        <Command shouldFilter={false}>
+                                            <CommandInput 
+                                                placeholder="Search co-maker by name, ID, or email..." 
+                                                value={coMakerSearch}
+                                                onValueChange={setCoMakerSearch}
+                                            />
+                                            <CommandList>
+                                                <CommandEmpty>No eligible co-makers found</CommandEmpty>
+                                                <CommandGroup>
+                                                    {filteredCoMakers.map((coMaker: EligibleCoMaker) => (
+                                                        <CommandItem
+                                                            key={coMaker.id}
+                                                            value={`${coMaker.name} ${coMaker.id} ${coMaker.email}`}
+                                                            onSelect={() => {
+                                                                setData('co_maker_user_id', coMaker.id.toString());
+                                                                setIsComakerPopoverOpen(false);
+                                                                setCoMakerSearch('');
+                                                            }}
+                                                        >
+                                                            <div className="flex flex-col gap-0.5">
+                                                                <span className="font-medium text-slate-900 dark:text-slate-100">{coMaker.name}</span>
+                                                                <span className="text-xs text-muted-foreground">
+                                                                    User ID: {coMaker.id} · {coMaker.email}
+                                                                </span>
+                                                            </div>
+                                                            {data.co_maker_user_id === coMaker.id.toString() && (
+                                                                <Check className="ml-auto h-4 w-4 text-emerald-500" />
+                                                            )}
+                                                        </CommandItem>
+                                                    ))}
+                                                </CommandGroup>
+                                            </CommandList>
+                                        </Command>
+                                    </PopoverContent>
+                                </Popover>
                                 <InputError message={errors.co_maker_user_id} />
 
                                 {/* Optional hint */}

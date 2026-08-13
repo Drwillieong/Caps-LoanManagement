@@ -150,7 +150,25 @@ export default function BulkUploadMembers() {
 
         xhr.onload = () => {
             try {
-                const response = JSON.parse(xhr.responseText);
+                const raw = xhr.responseText.trim();
+
+                if (xhr.status === 419) {
+                    setUploadState({
+                        status: 'error',
+                        message: 'Your session has expired. Please refresh the page and try again.',
+                    });
+                    return;
+                }
+
+                if (!raw) {
+                    setUploadState({
+                        status: 'error',
+                        message: 'Server returned an empty response. Please try again.',
+                    });
+                    return;
+                }
+
+                const response = JSON.parse(raw);
 
                 if (xhr.status >= 200 && xhr.status < 300 && response.success) {
                     setUploadState({
@@ -166,7 +184,7 @@ export default function BulkUploadMembers() {
             } catch {
                 setUploadState({
                     status: 'error',
-                    message: 'Failed to parse server response. Please try again.',
+                    message: 'Failed to process the server response. Please try again.',
                 });
             }
         };
@@ -177,6 +195,8 @@ export default function BulkUploadMembers() {
                 message: 'Network error. Please check your connection and try again.',
             });
         };
+
+        xhr.withCredentials = true;
 
         xhr.open('POST', '/dashboards/Gm/BulkUploadMembers');
         xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
@@ -347,7 +367,7 @@ export default function BulkUploadMembers() {
                                         </h3>
                                         <p className="mt-0.5 text-sm text-emerald-700 dark:text-emerald-400">
                                             Get a pre-formatted CSV file with all required columns and example data.
-                                            Fill in your member information and upload it here.
+                                            Leave the Employee ID column blank to auto-assign unique IDs (EMP-001, EMP-002, ...).
                                         </p>
                                     </div>
                                 </div>
@@ -369,6 +389,7 @@ export default function BulkUploadMembers() {
                                 <CardDescription>
                                     Select an Excel (.xlsx, .xls) or CSV file containing your member records.
                                     The file must include the required columns as shown in the template.
+                                    Leave Employee ID blank to auto-assign unique IDs.
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>

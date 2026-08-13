@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             'password' => Hash::make('admin123'),
             'role' => 'hr',
             'is_active' => true,
+             'status' => 'active',
         ]);
 
         // GM Admin
@@ -31,6 +32,8 @@ class DatabaseSeeder extends Seeder
             'password' => Hash::make('admin123'),
             'role' => 'gm',
             'is_active' => true,
+             'status' => 'active',
+              'status' => 'active',
         ]);
 
         // Credit Committee Admin
@@ -42,6 +45,7 @@ class DatabaseSeeder extends Seeder
             'password' => Hash::make('admin123'),
             'role' => 'creditcom',
             'is_active' => true,
+             'status' => 'active',
         ]);
 
         // -----------------------------
@@ -55,13 +59,14 @@ class DatabaseSeeder extends Seeder
             'password' => Hash::make('admin123'),
             'role' => 'member',
             'is_active' => true,
+             'status' => 'active',
         ]);
 
         MemberProfile::create([
             'user_id' => $user->id,
 
-            'employee_id' => 'EMP-001',
-            'first_name' => 'Jairus',
+            'employee_id' => '001',
+           'first_name' => 'Jairus',
             'middle_name' => 'Sotto',
             'last_name' => 'Pecho',
 
@@ -77,7 +82,6 @@ class DatabaseSeeder extends Seeder
 
             // Employment
             'position' => 'IT Staff',
-            'date_hired' => '2024-01-15',
             'basic_salary' => 25000.00,
 
             // Financial
@@ -90,22 +94,23 @@ class DatabaseSeeder extends Seeder
         // Test Member 2
         // -----------------------------
         $user = User::create([
-            'first_name' => 'Kayleen',
-            'middle_name' => 'Jairus',
-            'last_name' => 'Gallora',
+            'first_name' => 'Kevin ',
+            'middle_name' => 'Corpuz',
+            'last_name' => 'Bolado',
             'email' => 'kevincorpuz321@gmail.com',
             'password' => Hash::make('admin123'),
             'role' => 'member',
             'is_active' => true,
+             'status' => 'active',
         ]);
 
         MemberProfile::create([
             'user_id' => $user->id,
 
-            'employee_id' => 'EMP-002', // fixed duplicate
-            'first_name' => 'Kayleen',
-            'middle_name' => 'Jairus',
-            'last_name' => 'Gallora',
+            'employee_id' => '002', // fixed duplicate
+            'first_name' => 'Kevin ',
+            'middle_name' => 'Corpuz',
+            'last_name' => 'Bolado',
 
             'date_of_birth' => '2002-12-01',
             'sex' => 'female',
@@ -119,7 +124,6 @@ class DatabaseSeeder extends Seeder
 
             // Employment
             'position' => 'IT Staff',
-            'date_hired' => '2024-01-15',
             'basic_salary' => 20000.00,
 
             // Financial
@@ -131,22 +135,23 @@ class DatabaseSeeder extends Seeder
 // Test Member 3
 // -----------------------------
 $user = User::create([
-    'first_name' => 'Nathan',
-    'middle_name' => 'Reyes',
-    'last_name' => 'Yap',
+    'first_name' => 'Kayhleen',
+    'middle_name' => '',
+    'last_name' => 'Minor',
     'email' => 'nyak123457@gmail.com',
     'password' => Hash::make('admin123'),
     'role' => 'member',
     'is_active' => true,
+     'status' => 'active',
 ]);
 
 MemberProfile::create([
     'user_id' => $user->id,
 
-    'employee_id' => 'EMP-003',
-    'first_name' => 'Nathan',
-    'middle_name' => 'Reyes',
-    'last_name' => 'Yap',
+    'employee_id' => '003',
+    'first_name' => 'Kayhleen',
+    'middle_name' => '',
+    'last_name' => 'Minor',
 
     'date_of_birth' => '1998-08-12',
     'sex' => 'male',
@@ -158,7 +163,6 @@ MemberProfile::create([
     'permanent_address' => 'Barangay Real, Calamba City, Laguna',
 
     'position' => 'Accounting Staff',
-    'date_hired' => '2023-06-05',
     'basic_salary' => 24000.00,
 
     'share_capital_balance' => 18000.00,
@@ -171,21 +175,22 @@ MemberProfile::create([
 // -----------------------------
 $user = User::create([
     'first_name' => 'Jackie',
-    'middle_name' => 'Lopez',
-    'last_name' => 'Santos',
+    'middle_name' => '',
+    'last_name' => 'Gallora',
     'email' => 'jackiewxyz0412@gmail.com',
     'password' => Hash::make('admin123'),
     'role' => 'member',
     'is_active' => true,
+     'status' => 'active',
 ]);
 
 MemberProfile::create([
     'user_id' => $user->id,
 
-    'employee_id' => 'EMP-004',
+    'employee_id' => '004',
     'first_name' => 'Jackie',
-    'middle_name' => 'Lopez',
-    'last_name' => 'Santos',
+    'middle_name' => '',
+    'last_name' => 'Gallora',
 
     'date_of_birth' => '1999-04-25',
     'sex' => 'female',
@@ -197,7 +202,6 @@ MemberProfile::create([
     'permanent_address' => 'Barangay Parian, Calamba City, Laguna',
 
     'position' => 'HR Assistant',
-    'date_hired' => '2022-11-15',
     'basic_salary' => 23000.00,
 
     'share_capital_balance' => 21000.00,
@@ -216,14 +220,15 @@ $user = User::create([
     'password' => Hash::make('admin123'),
     'role' => 'member',
     'is_active' => true,
+     'status' => 'active',
 ]);
 
 MemberProfile::create([
     'user_id' => $user->id,
 
-    'employee_id' => 'EMP-005',
+    'employee_id' => '005',
     'first_name' => 'John Vincent',
-    'middle_name' => 'Cruz',
+    'middle_name' => 'Almogera',
     'last_name' => 'Saberdo',
 
     'date_of_birth' => '2000-02-18',
@@ -236,7 +241,6 @@ MemberProfile::create([
     'permanent_address' => 'Barangay Canlubang, Calamba City, Laguna',
 
     'position' => 'Operations Staff',
-    'date_hired' => '2024-03-18',
     'basic_salary' => 26000.00,
 
     'share_capital_balance' => 17000.00,

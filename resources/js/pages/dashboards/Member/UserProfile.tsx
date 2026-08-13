@@ -1,14 +1,22 @@
 import { Transition } from '@headlessui/react';
-import { Form, Head, usePage } from '@inertiajs/react';
-import { useState, useEffect } from 'react';
+import { Form, Head, Link, usePage } from '@inertiajs/react';
+import { useState, useEffect, useCallback } from 'react';
+import toast from 'react-hot-toast';
 import { 
-    AlertCircle, 
     User, 
     MapPin, 
     Briefcase, 
     Heart, 
     Camera, 
+    Building,
+    Phone,
+    Users,
+    ArrowLeft,
+    Download,
+    Mail,
 } from 'lucide-react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 import HeadingSmall from '@/components/heading-small';
 import InputError from '@/components/input-error';
@@ -16,31 +24,115 @@ import { LiveClock } from '@/components/live-clock';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
-import member from '@/routes/member';
 import { type BreadcrumbItem, type SharedData } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
-  
     {
         title: 'User Profile',
-        href: member.userProfile.url(),
+        href: '/dashboards/Member/UserProfile',
     },
-    
 ];
+
+// ──────────────────────────────────────────────────
+// Utility Helpers
+// ──────────────────────────────────────────────────
+
+function getTodayISO(): string {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+}
+
+function formatCurrency(raw: string): string {
+    const num = parseFloat(raw.replace(/,/g, ''));
+    if (isNaN(num)) return '';
+    return num.toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    });
+}
+
+function parseCurrency(formatted: string): string {
+    return formatted.replace(/,/g, '');
+}
+
+function formatPhone(raw: string): string {
+    const digits = raw.replace(/\D/g, '');
+    if (digits.length < 3) return digits;
+    if (digits.startsWith('63')) {
+        const rest = digits.slice(2);
+        if (rest.length <= 3) return `+63 ${rest}`;
+        if (rest.length <= 6) return `+63 ${rest.slice(0, 3)} ${rest.slice(3)}`;
+        return `+63 ${rest.slice(0, 3)} ${rest.slice(3, 6)} ${rest.slice(6, 10)}`;
+    }
+    if (digits.startsWith('0')) {
+        const rest = digits.slice(1);
+        if (rest.length <= 3) return digits;
+        if (rest.length <= 6) return `+63 ${rest.slice(0, 3)} ${rest.slice(3)}`;
+        return `+63 ${rest.slice(0, 3)} ${rest.slice(3, 6)} ${rest.slice(6, 10)}`;
+    }
+    return digits;
+}
+
+const CURRENCY_FIELDS = [
+    'basic_salary',
+    'net_income',
+    'share_capital_balance',
+    'spouse_gross_income',
+    'spouse_net_income',
+];
+
+const cleanNumericValue = (val: string | number) => {
+    if (typeof val === 'number') return val;
+    return parseFloat(String(val).replace(/,/g, '')) || 0;
+};
+
+function parsePhone(formatted: string): string {
+    const digits = formatted.replace(/\D/g, '');
+    if (digits.startsWith('63')) return digits;
+    if (digits.startsWith('0')) return `63${digits.slice(1)}`;
+    return digits;
+}
+
+function normalizeBeneficiariesForSubmit(beneficiaries: Beneficiary[] = []) {
+    return beneficiaries
+        .map((beneficiary) => {
+            const normalized: Beneficiary = {
+                full_name: beneficiary.full_name?.trim() || '',
+                relationship: beneficiary.relationship?.trim() || '',
+            };
+            const rawDate = String(beneficiary.date_of_birth || '').slice(0, 10);
+            const parsedDate = rawDate ? new Date(rawDate) : null;
+
+            if (
+                rawDate &&
+                /^\d{4}-\d{2}-\d{2}$/.test(rawDate) &&
+                parsedDate &&
+                !Number.isNaN(parsedDate.getTime()) &&
+                rawDate < getTodayISO()
+            ) {
+                normalized.date_of_birth = rawDate;
+            }
+
+            return normalized;
+        })
+        .filter((beneficiary) => beneficiary.full_name || beneficiary.relationship || beneficiary.date_of_birth);
+}
 
 interface Beneficiary {
     id?: number;
     full_name: string;
     relationship: string;
+    date_of_birth?: string;
 }
 
 interface MemberProfile {
-    id?: number;
     user_id: number;
     employee_id: string;
-    payroll_id?: string | null;
     first_name: string;
     middle_name?: string;
     last_name: string;
@@ -56,7 +148,6 @@ interface MemberProfile {
     permanent_address?: string;
     permanent_zip_code?: string | null;
     position: string;
-    date_hired: string;
     basic_salary: number;
     income_type?: string | null;
     net_income?: number | null;
@@ -68,8 +159,6 @@ interface MemberProfile {
     spouse_income_type?: string | null;
     spouse_net_income?: number | null;
     real_properties_owned?: string | null;
-    bank_account_number?: string;
-    tin_number?: string;
     profile_picture?: string;
 }
 
@@ -79,19 +168,19 @@ interface Props {
     isNewUser: boolean;
     isAdmin?: boolean;
     profileCompleted: boolean;
-    targetUserId?: number;
+    targetEmployeeId?: string;
     targetUserName?: string;
 }
 
-export default function UserProfile({ memberProfile, beneficiaries, isNewUser, isAdmin = false, profileCompleted, targetUserId, targetUserName }: Props) {
+export default function UserProfile({ memberProfile, beneficiaries, isNewUser, isAdmin = false, profileCompleted, targetEmployeeId, targetUserName }: Props) {
     const { auth } = usePage<SharedData>().props;
-    
-    // Determine if this is HR editing another member
-    const isHREditingMember = isAdmin && targetUserId;
+    const userEmail = auth.user.email;
+    const isHREditingMember = isAdmin && targetEmployeeId;
     
     // For HR editing, always enable editing
 const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
-    
+
+   
     const [previewUrl, setPreviewUrl] = useState('');
     
     useEffect(() => {
@@ -102,10 +191,40 @@ const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
       }
     }, [memberProfile]);
     
+    // ── Currency & Phone Handlers ──
+
+    const handleCurrencyChange = useCallback((field: string, raw: string) => {
+        const cleaned = raw.replace(/,/g, '');
+        if (/^\d*\.?\d{0,2}$/.test(cleaned) || cleaned === '') {
+            setFormData((prev: any) => ({ ...prev, [field]: cleaned }));
+        }
+    }, []);
+
+    const handleCurrencyFocus = useCallback((field: string) => {
+        setFormData((prev: any) => {
+            const val = prev[field];
+            if (!val) return prev;
+            return { ...prev, [field]: parseCurrency(val) };
+        });
+    }, []);
+
+    const handleCurrencyBlur = useCallback((field: string) => {
+        setFormData((prev: any) => {
+            const val = prev[field];
+            if (!val) return prev;
+            return { ...prev, [field]: formatCurrency(val) };
+        });
+    }, []);
+
+    const handlePhoneChange = useCallback((value: string) => {
+        const digits = value.replace(/\D/g, '').slice(0, 12);
+        setFormData((prev: any) => ({ ...prev, permanent_mobile_number: digits }));
+    }, []);
+
     // Initialize form data from existing profile or defaults
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState<any>({
+        email: userEmail || '',
         employee_id: memberProfile?.employee_id || '',
-        payroll_id: memberProfile?.payroll_id || '',
         first_name: memberProfile?.first_name || '',
         middle_name: memberProfile?.middle_name || '',
         last_name: memberProfile?.last_name || '',
@@ -114,27 +233,23 @@ const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
         sex: memberProfile?.sex || '',
         civil_status: memberProfile?.civil_status || '',
         educational_attainment: memberProfile?.educational_attainment || '',
-        mobile_number: memberProfile?.mobile_number || '',
-        permanent_mobile_number: memberProfile?.permanent_mobile_number || '',
+        permanent_mobile_number: memberProfile?.permanent_mobile_number || memberProfile?.mobile_number || '',
         present_zip_code: memberProfile?.present_zip_code || '',
         present_address: memberProfile?.present_address || '',
         permanent_address: memberProfile?.permanent_address || '',
         permanent_zip_code: memberProfile?.permanent_zip_code || '',
         position: memberProfile?.position || '',
-        date_hired: memberProfile?.date_hired || '',
-        basic_salary: memberProfile?.basic_salary || '',
+        basic_salary: memberProfile?.basic_salary ? formatCurrency(String(memberProfile.basic_salary)) : '',
         income_type: memberProfile?.income_type || 'monthly',
-        net_income: memberProfile?.net_income || '',
-        share_capital_balance: memberProfile?.share_capital_balance || '',
+        net_income: memberProfile?.net_income ? formatCurrency(String(memberProfile.net_income)) : '',
+        share_capital_balance: memberProfile?.share_capital_balance ? formatCurrency(String(memberProfile.share_capital_balance)) : '',
         other_source_of_income: memberProfile?.other_source_of_income || '',
         facebook_account_name: memberProfile?.facebook_account_name || '',
         spouse_occupation: memberProfile?.spouse_occupation || '',
-        spouse_gross_income: memberProfile?.spouse_gross_income || '',
+        spouse_gross_income: memberProfile?.spouse_gross_income ? formatCurrency(String(memberProfile.spouse_gross_income)) : '',
         spouse_income_type: memberProfile?.spouse_income_type || 'monthly',
-        spouse_net_income: memberProfile?.spouse_net_income || '',
+        spouse_net_income: memberProfile?.spouse_net_income ? formatCurrency(String(memberProfile.spouse_net_income)) : '',
         real_properties_owned: memberProfile?.real_properties_owned || '',
-        bank_account_number: memberProfile?.bank_account_number || '',
-        tin_number: memberProfile?.tin_number || '',
         profile_picture: memberProfile?.profile_picture || '',
         beneficiaries: beneficiaries.length > 0 ? beneficiaries : [{ full_name: '', relationship: '' }],
     });
@@ -147,7 +262,7 @@ const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
     };
 
     const removeBeneficiary = (index: number) => {
-        const updatedBeneficiaries = formData.beneficiaries.filter((_, i) => i !== index);
+        const updatedBeneficiaries = formData.beneficiaries.filter((_: Beneficiary, i: number) => i !== index);
         setFormData({
             ...formData,
             beneficiaries: updatedBeneficiaries.length > 0 ? updatedBeneficiaries : [{ full_name: '', relationship: '' }],
@@ -167,27 +282,137 @@ const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
     const requiredFields = isNewUser ? [
         'employee_id', 'first_name', 'last_name', 'date_of_birth', 'sex', 
         'civil_status', 'mobile_number', 'present_address', 'position', 
-        'date_hired', 'basic_salary'
+        'basic_salary'
     ] : [];
 
-    // Determine if user can edit employment - admins can always edit, members only when isEditing
-    const canEditEmployment = isAdmin;
+    // Admins can always edit employment fields; members can edit them while editing their profile.
+    const canEditEmployment = isAdmin || isEditing;
+
+    const exportPDF = () => {
+        if (!memberProfile) return;
+
+        const doc = new jsPDF();
+        
+        doc.setFontSize(18);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Member Profile Report', 14, 20);
+        
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Generated: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`, 14, 28);
+
+        const fmtCurrency = (amount: number) => 
+            '₱' + amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+        const userInfo: string[][] = [
+            ['Employee ID:', memberProfile.employee_id],
+            ['First Name:', memberProfile.first_name],
+            ['Middle Name:', memberProfile.middle_name || 'N/A'],
+            ['Last Name:', memberProfile.last_name],
+            ['Date of Birth:', formatDate(memberProfile.date_of_birth)],
+            ['Sex:', memberProfile.sex],
+            ['Civil Status:', memberProfile.civil_status],
+        ];
+        
+        autoTable(doc, {
+            startY: 45,
+            head: [['Field', 'Value']],
+            body: userInfo,
+            theme: 'striped',
+            headStyles: { fillColor: [59, 130, 246] },
+            margin: { left: 14, right: 100 },
+            tableWidth: 'wrap',
+        });
+
+        const contactInfo: string[][] = [
+            ['Contact Number:', memberProfile.permanent_mobile_number || memberProfile.mobile_number],
+            ['Present Address:', memberProfile.present_address],
+            ['Permanent Address:', memberProfile.permanent_address || 'N/A'],
+        ];
+        
+        autoTable(doc, {
+            startY: (doc as any).lastAutoTable.finalY + 15,
+            head: [['Field', 'Value']],
+            body: contactInfo,
+            theme: 'striped',
+            headStyles: { fillColor: [59, 130, 246] },
+            margin: { left: 14, right: 100 },
+            tableWidth: 'wrap',
+        });
+
+        const employmentInfo: string[][] = [
+            ['Position:', memberProfile.position],
+            ['Income (Gross):', fmtCurrency(memberProfile.basic_salary)],
+        ];
+        
+        autoTable(doc, {
+            startY: (doc as any).lastAutoTable.finalY + 15,
+            head: [['Field', 'Value']],
+            body: employmentInfo,
+            theme: 'striped',
+            headStyles: { fillColor: [59, 130, 246] },
+            margin: { left: 14, right: 100 },
+            tableWidth: 'wrap',
+        });
+
+        const financialInfo: string[][] = [
+            ['Share Capital Balance:', fmtCurrency(memberProfile.share_capital_balance || 0)],
+        ];
+        
+        autoTable(doc, {
+            startY: (doc as any).lastAutoTable.finalY + 15,
+            head: [['Field', 'Value']],
+            body: financialInfo,
+            theme: 'striped',
+            headStyles: { fillColor: [59, 130, 246] },
+            margin: { left: 14, right: 100 },
+            tableWidth: 'wrap',
+        });
+
+        const beneficiariesArr = formData.beneficiaries as Beneficiary[];
+        if (beneficiariesArr && beneficiariesArr.length > 0) {
+            const validBens = beneficiariesArr.filter((b: Beneficiary) => b.full_name);
+            if (validBens.length > 0) {
+                const beneficiaryData = validBens.map((b: Beneficiary) => [
+                    b.full_name,
+                    b.relationship || 'N/A',
+                ]);
+                
+                autoTable(doc, {
+                    startY: (doc as any).lastAutoTable.finalY + 15,
+                    head: [['Full Name', 'Relationship']],
+                    body: beneficiaryData,
+                    theme: 'striped',
+                    headStyles: { fillColor: [59, 130, 246] },
+                    margin: { left: 14, right: 14 },
+                });
+            }
+        }
+
+        const fileName = `${memberProfile.last_name}_${memberProfile.first_name}_Profile.pdf`;
+        doc.save(fileName);
+    };
 
     // Get the appropriate URL for form action
     const formActionUrl = isHREditingMember 
-        ? `/dashboards/HR/EditMember/${targetUserId}` 
-        : member.userProfile.store.url();
+        ? `/dashboards/HR/EditMember/${targetEmployeeId}` 
+        : '/dashboards/Member/UserProfile';
 
     const formMethod = isHREditingMember ? 'put' : 'post';
 
     const formatDate = (date?: string) => {
-    if (!date) return '';
-    return new Date(date).toLocaleDateString('en-US', {
-        month: 'short',
-        day: '2-digit',
-        year: 'numeric',
-    });
-};
+        if (!date) return 'N/A';
+        const d = new Date(date);
+        if (isNaN(d.getTime())) return 'N/A';
+        const months = [
+            'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+        ];
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = months[d.getMonth()];
+        const year = d.getFullYear();
+        return `${day} ${month} ${year}`;
+    };
 
 
 
@@ -197,73 +422,120 @@ const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
     <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
         <Head title="User Profile" />
 
-        {/* Warning Banner for Incomplete Profile */}
-        {!profileCompleted && (
-            <Card className="border-l-4 border-l-amber-500 bg-amber-50 m-6">
-                <CardContent className="flex items-center justify-between py-4">
-                    <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100">
-                            <AlertCircle className="h-5 w-5 text-amber-600" />
-                        </div>
-                        <div>
-                            <p className="font-semibold text-amber-800">
-                                Complete Your Profile First
-                            </p>
-                            <p className="text-sm text-amber-700">
-                                Please complete your profile with all required information before you can apply for a loan or access other member services.
-                            </p>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
-        )}
-
         <div className="flex flex-1 flex-col gap-6 p-6">
             {/* Header Section */}
             <div className="flex items-center justify-between">
-                <HeadingSmall
-                    title="Personal Information"
-                    description={
-                        isEditing
-                            ? 'You can now edit your profile details'
-                            : 'View your personal information'
-                    }
-                />
-
-                {!isNewUser && (
-                    <div className="flex gap-2">
-                        {!isEditing ? (
-                            <Button onClick={() => setIsEditing(true)}>
-                                Edit Profile
-                            </Button>
-                        ) : (
-                            <Button
-                                variant="outline"
-                                onClick={() => setIsEditing(false)}
-                            >
-                                Cancel
-                            </Button>
-                        )}
+                <div className="flex items-center gap-4">
+                    <Button variant="outline" size="icon" asChild>
+                        <Link href="/dashboards/Member">
+                            <ArrowLeft className="h-4 w-4" />
+                        </Link>
+                    </Button>
+                    <div>
+                        <HeadingSmall
+                            title={targetUserName || `${memberProfile?.first_name || ''} ${memberProfile?.last_name || ''}`}
+                            description={
+                                isEditing
+                                    ? 'Editing member profile details'
+                                    : 'View member profile information'
+                            }
+                        />
                     </div>
-                )}
+                </div>
+
+                <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" onClick={() => exportPDF()}>
+                        <Download className="mr-2 h-4 w-4" />
+                        Export PDF
+                    </Button>
+                    {!isNewUser && (
+                        <>
+                            {!isEditing ? (
+                                <Button onClick={() => setIsEditing(true)}>
+                                    Edit Profile
+                                </Button>
+                            ) : (
+                                <Button
+                                    variant="outline"
+                                    onClick={() => setIsEditing(false)}
+                                >
+                                    Cancel
+                                </Button>
+                            )}
+                        </>
+                    )}
+                </div>
             </div>
+
+            {/* Warning Banner for Incomplete Profile */}
+            {!profileCompleted && (
+                <Card className="border-l-4 border-l-amber-500 bg-amber-50">
+                    <CardContent className="flex items-center justify-between py-4">
+                        <div className="flex items-start gap-3">
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-100">
+                                <span className="text-sm font-bold text-amber-600">!</span>
+                            </div>
+                            <div>
+                                <h3 className="font-semibold text-amber-800">Complete Your Profile First</h3>
+                                <p className="mt-1 text-sm text-amber-700">
+                                    Please complete your profile with all required information before you can apply for a loan or access other member services.
+                                </p>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
 
             <Form
                 method={formMethod}
                 action={formActionUrl}
-                transform={() => formData as any}
+                transform={() => {
+                    const data = { ...formData } as any;
+                    const cleanedPhone = parsePhone(data.permanent_mobile_number || data.mobile_number || '');
+
+                    CURRENCY_FIELDS.forEach((field) => {
+                        if (data[field] !== undefined && data[field] !== '') {
+                            data[field] = cleanNumericValue(data[field]);
+                        }
+                    });
+
+                    data.email = String(data.email || '').trim().toLowerCase();
+                    data.mobile_number = cleanedPhone;
+                    data.permanent_mobile_number = cleanedPhone;
+                    if (typeof data.profile_picture === 'string') {
+                        delete data.profile_picture;
+                    }
+                    data.beneficiaries = normalizeBeneficiariesForSubmit(data.beneficiaries || []);
+
+                    return data;
+                }}
                 className="space-y-6"
+                onSuccess={() => {
+                    toast.success('Profile updated successfully.');
+                    if (!isNewUser) {
+                        setIsEditing(false);
+                    }
+                }}
+                onError={(errors) => {
+                    const firstError = Object.values(errors)[0];
+                    toast.error(firstError || 'Please check the highlighted profile fields.');
+                }}
             >
                 {({ processing, recentlySuccessful, errors }) => (
                     <>
                         {/* Identity Section */}
-                        <Card className="border-emerald-100">
-                            <CardHeader className="flex flex-row items-center justify-between pb-3">
-                                <div className="flex items-center gap-2">
-                                    <User className="h-5 w-5 text-emerald-600" />
-                                    <CardTitle className="text-emerald-900 dark:text-emerald-100 text-lg">
-                                        Identity
-                                    </CardTitle>
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between pb-2 border-b">
+                                <div className="flex items-center gap-3">
+                                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
+                                        <User className="h-5 w-5 text-primary" />
+                                    </div>
+                                    <div>
+                                        <CardTitle className="text-base">
+                                            Identity
+                                        </CardTitle>
+                                    
+                                    </div>
                                 </div>
                             </CardHeader>
     <CardContent>
@@ -341,9 +613,10 @@ const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
                                   </div>
                                 </div>
                                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                                    <div className="grid gap-2">
+
+                                  <div className="grid gap-2">
                                         <Label htmlFor="employee_id">
-                                            Employee ID <span className="text-red-500">*</span>
+                                            Member ID <span className="text-red-500">*</span>
                                         </Label>
                                         <Input
                                             id="employee_id"
@@ -352,26 +625,14 @@ const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
                                             onChange={(e) => setFormData({ ...formData, employee_id: e.target.value })}
                                             required={isRequired('employee_id')}
                                             placeholder="e.g., EMP-001"
-                                            disabled={!isEditing}
+                                            disabled
                                         />
-                                        <InputError message={errors.employee_id} />
+                                    <InputError message={errors.employee_id} />
                                     </div>
+ 
+                                    
 
-                                    {isAdmin && (
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="payroll_id">Payroll ID</Label>
-                                            <Input
-                                                id="payroll_id"
-                                                name="payroll_id"
-                                                value={formData.payroll_id}
-                                                onChange={(e) => setFormData({ ...formData, payroll_id: e.target.value })}
-                                                placeholder="Optional payroll identifier"
-                                                disabled={!isEditing}
-                                            />
-                                            <InputError message={errors.payroll_id} />
-                                        </div>
-                                    )}
-
+                                  
                                     <div className="grid gap-2">
                                         <Label htmlFor="first_name">
                                             First Name <span className="text-red-500">*</span>
@@ -428,6 +689,7 @@ const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
                                                 type="date"
                                                 name="date_of_birth"
                                                 value={formData.date_of_birth}
+                                                max={getTodayISO()}
                                                 onChange={(e) =>
                                                     setFormData({ ...formData, date_of_birth: e.target.value })
                                                 }
@@ -552,84 +814,45 @@ const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
                         </Card>
 
                         {/* Contact & Address Section */}
-                        <Card className="border-emerald-100">
-                            <CardHeader className="flex flex-row items-center justify-between pb-3">
-                                <div className="flex items-center gap-2">
-                                    <MapPin className="h-5 w-5 text-emerald-600" />
-                                    <CardTitle className="text-emerald-900 dark:text-emerald-100 text-lg">
-                                        Contact & Address
-                                    </CardTitle>
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between pb-2 border-b">
+                                <div className="flex items-center gap-3">
+                                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
+                                        <MapPin className="h-5 w-5 text-primary" />
+                                    </div>
+                                    <div>
+                                        <CardTitle className="text-base">
+                                            Contact &amp; Address Details
+                                        </CardTitle>
+                                        <CardDescription>
+                                            Primary contact number and residential addresses
+                                        </CardDescription>
+                                    </div>
                                 </div>
                             </CardHeader>
                             <CardContent>
                                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="mobile_number">
-                                            Present Cellphone Number <span className="text-red-500">*</span>
+                                    <div className="grid gap-2 md:col-span-2 lg:col-span-1">
+                                        <Label htmlFor="permanent_mobile_number">
+                                            Contact Number <span className="text-red-500">*</span>
                                         </Label>
-                                        <Input
-                                            id="mobile_number"
-                                            name="mobile_number"
-                                            type="tel"
-                                            inputMode="numeric"
-                                            pattern="[0-9]{11}"
-                                            maxLength={11}
-                                            minLength={11}
-                                            value={formData.mobile_number}
-                                            onChange={(e) => {
-                                                const value = e.target.value.replace(/[^0-9]/g, '').slice(0, 11);
-                                                setFormData({ ...formData, mobile_number: value });
-                                            }}
-                                            required={isRequired('mobile_number')}
-                                            placeholder="e.g., 09123456789"
-                                            disabled={!isEditing}
-                                        />
-                                        <InputError message={errors.mobile_number} />
-                                    </div>
-
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="permanent_mobile_number">Permanent Mobile Number</Label>
-                                        {!isEditing ? (
-                                            <div className="rounded-md border bg-muted px-3 py-2 text-sm">
-                                                {formData.permanent_mobile_number || 'Not provided'}
-                                            </div>
-                                        ) : (
+                                        <div className="relative">
+                                            <Phone className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground" />
                                             <Input
                                                 id="permanent_mobile_number"
                                                 name="permanent_mobile_number"
                                                 type="tel"
                                                 inputMode="numeric"
-                                                pattern="[0-9]{11}"
-                                                maxLength={11}
-                                                value={formData.permanent_mobile_number}
-                                                onChange={(e) => {
-                                                    const value = e.target.value.replace(/[^0-9]/g, '').slice(0, 11);
-                                                    setFormData({ ...formData, permanent_mobile_number: value });
-                                                }}
-                                                placeholder="e.g., 09123456789"
+                                                value={formatPhone(formData.permanent_mobile_number)}
+                                                onChange={(e) => handlePhoneChange(e.target.value)}
+                                                placeholder="+63 912 345 6789"
+                                                className="pl-9"
                                                 disabled={!isEditing}
+                                                aria-invalid={!!errors.permanent_mobile_number}
                                             />
-                                        )}
+                                        </div>
+                                       
                                         <InputError message={errors.permanent_mobile_number} />
-                                    </div>
-
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="tin_number">TIN Number</Label>
-                                        {!isEditing ? (
-                                            <div className="rounded-md border bg-muted px-3 py-2 text-sm">
-                                                {formData.tin_number || 'Not provided'}
-                                            </div>
-                                        ) : (
-                                            <Input
-                                                id="tin_number"
-                                                name="tin_number"
-                                                value={formData.tin_number}
-                                                onChange={(e) => setFormData({ ...formData, tin_number: e.target.value })}
-                                                placeholder="e.g., 123-456-789"
-                                                disabled={!isEditing}
-                                            />
-                                        )}
-                                        <InputError message={errors.tin_number} />
                                     </div>
 
                                     <div className="grid gap-2">
@@ -644,7 +867,7 @@ const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
                                             required={isRequired('present_address')}
                                             disabled={!isEditing}
                                             placeholder="Present address"
-                                            rows={3}
+                                            rows={1}
                                             className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                                         />
                                         <InputError message={errors.present_address} />
@@ -669,6 +892,22 @@ const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
                                         <InputError message={errors.present_zip_code} />
                                     </div>
 
+                                     <div className="grid gap-2">
+                                        <Label htmlFor="email">
+                                            Email <span className="text-red-500">*</span>
+                                        </Label>
+                                        <Input
+                                            id="email"
+                                            name="email"
+                                            value={formData.email}
+                                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                            required={isRequired('email')}
+                                            placeholder="Email address"
+                                            disabled={!isEditing}
+                                        />
+                                        <InputError message={errors.email} />
+                                    </div>
+
                                     <div className="grid gap-2">
                                         <Label htmlFor="permanent_address">Permanent (Provincial) Address</Label>
                                         <textarea
@@ -677,7 +916,7 @@ const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
                                             value={formData.permanent_address}
                                             onChange={(e) => setFormData({ ...formData, permanent_address: e.target.value })}
                                             placeholder="Permanent address (optional)"
-                                            rows={3}
+                                            rows={1}
                                             disabled={!isEditing}
                                             className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                                         />
@@ -707,13 +946,20 @@ const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
                         </Card>
 
                         {/* Employment Section */}
-                        <Card className="border-emerald-100">
-                            <CardHeader className="flex flex-row items-center justify-between pb-3">
-                                <div className="flex items-center gap-2">
-                                    <Briefcase className="h-5 w-5 text-emerald-600" />
-                                    <CardTitle className="text-emerald-900 dark:text-emerald-100 text-lg">
-                                        Employment Information
-                                    </CardTitle>
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between pb-2 border-b">
+                                <div className="flex items-center gap-3">
+                                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
+                                        <Briefcase className="h-5 w-5 text-primary" />
+                                    </div>
+                                    <div>
+                                        <CardTitle className="text-base">
+                                            Employment &amp; Financial Assessment
+                                        </CardTitle>
+                                        <CardDescription>
+                                            Job details and income information for loan eligibility
+                                        </CardDescription>
+                                    </div>
                                 </div>
                             </CardHeader>
                             <CardContent>
@@ -735,58 +981,52 @@ const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
                                     </div>
 
                                     <div className="grid gap-2">
-                                        <Label htmlFor="date_hired">
-                                            Date Hired <span className="text-red-500">*</span>
-                                        </Label>
-                                        {!canEditEmployment ? (
-                                            <div className="rounded-md border bg-muted px-3 py-2 text-sm">
-                                                {formatDate(formData.date_hired)}
-                                            </div>
-                                        ) : (
-                                            <Input
-                                                id="date_hired"
-                                                type="date"
-                                                name="date_hired"
-                                                value={formData.date_hired}
-                                                onChange={(e) => setFormData({ ...formData, date_hired: e.target.value })}
-                                                required={isRequired('date_hired')}
-                                                disabled={!canEditEmployment}
-                                            />
-                                        )}
-                                        <InputError message={errors.date_hired} />
-                                    </div>
-
-                                    <div className="grid gap-2">
                                         <Label htmlFor="basic_salary">
-                                            Basic Salary <span className="text-red-500">*</span>
+                                            Income (Gross) <span className="text-red-500">*</span>
                                         </Label>
-                                        <Input
-                                            id="basic_salary"
-                                            name="basic_salary"
-                                            type="number"
-                                            step="0.01"
-                                            value={formData.basic_salary}
-                                            onChange={(e) => setFormData({ ...formData, basic_salary: e.target.value })}
-                                            required={isRequired('basic_salary')}
-                                            placeholder="e.g., 50000.00"
-                                            disabled={!canEditEmployment}
-                                        />
+                                        <div className="relative">
+                                            <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-sm text-muted-foreground">
+                                                ₱
+                                            </span>
+                                            <Input
+                                                id="basic_salary"
+                                                name="basic_salary"
+                                                type="text"
+                                                inputMode="decimal"
+                                                value={formData.basic_salary}
+                                                placeholder="0.00"
+                                                onChange={(e) => handleCurrencyChange('basic_salary', e.target.value)}
+                                                onFocus={() => handleCurrencyFocus('basic_salary')}
+                                                onBlur={() => handleCurrencyBlur('basic_salary')}
+                                                className="pl-7"
+                                                disabled={!canEditEmployment}
+                                                aria-invalid={!!errors.basic_salary}
+                                            />
+                                        </div>
                                         <InputError message={errors.basic_salary} />
                                     </div>
 
                                     <div className="grid gap-2">
                                         <Label htmlFor="share_capital_balance">Share Capital Balance</Label>
-                                        <Input
-                                            id="share_capital_balance"
-                                            name="share_capital_balance"
-                                            type="number"
-                                            step="0.01"
-                                            value={formData.share_capital_balance}
-                                            onChange={(e) => setFormData({ ...formData, share_capital_balance: e.target.value })}
-                                            placeholder="e.g., 10000.00"
-                                            disabled={!canEditEmployment}
-                                        />
-                                      
+                                        <div className="relative">
+                                            <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-sm text-muted-foreground">
+                                                ₱
+                                            </span>
+                                            <Input
+                                                id="share_capital_balance"
+                                                name="share_capital_balance"
+                                                type="text"
+                                                inputMode="decimal"
+                                                value={formData.share_capital_balance}
+                                                placeholder="0.00"
+                                                onChange={(e) => handleCurrencyChange('share_capital_balance', e.target.value)}
+                                                onFocus={() => handleCurrencyFocus('share_capital_balance')}
+                                                onBlur={() => handleCurrencyBlur('share_capital_balance')}
+                                                className="pl-7"
+                                                disabled={!canEditEmployment}
+                                                aria-invalid={!!errors.share_capital_balance}
+                                            />
+                                        </div>
                                         <InputError message={errors.share_capital_balance} />
                                     </div>
 
@@ -818,46 +1058,34 @@ const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
 
                                     <div className="grid gap-2">
                                         <Label htmlFor="net_income">
-                                            Income (Net) <span className="text-red-500">*</span>
+                                            Net Income <span className="text-red-500">*</span>
                                         </Label>
                                         {!isEditing ? (
                                             <div className="rounded-md border bg-muted px-3 py-2 text-sm">
-                                                {formData.net_income ? parseFloat(String(formData.net_income)).toLocaleString('en-US', { style: 'currency', currency: 'PHP' }) : 'Not provided'}
+                                                {formData.net_income ? `₱${formData.net_income}` : 'Not provided'}
                                             </div>
                                         ) : (
-                                            <Input
-                                                id="net_income"
-                                                name="net_income"
-                                                type="number"
-                                                step="0.01"
-                                                min="0"
-                                                value={formData.net_income}
-                                                onChange={(e) => setFormData({ ...formData, net_income: e.target.value })}
-                                                required
-                                                placeholder="0.00"
-                                                disabled={!canEditEmployment}
-                                            />
+                                            <div className="relative">
+                                                <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-sm text-muted-foreground">
+                                                    ₱
+                                                </span>
+                                                <Input
+                                                    id="net_income"
+                                                    name="net_income"
+                                                    type="text"
+                                                    inputMode="decimal"
+                                                    value={formData.net_income}
+                                                    placeholder="0.00"
+                                                    onChange={(e) => handleCurrencyChange('net_income', e.target.value)}
+                                                    onFocus={() => handleCurrencyFocus('net_income')}
+                                                    onBlur={() => handleCurrencyBlur('net_income')}
+                                                    className="pl-7"
+                                                    disabled={!canEditEmployment}
+                                                    aria-invalid={!!errors.net_income}
+                                                />
+                                            </div>
                                         )}
                                         <InputError message={errors.net_income} />
-                                    </div>
-
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="bank_account_number">Bank Account Number (RCBC)</Label>
-                                        {!isEditing ? (
-                                            <div className="rounded-md border bg-muted px-3 py-2 text-sm">
-                                                {formData.bank_account_number || 'Not provided'}
-                                            </div>
-                                        ) : (
-                                            <Input
-                                                id="bank_account_number"
-                                                name="bank_account_number"
-                                                value={formData.bank_account_number}
-                                                onChange={(e) => setFormData({ ...formData, bank_account_number: e.target.value })}
-                                                placeholder="e.g., 1234567890"
-                                                disabled={!canEditEmployment}
-                                            />
-                                        )}
-                                        <InputError message={errors.bank_account_number} />
                                     </div>
 
                                     <div className="grid gap-2">
@@ -879,203 +1107,235 @@ const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
                                         <InputError message={errors.other_source_of_income} />
                                     </div>
                                 </div>
-                                 <p className="text-xs text-muted-foreground p-2">
-                                            Note: If you want to add your share capital balance, you should go to the main office.
-                                        </p>
+                                <p className="text-xs text-muted-foreground p-2">
+                                    Note: If you want to add your share capital balance, you should go to the main office.
+                                </p>
                             </CardContent>
                         </Card>
 
-                        {/* Spouse, Beneficiary, and Assets Section */}
-                        <Card className="border-emerald-100">
-                            <CardHeader className="flex flex-row items-center justify-between pb-3">
-                                <div className="flex items-center gap-2">
-                                    <Heart className="h-5 w-5 text-emerald-600" />
-                                    <CardTitle className="text-emerald-900 dark:text-emerald-100 text-lg">
-                                        Spouse, Beneficiary, and Assets
-                                    </CardTitle>
+                        {/* Spouse & Assets Section */}
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between pb-2 border-b">
+                                <div className="flex items-center gap-3">
+                                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
+                                        <Heart className="h-5 w-5 text-primary" />
+                                    </div>
+                                    <div>
+                                        <CardTitle className="text-base">
+                                            Spouse &amp; Beneficiaries
+                                        </CardTitle>
+                                        <CardDescription>
+                                            Spouse financial profile and beneficiary designations (if applicable)
+                                        </CardDescription>
+                                    </div>
                                 </div>
                             </CardHeader>
                             <CardContent>
-                                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="spouse_occupation">Occupation of Spouse</Label>
-                                        {!isEditing ? (
-                                            <div className="rounded-md border bg-muted px-3 py-2 text-sm">
-                                                {formData.spouse_occupation || 'Not provided'}
-                                            </div>
-                                        ) : (
-                                            <Input
-                                                id="spouse_occupation"
-                                                name="spouse_occupation"
-                                                value={formData.spouse_occupation}
-                                                onChange={(e) => setFormData({ ...formData, spouse_occupation: e.target.value })}
-                                                placeholder="Enter spouse occupation"
-                                                disabled={!isEditing}
-                                            />
-                                        )}
-                                        <InputError message={errors.spouse_occupation} />
-                                    </div>
-
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="spouse_gross_income">Spouse Income (Gross)</Label>
-                                        {!isEditing ? (
-                                            <div className="rounded-md border bg-muted px-3 py-2 text-sm">
-                                                {formData.spouse_gross_income ? parseFloat(String(formData.spouse_gross_income)).toLocaleString('en-US', { style: 'currency', currency: 'PHP' }) : 'Not provided'}
-                                            </div>
-                                        ) : (
-                                            <Input
-                                                id="spouse_gross_income"
-                                                name="spouse_gross_income"
-                                                type="number"
-                                                step="0.01"
-                                                min="0"
-                                                value={formData.spouse_gross_income}
-                                                onChange={(e) => setFormData({ ...formData, spouse_gross_income: e.target.value })}
-                                                placeholder="0.00"
-                                                disabled={!isEditing}
-                                            />
-                                        )}
-                                        <InputError message={errors.spouse_gross_income} />
-                                    </div>
-
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="spouse_income_type">Spouse Income Type</Label>
-                                        {!isEditing ? (
-                                            <div className="rounded-md border bg-muted px-3 py-2 text-sm capitalize">
-                                                {formData.spouse_income_type || 'Not provided'}
-                                            </div>
-                                        ) : (
-                                            <select
-                                                id="spouse_income_type"
-                                                name="spouse_income_type"
-                                                value={formData.spouse_income_type}
-                                                onChange={(e) => setFormData({ ...formData, spouse_income_type: e.target.value })}
-                                                disabled={!isEditing}
-                                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                            >
-                                                <option value="monthly">Monthly</option>
-                                                <option value="daily">Daily</option>
-                                                <option value="yearly">Yearly</option>
-                                            </select>
-                                        )}
-                                        <InputError message={errors.spouse_income_type} />
-                                    </div>
-
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="spouse_net_income">Spouse Income (Net)</Label>
-                                        {!isEditing ? (
-                                            <div className="rounded-md border bg-muted px-3 py-2 text-sm">
-                                                {formData.spouse_net_income ? parseFloat(String(formData.spouse_net_income)).toLocaleString('en-US', { style: 'currency', currency: 'PHP' }) : 'Not provided'}
-                                            </div>
-                                        ) : (
-                                            <Input
-                                                id="spouse_net_income"
-                                                name="spouse_net_income"
-                                                type="number"
-                                                step="0.01"
-                                                min="0"
-                                                value={formData.spouse_net_income}
-                                                onChange={(e) => setFormData({ ...formData, spouse_net_income: e.target.value })}
-                                                placeholder="0.00"
-                                                disabled={!isEditing}
-                                            />
-                                        )}
-                                        <InputError message={errors.spouse_net_income} />
-                                    </div>
-
-                                    <div className="grid gap-2 md:col-span-2 lg:col-span-3">
-                                        <Label htmlFor="real_properties_owned">Real Properties Owned (Specify)</Label>
-                                        {!isEditing ? (
-                                            <div className="rounded-md border bg-muted px-3 py-2 text-sm min-h-20">
-                                                {formData.real_properties_owned || 'Not provided'}
-                                            </div>
-                                        ) : (
-                                            <textarea
-                                                id="real_properties_owned"
-                                                name="real_properties_owned"
-                                                value={formData.real_properties_owned}
-                                                onChange={(e) => setFormData({ ...formData, real_properties_owned: e.target.value })}
-                                                placeholder="Specify real properties owned"
-                                                rows={3}
-                                                disabled={!isEditing}
-                                                className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                            />
-                                        )}
-                                        <InputError message={errors.real_properties_owned} />
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-
-                        {/* Beneficiaries Section */}
-                        <Card className="border-emerald-100">
-                            <CardHeader className="flex flex-row items-center justify-between pb-3">
-                                <div className="flex items-center gap-2">
-                                    <Heart className="h-5 w-5 text-emerald-600" />
-                                    <CardTitle className="text-emerald-900 dark:text-emerald-100 text-lg">
-                                        Beneficiaries
-                                    </CardTitle>
-                                </div>
-                                {isEditing && (
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={addBeneficiary}
-                                    >
-                                        Add Beneficiary
-                                    </Button>
-                                )}
-                            </CardHeader>
-                            <CardContent>
-                                <div className="space-y-4">
-                                    {formData.beneficiaries.map((beneficiary, index) => (
-                                        <div key={index} className="rounded-lg border border-emerald-100 p-4 bg-emerald-50/50">
-                                            <div className="mb-2 flex items-center justify-between">
-                                                <span className="text-sm font-medium text-emerald-800">Beneficiary {index + 1}</span>
-                                                {formData.beneficiaries.length > 1 && (
-                                                    <Button
-                                                        type="button"
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => removeBeneficiary(index)}
-                                                        className="text-red-600 hover:text-red-700"
-                                                    >
-                                                        Remove
-                                                    </Button>
-                                                )}
-                                            </div>
-                                            <div className="grid gap-4 md:grid-cols-3">
-                                                <div className="grid gap-2">
-                                                    <Label htmlFor={`beneficiaries[${index}][full_name]`}>
-                                                        Full Name
-                                                    </Label>
-                                                    <Input
-                                                        id={`beneficiaries[${index}][full_name]`}
-                                                        name={`beneficiaries[${index}][full_name]`}
-                                                        value={beneficiary.full_name}
-                                                        onChange={(e) => updateBeneficiary(index, 'full_name', e.target.value)}
-                                                        placeholder="Full name"
-                                                        disabled={!isEditing}
-                                                    />
+                                <div className="mb-6">
+                                    <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+                                        <User className="h-4 w-4" />
+                                        Spouse Information
+                                    </h4>
+                                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="spouse_occupation">Occupation of Spouse</Label>
+                                            {!isEditing ? (
+                                                <div className="rounded-md border bg-muted px-3 py-2 text-sm">
+                                                    {formData.spouse_occupation || 'Not provided'}
                                                 </div>
-                                                <div className="grid gap-2">
-                                                    <Label htmlFor={`beneficiaries[${index}][relationship]`}>
-                                                        Relationship
-                                                    </Label>
-                                                    <Input
-                                                        id={`beneficiaries[${index}][relationship]`}
-                                                        name={`beneficiaries[${index}][relationship]`}
-                                                        value={beneficiary.relationship}
-                                                        onChange={(e) => updateBeneficiary(index, 'relationship', e.target.value)}
-                                                        placeholder="e.g., Wife, Daughter"
-                                                        disabled={!isEditing}
-                                                    />
-                                                </div>
-                                               
-                                            </div>
+                                            ) : (
+                                                <Input
+                                                    id="spouse_occupation"
+                                                    name="spouse_occupation"
+                                                    value={formData.spouse_occupation}
+                                                    onChange={(e) => setFormData({ ...formData, spouse_occupation: e.target.value })}
+                                                    placeholder="Enter spouse occupation"
+                                                    disabled={!isEditing}
+                                                />
+                                            )}
+                                            <InputError message={errors.spouse_occupation} />
                                         </div>
-                                    ))}
+
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="spouse_gross_income">Spouse Income (Gross)</Label>
+                                            {!isEditing ? (
+                                                <div className="rounded-md border bg-muted px-3 py-2 text-sm">
+                                                    {formData.spouse_gross_income ? `₱${formData.spouse_gross_income}` : 'Not provided'}
+                                                </div>
+                                            ) : (
+                                                <div className="relative">
+                                                    <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-sm text-muted-foreground">₱</span>
+                                                    <Input
+                                                        id="spouse_gross_income"
+                                                        name="spouse_gross_income"
+                                                        type="text"
+                                                        inputMode="decimal"
+                                                        value={formData.spouse_gross_income}
+                                                        placeholder="0.00"
+                                                        onChange={(e) => handleCurrencyChange('spouse_gross_income', e.target.value)}
+                                                        onFocus={() => handleCurrencyFocus('spouse_gross_income')}
+                                                        onBlur={() => handleCurrencyBlur('spouse_gross_income')}
+                                                        className="pl-7"
+                                                        disabled={!isEditing}
+                                                    />
+                                                </div>
+                                            )}
+                                            <InputError message={errors.spouse_gross_income} />
+                                        </div>
+
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="spouse_income_type">Spouse Income Type</Label>
+                                            {!isEditing ? (
+                                                <div className="rounded-md border bg-muted px-3 py-2 text-sm capitalize">
+                                                    {formData.spouse_income_type || 'Not provided'}
+                                                </div>
+                                            ) : (
+                                                <select
+                                                    id="spouse_income_type"
+                                                    name="spouse_income_type"
+                                                    value={formData.spouse_income_type}
+                                                    onChange={(e) => setFormData({ ...formData, spouse_income_type: e.target.value })}
+                                                    disabled={!isEditing}
+                                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                                >
+                                                    <option value="monthly">Monthly</option>
+                                                    <option value="daily">Daily</option>
+                                                    <option value="yearly">Yearly</option>
+                                                </select>
+                                            )}
+                                            <InputError message={errors.spouse_income_type} />
+                                        </div>
+
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="spouse_net_income">Spouse Income (Net)</Label>
+                                            {!isEditing ? (
+                                                <div className="rounded-md border bg-muted px-3 py-2 text-sm">
+                                                    {formData.spouse_net_income ? `₱${formData.spouse_net_income}` : 'Not provided'}
+                                                </div>
+                                            ) : (
+                                                <div className="relative">
+                                                    <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-sm text-muted-foreground">₱</span>
+                                                    <Input
+                                                        id="spouse_net_income"
+                                                        name="spouse_net_income"
+                                                        type="text"
+                                                        inputMode="decimal"
+                                                        value={formData.spouse_net_income}
+                                                        placeholder="0.00"
+                                                        onChange={(e) => handleCurrencyChange('spouse_net_income', e.target.value)}
+                                                        onFocus={() => handleCurrencyFocus('spouse_net_income')}
+                                                        onBlur={() => handleCurrencyBlur('spouse_net_income')}
+                                                        className="pl-7"
+                                                        disabled={!isEditing}
+                                                    />
+                                                </div>
+                                            )}
+                                            <InputError message={errors.spouse_net_income} />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* ── Real Properties ── */}
+                                <div className="mb-6">
+                                    <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+                                        <Building className="h-4 w-4" />
+                                        Assets
+                                    </h4>
+                                    <div className="grid gap-4">
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="real_properties_owned">Real Properties Owned (Specify)</Label>
+                                            {!isEditing ? (
+                                                <div className="rounded-md border bg-muted px-3 py-2 text-sm min-h-20">
+                                                    {formData.real_properties_owned || 'Not provided'}
+                                                </div>
+                                            ) : (
+                                                <textarea
+                                                    id="real_properties_owned"
+                                                    name="real_properties_owned"
+                                                    value={formData.real_properties_owned}
+                                                    onChange={(e) => setFormData({ ...formData, real_properties_owned: e.target.value })}
+                                                    placeholder="Specify real properties owned (e.g., Lot in Quezon City, House in Batangas)"
+                                                    rows={3}
+                                                    disabled={!isEditing}
+                                                    className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                                />
+                                            )}
+                                            <InputError message={errors.real_properties_owned} />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* ── Beneficiaries ── */}
+                                <div>
+                                    <div className="mb-3 flex items-center justify-between">
+                                        <h4 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+                                            <Users className="h-4 w-4" />
+                                            Beneficiaries
+                                        </h4>
+                                        {isEditing && (
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={addBeneficiary}
+                                            >
+                                                Add Beneficiary
+                                            </Button>
+                                        )}
+                                    </div>
+                                    <div className="space-y-3">
+                                    {(formData.beneficiaries as Beneficiary[]).map((beneficiary: Beneficiary, index: number) => (
+                                            <div
+                                                key={index}
+                                                className="rounded-lg border bg-muted/30 p-4 transition-colors hover:bg-muted/50"
+                                            >
+                                                <div className="mb-2 flex items-center justify-between">
+                                                    <span className="text-sm font-medium">
+                                                        Beneficiary {index + 1}
+                                                    </span>
+                                                    {formData.beneficiaries.length > 1 && (
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => removeBeneficiary(index)}
+                                                            className="text-destructive hover:text-destructive/80"
+                                                        >
+                                                            Remove
+                                                        </Button>
+                                                    )}
+                                                </div>
+                                                <div className="grid gap-4 md:grid-cols-2">
+                                                    <div className="grid gap-2">
+                                                        <Label htmlFor={`beneficiaries[${index}][full_name]`}>
+                                                            Full Name
+                                                        </Label>
+                                                        <Input
+                                                            id={`beneficiaries[${index}][full_name]`}
+                                                            name={`beneficiaries[${index}][full_name]`}
+                                                            value={beneficiary.full_name}
+                                                            onChange={(e) => updateBeneficiary(index, 'full_name', e.target.value)}
+                                                            placeholder="Full name"
+                                                            disabled={!isEditing}
+                                                        />
+                                                    </div>
+                                                    <div className="grid gap-2">
+                                                        <Label htmlFor={`beneficiaries[${index}][relationship]`}>
+                                                            Relationship
+                                                        </Label>
+                                                        <Input
+                                                            id={`beneficiaries[${index}][relationship]`}
+                                                            name={`beneficiaries[${index}][relationship]`}
+                                                            value={beneficiary.relationship}
+                                                            onChange={(e) => updateBeneficiary(index, 'relationship', e.target.value)}
+                                                            placeholder="e.g., Wife, Daughter"
+                                                            disabled={!isEditing}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
                             </CardContent>
                         </Card>

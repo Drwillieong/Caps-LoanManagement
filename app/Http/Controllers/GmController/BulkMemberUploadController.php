@@ -43,7 +43,6 @@ class BulkMemberUploadController extends Controller
             'permanent_address',
             'permanent_zip_code',
             'position',
-            'date_hired',
             'basic_salary',
             'income_type',
             'net_income',
@@ -63,7 +62,7 @@ class BulkMemberUploadController extends Controller
             'Dela Cruz',
             'Santos',
             'juan.santos@example.com',
-            'EMP-001',
+            '',
             'PAY-001',
             '1990-01-15',
             'male',
@@ -117,11 +116,10 @@ class BulkMemberUploadController extends Controller
 
         try {
             Excel::import($import, $validated['file']);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to parse the uploaded file. Please ensure it is a valid Excel (.xlsx, .xls) or CSV file with the correct column headers.',
-                'error' => $e->getMessage(),
+                'message' => 'Failed to parse the uploaded file: '.$e->getMessage(),
             ], 422);
         }
 

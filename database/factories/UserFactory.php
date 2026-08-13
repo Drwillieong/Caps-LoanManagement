@@ -32,7 +32,6 @@ class UserFactory extends Factory
                     'mobile_number' => '09000000000',
                     'present_address' => 'Factory generated address',
                     'position' => 'Member',
-                    'date_hired' => now()->subYear()->toDateString(),
                     'basic_salary' => 25000,
                     'share_capital_balance' => 10000,
                 ]);

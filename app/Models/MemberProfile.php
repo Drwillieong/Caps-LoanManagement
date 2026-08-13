@@ -11,6 +11,10 @@ class MemberProfile extends Model
 {
     use HasFactory;
 
+    protected $primaryKey = 'employee_id';
+    protected $keyType = 'string';
+    public $incrementing = false;
+
     /**
      * The attributes that are mass assignable.
      *
@@ -36,7 +40,6 @@ class MemberProfile extends Model
         'permanent_address',
         'permanent_zip_code',
         'position',
-        'date_hired',
         'basic_salary',
         'income_type',
         'net_income',
@@ -52,6 +55,7 @@ class MemberProfile extends Model
         'bank_account_number',
         'tin_number',
         'profile_picture',
+        'account_status',
     ];
 
     /**
@@ -63,7 +67,6 @@ class MemberProfile extends Model
     {
         return [
             'date_of_birth' => 'date',
-            'date_hired' => 'date',
             'basic_salary' => 'decimal:2',
             'net_income' => 'decimal:2',
             'share_capital_balance' => 'decimal:2',
@@ -85,12 +88,12 @@ class MemberProfile extends Model
      */
     public function beneficiaries(): HasMany
     {
-        return $this->hasMany(Beneficiary::class);
+        return $this->hasMany(Beneficiary::class, 'member_profile_id', 'employee_id');
     }
 
     public function deductionRecords(): HasMany
     {
-        return $this->hasMany(DeductionRecord::class);
+        return $this->hasMany(DeductionRecord::class, 'member_profile_id', 'employee_id');
     }
 
     /**

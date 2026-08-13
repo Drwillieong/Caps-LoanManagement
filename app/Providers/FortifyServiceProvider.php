@@ -37,20 +37,41 @@ class FortifyServiceProvider extends ServiceProvider
         $this->configureRateLimiting();
 
         Fortify::authenticateUsing(function (Request $request) {
-    $user = User::where('email', $request->email)->first();
+            $user = User::where('email', $request->email)->first();
 
-    if (! $user || ! Hash::check($request->password, $user->password)) {
-        return null;
-    }
+            if (! $user || ! Hash::check($request->password, $user->password)) {
+                return null;
+            }
 
-    if (! $user->is_active) {
-        throw ValidationException::withMessages([
-            'email' => ['This account is inactive.'],
-        ]);
-    }
+            $user->refresh();
+            $memberProfile = $user->memberProfile()->first();
 
-    return $user;
-});
+            if ($memberProfile) {
+                $accountStatus = $memberProfile->account_status ?? 'active';
+
+                if ($accountStatus !== 'active') {
+                    throw ValidationException::withMessages([
+                        'email' => ['Your account is currently inactive. .'],
+                    ]);
+                }
+
+                if ($user->status !== 'active') {
+                    throw ValidationException::withMessages([
+                        'email' => ['This account is not active.'],
+                    ]);
+                }
+
+                return $user;
+            }
+
+            if (! $user->is_active || $user->status !== 'active') {
+                throw ValidationException::withMessages([
+                    'email' => ['This account is inactive.'],
+                ]);
+            }
+
+            return $user;
+        });
 
     }
 
@@ -107,6 +128,11 @@ class FortifyServiceProvider extends ServiceProvider
             $throttleKey = Str::transliterate(Str::lower($request->input(Fortify::username())).'|'.$request->ip());
 
             return Limit::perMinute(5)->by($throttleKey);
+        });
+
+        // Loan application submission: max 1 request every 10 seconds per user.
+        RateLimiter::for('loan-application', function (Request $request) {
+            return Limit::perMinute(6)->by('loan-app:'.($request->user()?->id ?? $request->ip()));
         });
     }
 }

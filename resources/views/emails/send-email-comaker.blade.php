@@ -3,244 +3,231 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Co-Maker Notification</title>
+    <title>Co-Maker Loan Request</title>
     <style>
-        * {
+        body {
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
+            background: #eef2f7;
+            color: #172033;
+            font-family: Arial, Helvetica, sans-serif;
+            line-height: 1.6;
         }
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f0f2f5;
-            padding: 20px 0;
-            margin: 0;
-        }
-        .email-container {
-            max-width: 600px;
+ 
+        .container {
+            max-width: 680px;
             margin: 0 auto;
             background: #ffffff;
-            border-radius: 12px;
+            border: 1px solid #dbe3ef;
+            border-radius: 8px;
             overflow: hidden;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
         }
         .header {
+            background: #ffffff;
+            padding: 28px 36px;
             text-align: center;
-            margin-bottom: 30px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid #eee;
-            background-color: #ffffff;
-            padding: 30px 40px;
+            border-bottom: 1px solid #e5eaf2;
         }
-        .header img {
-            max-width: 250px;
-        }
-        .email-body {
-            padding: 40px;
-        }
-        .greeting {
-            font-size: 18px;
-            color: #1f2937;
-            margin-bottom: 20px;
-        }
-        .info-box {
-            background: #f8fafc;
-            border-radius: 10px;
-            padding: 25px;
-            margin: 25px 0;
-            border: 1px solid #e2e8f0;
-        }
-        .info-box-title {
-            font-size: 16px;
-            font-weight: 600;
-            color: #1e293b;
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .info-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-        }
-        .info-item {
-            display: flex;
-            flex-direction: column;
-        }
-        .info-label {
+        .header img { max-width: 210px; height: auto; }
+        .body { padding: 34px 40px 28px; }
+        .eyebrow {
+            color: #315d9f;
             font-size: 12px;
-            color: #64748b;
+            font-weight: 700;
+            letter-spacing: 1.2px;
+            margin: 0 0 8px;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 4px;
         }
-        .info-value {
-            font-size: 15px;
-            color: #1e293b;
-            font-weight: 500;
+        h1 {
+            color: #111827;
+            font-size: 24px;
+            line-height: 1.3;
+            margin: 0 0 16px;
         }
-        .info-value.highlight {
-            color: #2563eb;
-            font-size: 18px;
-        }
-        .message-text {
-            color: #4b5563;
-            font-size: 15px;
-            line-height: 1.7;
-            margin: 20px 0;
-        }
-        .important-box {
-            background: #fef3c7;
-            border: 1px solid #fcd34d;
-            border-radius: 10px;
-            padding: 20px;
-            margin: 25px 0;
-        }
-        .important-title {
-            font-size: 15px;
-            font-weight: 600;
-            color: #92400e;
-            margin-bottom: 8px;
-        }
-        .important-text {
-            font-size: 14px;
-            color: #b45309;
-        }
-        .btn-container {
-            text-align: center;
-            margin: 35px 0;
-        }
-        .btn {
-            background-color: #2563eb;
-            color: #ffffff;
-            padding: 14px 32px;
-            text-decoration: none;
+        p { margin: 0 0 16px; }
+        .copy { color: #475569; font-size: 15px; }
+        .section {
+            border: 1px solid #dbe3ef;
             border-radius: 8px;
-            font-weight: 600;
+            margin: 24px 0;
+            overflow: hidden;
+        }
+        .section-title {
+            background: #f8fafc;
+            border-bottom: 1px solid #dbe3ef;
+            color: #111827;
+            font-size: 15px;
+            font-weight: 700;
+            padding: 14px 18px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        td {
+            border-bottom: 1px solid #edf2f7;
+            padding: 12px 18px;
+            vertical-align: top;
+        }
+        tr:last-child td { border-bottom: 0; }
+        .label {
+            color: #64748b;
+            font-size: 12px;
+            text-transform: uppercase;
+            width: 42%;
+        }
+        .value {
+            color: #1e293b;
+            font-size: 14px;
+            font-weight: 700;
+            text-align: right;
+        }
+        .amount { color: #173d7a; font-size: 16px; }
+        .notice {
+            background: #fff7ed;
+        
+            border-left: 4px solid ;
+            border-radius: 8px;
+           
+            font-size: 14px;
+            margin: 24px 0;
+            padding: 18px 20px;
+        }
+        .notice strong { color: #7c2d12; }
+        .button-wrap { text-align: center; margin: 28px 0 8px; }
+        .button {
+            background: #1d4ed8;
+            border-radius: 6px;
+            color: #ffffff !important;
             display: inline-block;
             font-size: 15px;
-        }
-        .email-footer {
-            background: #f8fafc;
-            padding: 25px 40px;
-            text-align: center;
-            border-top: 1px solid #e2e8f0;
-        }
-        .footer-text {
-            font-size: 13px;
-            color: #64748b;
-            margin-bottom: 8px;
-        }
-        .footer-contact {
-            font-size: 12px;
-            color: #94a3b8;
-        }
-        .footer-contact a {
-            color: #2563eb;
+            font-weight: 700;
+            padding: 13px 28px;
             text-decoration: none;
         }
-        .divider {
-            height: 1px;
-            background: #e2e8f0;
-            margin: 25px 0;
+        .disclaimer {
+            color: #64748b;
+            font-size: 12px;
+            margin-top: 22px;
         }
+        .footer {
+            background: #172033;
+            color: #cbd5e1;
+            font-size: 12px;
+            padding: 24px 36px;
+            text-align: center;
+        }
+        .footer strong {
+            color: #ffffff;
+            display: block;
+            font-size: 13px;
+            margin-bottom: 4px;
+        }
+        .footer a { color: #bfdbfe; text-decoration: none; }
         @media only screen and (max-width: 600px) {
-            .email-container {
-                margin: 10px;
-            }
-            .email-body {
-                padding: 25px;
-            }
-            .info-grid {
-                grid-template-columns: 1fr;
-            }
-            .header {
-                padding: 25px 20px;
-            }
+            .page { padding: 12px; }
+            .header { padding: 24px 22px; }
+            .body { padding: 28px 22px 22px; }
+            td { display: block; padding: 10px 16px; }
+            .label { width: auto; padding-bottom: 0; }
+            .value { text-align: left; padding-top: 2px; }
         }
     </style>
 </head>
 <body>
 
-<div class="email-container">
-
-    <!-- HEADER with Logo -->
-    <div class="header">
-        <img src="{{ $message->embed(public_path('LEIMCO.png')) }}" alt="LEIMCO Logo">
-    </div>
-
-    <!-- Body -->
-    <div class="email-body">
-
-        <p class="greeting">Dear <strong>{{ $comakerName }}</strong>,</p>
-
-        <p class="message-text">
-            You have been selected as a <strong>Co-Maker</strong> for a loan application. 
-            Below are the details of the loan request:
-        </p>
-
-        <!-- Loan Details Box -->
-        <div class="info-box">
-            <div class="info-box-title">
-                📋 Loan Application Details
-            </div>
-            
-            <div class="info-grid">
-                <div class="info-item">
-                    <span class="info-label">Borrower Name</span>
-                    <span class="info-value">{{ $borrowerName }}</span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Loan Type</span>
-                    <span class="info-value">{{ $loanType }}</span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Loan Amount</span>
-                    <span class="info-value highlight">₱{{ number_format($loanAmount, 2) }}</span>
-                </div>
-            </div>
+    <div class="container">
+        <div class="header">
+            <img src="{{ $message->embed(public_path('LEIMCO.png')) }}" alt="LEIMCO Logo">
         </div>
 
-        <div class="divider"></div>
+        <div class="body">
+            <p class="eyebrow">Official Co-Maker Request</p>
+            <h1>Dear {{ $comakerName }},</h1>
 
-        <!-- Important Information Box -->
-        <div class="important-box">
-            <div class="important-title">⚠️ Important Responsibility</div>
-            <p class="important-text">
-                As a Co-Maker, you share equal responsibility with the borrower for repaying the loan. 
-                If the borrower fails to meet their loan obligations, you will be held equally liable for the debt.
-                Please review this request carefully before accepting or declining.
+            <p class="copy">
+                You have been nominated as co-maker for a loan application submitted by <strong>{{ $borrowerName }}</strong>. Your acknowledgment is required in the LEIMCO member portal before the application can continue.
+            </p>
+
+            <div class="section">
+                <div class="section-title">Borrower Information</div>
+                <table role="presentation">
+                    <tr>
+                        <td class="label">Member Name</td>
+                        <td class="value">{{ $borrowerName }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Employee ID</td>
+                        <td class="value">{{ $borrower->memberProfile->employee_id ?? 'N/A' }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Position</td>
+                        <td class="value">{{ $borrower->memberProfile->position ?? 'N/A' }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Contact Number</td>
+                        <td class="value">{{ $borrower->memberProfile->mobile_number ?? 'N/A' }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Present Address</td>
+                        <td class="value">{{ $borrower->memberProfile->present_address ?? 'N/A' }}{{ $borrower->memberProfile->present_zip_code ? ' '.$borrower->memberProfile->present_zip_code : '' }}</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="section">
+                <div class="section-title">Loan Application Details</div>
+                <table role="presentation">
+                    <tr>
+                        <td class="label">Loan Type</td>
+                        <td class="value">{{ $loanType }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Term</td>
+                        <td class="value">{{ $loan->terms_months ?? 'N/A' }} {{ ($loan->terms_months ?? 0) == 1 ? 'Month' : 'Months' }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Principal Amount</td>
+                        <td class="value amount">PHP {{ number_format($loanAmount, 2) }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Total Amount Due</td>
+                        <td class="value">PHP {{ number_format($loan->total_amount_due ?? 0, 2) }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Monthly Amortization</td>
+                        <td class="value">PHP {{ number_format($loan->monthly_amortization ?? 0, 2) }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Disbursement Method</td>
+                        <td class="value">{{ isset($loan->disbursement_method) ? ucwords(str_replace('_', ' ', $loan->disbursement_method)) : 'N/A' }}</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div class="notice">
+                <strong>Important:</strong> By accepting this request, you acknowledge potential joint responsibility for repayment obligations if the borrower fails to pay according to the approved loan terms.
+            </div>
+
+            <p class="copy">
+                Please sign in to your account to review the request and formally accept or decline your nomination.
+            </p>
+
+            <div class="button-wrap">
+                <a href="{{ url('/login') }}" class="button">Review Request in Portal</a>
+            </div>
+
+            <p class="disclaimer">
+                This is an automated notification from LEIMCO. Please do not reply directly to this email.
             </p>
         </div>
 
-        <p class="message-text">
-            Please log in to your account to review the full loan details and respond to this co-maker request.
-        </p>
-
-        <div class="btn-container">
-            <a href="{{ url('/login') }}" class="btn">Login to Portal</a>
+        <div class="footer">
+            <strong>LEIMCO Lending and Investment Cooperative</strong>
+            Copyright {{ date('Y') }} LEIMCO. All rights reserved.<br>
+            Member Services: <a href="mailto:support@leimco.com">support@leimco.com</a>
         </div>
-
-        <p class="message-text" style="font-size: 13px; color: #6b7280;">
-            This is an automated notification from LEIMCO. Please do not reply directly to this email. 
-            If you have any questions or need assistance, please contact our support team.
-        </p>
-
     </div>
-
-    <!-- Footer -->
-    <div class="email-footer">
-        <p class="footer-text">
-            © {{ date('Y') }} LEIMCO - Lending & Investment Cooperative. All rights reserved.
-        </p>
-        <p class="footer-contact">
-            Need help? Contact us at <a href="mailto:support@leimco.com">support@leimco.com</a> 
-            or call (02) 123-4567
-        </p>
-    </div>
-
-</div>
 
 </body>
 </html>

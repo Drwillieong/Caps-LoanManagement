@@ -15,6 +15,7 @@ import {
     Wallet,
     Building2,
     DollarSign,
+    PhilippinePeso,
     AlertTriangle,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -31,6 +32,14 @@ import {
     CardDescription,
     CardFooter,
 } from '@/components/ui/card';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { LiveClock } from '@/components/live-clock';
@@ -51,7 +60,6 @@ interface MemberProfile {
     civil_status: string | null;
     educational_attainment: string | null;
     position: string | null;
-    date_hired: string | null;
     basic_salary: number | null;
     income_type: string | null;
     net_income: number | null;
@@ -89,7 +97,7 @@ interface Props {
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Dashboard', href: '/dashboards/Gm/GmDashboard' },
+    { title: 'Dashboard', href: '/dashboard' },
     { title: 'Member Validation', href: '/dashboards/Gm/MemberValidate' },
 ];
 
@@ -186,6 +194,7 @@ export default function MemberValidate({ pendingMembers }: Props) {
     const [processingId, setProcessingId] = useState<number | null>(null);
     const [selectedMember, setSelectedMember] = useState<PendingMember | null>(null);
     const [showRejectForm, setShowRejectForm] = useState(false);
+    const [approveDialogOpen, setApproveDialogOpen] = useState(false);
 
     const rejectForm = useForm({
         rejection_reason: '',
@@ -221,10 +230,6 @@ export default function MemberValidate({ pendingMembers }: Props) {
     };
 
     const handleApprove = (memberId: number) => {
-        if (!confirm('Are you sure you want to approve this member? A welcome email with credentials will be sent.')) {
-            return;
-        }
-
         setProcessingId(memberId);
         router.post(
             `/dashboards/Gm/Member/${memberId}/approve`,
@@ -234,14 +239,20 @@ export default function MemberValidate({ pendingMembers }: Props) {
                 onSuccess: () => {
                     toast.success('Member approved successfully! Welcome email sent with credentials.');
                     setProcessingId(null);
+                    setApproveDialogOpen(false);
                     backToQueue();
                 },
                 onError: () => {
                     toast.error('Failed to approve member. Please try again.');
                     setProcessingId(null);
+                    setApproveDialogOpen(false);
                 },
             }
         );
+    };
+
+    const openApproveDialog = () => {
+        setApproveDialogOpen(true);
     };
 
     const handleReject = () => {
@@ -356,19 +367,7 @@ export default function MemberValidate({ pendingMembers }: Props) {
                                                                 <User className="mr-1.5 h-3.5 w-3.5" />
                                                                 Review
                                                             </Button>
-                                                            <Button
-                                                                size="sm"
-                                                                className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
-                                                                onClick={() => handleApprove(member.id)}
-                                                                disabled={processingId === member.id}
-                                                            >
-                                                                {processingId === member.id ? (
-                                                                    <Spinner className="mr-1.5 h-3.5 w-3.5" />
-                                                                ) : (
-                                                                    <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />
-                                                                )}
-                                                                Accept
-                                                            </Button>
+                                                          
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -418,7 +417,7 @@ export default function MemberValidate({ pendingMembers }: Props) {
                                         <Button
                                             size="sm"
                                             className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
-                                            onClick={() => handleApprove(selectedMember.id)}
+                                            onClick={openApproveDialog}
                                             disabled={processingId === selectedMember.id}
                                         >
                                             {processingId === selectedMember.id ? (
@@ -577,9 +576,9 @@ export default function MemberValidate({ pendingMembers }: Props) {
                                     <SectionCard title="Employment & Financial Assessment" icon={Briefcase} description="Employment and income details">
                                         <InfoGrid>
                                             <InfoField label="Employee ID" value={profile.employee_id} />
-                                            <InfoField label="Payroll ID" value={profile.payroll_id} />
+                                           
                                             <InfoField label="Position" value={profile.position} />
-                                            <InfoField label="Date Hired" value={profile.date_hired} isDate />
+                                            <InfoField label="Basic Salary" value={profile.basic_salary} />
                                             <InfoField label="Income Type" value={profile.income_type} />
                                         </InfoGrid>
                                         <Separator className="my-4" />
@@ -596,7 +595,7 @@ export default function MemberValidate({ pendingMembers }: Props) {
                                             <Card className="bg-muted/30 border-dashed">
                                                 <CardContent className="pt-4 pb-4">
                                                     <div className="flex items-center gap-2 mb-1">
-                                                        <DollarSign className="h-4 w-4 text-muted-foreground" />
+                                                        <PhilippinePeso className="h-4 w-4 text-muted-foreground" />
                                                         <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Net Income</span>
                                                     </div>
                                                     <p className="text-lg font-bold">{formatCurrency(profile.net_income)}</p>
@@ -664,6 +663,68 @@ export default function MemberValidate({ pendingMembers }: Props) {
                         </div>
                     </div>
                 )}
+
+                {/* ── Shadcn Confirmation Modal for Approval ── */}
+                <Dialog open={approveDialogOpen} onOpenChange={setApproveDialogOpen}>
+                    <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2 text-lg">
+                                <ShieldCheck className="h-5 w-5 text-emerald-600" />
+                                Confirm Member Approval
+                            </DialogTitle>
+                            <DialogDescription className="text-sm pt-2">
+                                Are you sure you want to approve this member? 
+                              
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        {selectedMember && (
+                            <div className="rounded-lg border bg-muted/30 p-4 text-sm space-y-2">
+                                <div className="flex items-center gap-3">
+                                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary shrink-0">
+                                        {getInitials(selectedMember.first_name, selectedMember.last_name)}
+                                    </div>
+                                    <div>
+                                        <p className="font-semibold">{selectedMember.name}</p>
+                                        <p className="text-xs text-muted-foreground">{selectedMember.email}</p>
+                                    </div>
+                                </div>
+                                {selectedMember.member_profile?.position && (
+                                    <p className="text-xs text-muted-foreground pl-12">
+                                        Position: {selectedMember.member_profile.position}
+                                    </p>
+                                )}
+                            </div>
+                        )}
+
+                        <DialogFooter className="gap-2 sm:gap-0">
+                            <Button
+                                variant="outline"
+                                onClick={() => setApproveDialogOpen(false)}
+                                disabled={processingId === selectedMember?.id}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
+                                onClick={() => selectedMember && handleApprove(selectedMember.id)}
+                                disabled={processingId === selectedMember?.id}
+                            >
+                                {processingId === selectedMember?.id ? (
+                                    <>
+                                        <Spinner className="mr-2 h-4 w-4" />
+                                        Approving...
+                                    </>
+                                ) : (
+                                    <>
+                                        <CheckCircle2 className="mr-2 h-4 w-4" />
+                                        Confirm &amp; Approve
+                                    </>
+                                )}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
             </div>
         </AppLayout>
     );

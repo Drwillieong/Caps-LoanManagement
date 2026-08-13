@@ -229,6 +229,7 @@ class GmDashboardController extends Controller
             'interest_amount' => $loan->interest_amount,
             'total_amount_due' => $loan->total_amount_due,
             'monthly_amortization' => $loan->monthly_amortization,
+            'disbursement_method' => $loan->disbursement_method,
             'status' => $loan->status,
             'created_at' => $loan->created_at->format('Y-m-d H:i:s'),
             'release_date' => $loan->release_date?->format('Y-m-d'),
@@ -238,7 +239,6 @@ class GmDashboardController extends Controller
                 'name' => trim($loan->user->first_name.' '.$loan->user->middle_name.' '.$loan->user->last_name),
                 'email' => $loan->user->email,
                 'member_id' => 'MEM-'.str_pad($loan->user->id, 4, '0', STR_PAD_LEFT),
-                'date_hired' => $loan->user->memberProfile?->date_hired?->format('Y-m-d'),
                 'basic_salary' => $loan->user->memberProfile?->basic_salary ?? 0,
                 'share_capital_balance' => $loan->user->memberProfile?->share_capital_balance ?? 0,
             ],
@@ -326,6 +326,7 @@ class GmDashboardController extends Controller
             'date_approved' => $loan->release_date?->format('Y-m-d') ?? $loan->created_at->format('Y-m-d'),
             'status' => $loan->status,
             'next_due_date' => $loan->amortizations->where('status', 'pending')->first()?->due_date?->format('Y-m-d') ?? null,
+            'disbursement_method' => $loan->disbursement_method,
             'co_maker' => $loan->coMakers->first()?->user ? [
                 'name' => trim($loan->coMakers->first()->user->first_name.' '.($loan->coMakers->first()->user->middle_name ?? '').' '.$loan->coMakers->first()->user->last_name),
                 'relationship' => $loan->coMakers->first()->user->memberProfile?->relationship ?? 'N/A',

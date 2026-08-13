@@ -32,7 +32,6 @@ interface LoanMember {
     name: string;
     email: string;
     member_id: string;
-    date_hired?: string;
     basic_salary: number;
     share_capital_balance: number;
 }
@@ -45,6 +44,7 @@ interface Loan {
     interest_amount: number;
     total_amount_due: number;
     monthly_amortization: number;
+    disbursement_method?: string;
     status: string;
     created_at: string;
     release_date?: string;
@@ -209,10 +209,6 @@ export default function CreditComViewLoanDecision() {
                                 <p className="text-xs text-muted-foreground">Email</p>
                                 <p className="font-medium">{loan.member.email}</p>
                             </div>
-                            <div>
-                                <p className="text-xs text-muted-foreground">Date Hired</p>
-                                <p className="font-medium">{loan.member.date_hired || 'N/A'}</p>
-                            </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4 mt-3 pt-3 border-t text-sm">
                             <div>
@@ -264,6 +260,14 @@ export default function CreditComViewLoanDecision() {
                                 <p className="font-medium text-base">{loan.active_loans_count}</p>
                             </div>
                         </div>
+                        {loan.disbursement_method && (
+                            <div className="grid grid-cols-2 gap-4 mt-3 pt-3 border-t text-sm">
+                                <div>
+                                    <p className="text-xs text-muted-foreground">Disbursement Method</p>
+                                    <p className="font-medium capitalize">{loan.disbursement_method.replace('_', ' ')}</p>
+                                </div>
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
 

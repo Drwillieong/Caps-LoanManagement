@@ -16,7 +16,6 @@ function validCreateMemberPayload(array $overrides = []): array
         'last_name' => 'Reyes',
         'email' => 'maria.reyes@gmail.com',
         'role' => 'member',
-        'employee_id' => 'MEM-1001',
         'payroll_id' => 'PAY-1001',
         'place_of_birth' => 'Calamba City, Laguna',
         'date_of_birth' => '1992-05-10',
@@ -30,7 +29,6 @@ function validCreateMemberPayload(array $overrides = []): array
         'present_zip_code' => '4027',
         'mobile_number' => '09170000002',
         'position' => 'Accounting Staff',
-        'date_hired' => '2024-01-15',
         'basic_salary' => 25000,
         'income_type' => 'monthly',
         'net_income' => 22000,
@@ -61,7 +59,7 @@ test('hr can create a member with a generated temporary password and welcome ema
 
     expect($member->role)->toBe('member');
     expect($member->memberProfile)
-        ->employee_id->toBe('MEM-1001')
+        ->employee_id->toBe('001')
         ->basic_salary->toBe('25000.00')
         ->share_capital_balance->toBe('15000.00')
         ->place_of_birth->toBe('Calamba City, Laguna')

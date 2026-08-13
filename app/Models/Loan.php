@@ -11,6 +11,13 @@ class Loan extends Model
 {
     use HasFactory;
 
+    public const STATUS_AWAITING_COMAKER = 'awaiting_comaker';
+
+    /**
+     * Number of hours a co-maker request may stay pending before expiring.
+     */
+    public const COMAKER_EXPIRATION_HOURS = 48;
+
     /**
      * The attributes that are mass assignable.
      *
@@ -33,6 +40,7 @@ class Loan extends Model
         'rejected_at',
         'notifications_read_at',
         'has_edited',
+        'disbursement_method',
     ];
 
     /**

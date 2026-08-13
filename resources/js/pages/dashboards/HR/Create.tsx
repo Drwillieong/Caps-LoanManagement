@@ -1,8 +1,17 @@
-import { Transition } from '@headlessui/react';
-import { Head, useForm } from '@inertiajs/react';
-import { type FormEvent } from 'react';
-import { toast } from 'react-hot-toast';
-import { z } from 'zod';
+import { Head, Link, useForm } from '@inertiajs/react';
+import { useState, useCallback, type ReactNode, type FormEvent } from 'react';
+import toast from 'react-hot-toast';
+import {
+    ArrowLeft,
+    User,
+    MapPin,
+    Briefcase,
+    Heart,
+    Users,
+    Phone,
+    Building,
+    UserCircle,
+} from 'lucide-react';
 
 import HeadingSmall from '@/components/heading-small';
 import InputError from '@/components/input-error';
@@ -10,795 +19,983 @@ import { LiveClock } from '@/components/live-clock';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
-import { Spinner } from '@/components/ui/spinner';
-import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
-import { store } from '@/routes/users';
 import { type BreadcrumbItem } from '@/types';
+import { cn } from '@/lib/utils';
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Members', href: '/dashboards/HR/SeeUsers' },
-    { title: 'Create', href: '/dashboards/HR/create' },
+    { title: 'Create Member', href: '' },
 ];
 
-const MIN_FINANCIAL_AMOUNT = 10000;
+// ──────────────────────────────────────────────────
+// Utility Helpers
+// ──────────────────────────────────────────────────
 
-const inputClass =
-    'h-10 rounded-lg border-emerald-100 focus:ring-emerald-500/40';
-const selectClass =
-    'h-10 rounded-lg border-emerald-100 focus:ring-emerald-500/40';
-const sectionClass =
-    'rounded-xl border border-emerald-100 bg-white/50 p-6 dark:bg-emerald-950/10';
-
-const requiredText = (label: string, max = 255) =>
-    z
-        .string()
-        .trim()
-        .min(1, `${label} is required.`)
-        .max(max, `${label} must not exceed ${max} characters.`);
-
-const optionalText = (label: string, max = 255) =>
-    z.string().trim().max(max, `${label} must not exceed ${max} characters.`);
-
-const requiredAmount = (label: string, minimum = 0) =>
-    z
-        .string()
-        .trim()
-        .min(1, `${label} is required.`)
-        .refine(
-            (value) => Number.isFinite(Number(value)),
-            `${label} must be a valid amount.`,
-        )
-        .refine(
-            (value) => Number(value) >= minimum,
-            `${label} must be at least ${minimum.toLocaleString()}.`,
-        );
-
-const optionalAmount = (label: string) =>
-    z
-        .string()
-        .trim()
-        .refine(
-            (value) => value === '' || Number.isFinite(Number(value)),
-            `${label} must be a valid amount.`,
-        )
-        .refine(
-            (value) => value === '' || Number(value) >= 0,
-            `${label} must not be negative.`,
-        );
-
-const requiredPastDate = (label: string) =>
-    z
-        .string()
-        .trim()
-        .min(1, `${label} is required.`)
-        .refine((value) => {
-            const date = new Date(`${value}T00:00:00`);
-            const today = new Date();
-
-            today.setHours(0, 0, 0, 0);
-
-            return !Number.isNaN(date.getTime()) && date < today;
-        }, `${label} must be before today.`);
-
-export const createMemberSchema = z.object({
-    first_name: requiredText('First name'),
-    middle_name: optionalText('Middle name'),
-    last_name: requiredText('Family name'),
-    email: z
-        .string()
-        .trim()
-        .min(1, 'Email address is required.')
-        .email('Enter a valid email address.'),
-    role: z.literal('member'),
-    employee_id: requiredText('Member ID'),
-    payroll_id: optionalText('Payroll ID'),
-    place_of_birth: requiredText('Place of birth'),
-    date_of_birth: requiredPastDate('Date of birth'),
-    civil_status: z.enum(['single', 'married', 'widowed']),
-    sex: z.enum(['male', 'female']),
-    educational_attainment: requiredText('Educational attainment'),
-    permanent_address: requiredText('Permanent address', 1000),
-    permanent_zip_code: requiredText('Permanent address zip code', 20),
-    permanent_mobile_number: requiredText('Permanent mobile number', 20),
-    present_address: requiredText('Present address', 1000),
-    present_zip_code: requiredText('Present address zip code', 20),
-    mobile_number: requiredText('Present cellphone number', 20),
-    position: requiredText('Position'),
-    date_hired: z.string().trim().min(1, 'Date hired is required.'),
-    basic_salary: requiredAmount('Income (Gross)', MIN_FINANCIAL_AMOUNT),
-    income_type: z.enum(['monthly', 'daily', 'yearly']),
-    net_income: requiredAmount('Income (Net)'),
-    share_capital_balance: requiredAmount(
-        'Share capital balance',
-        MIN_FINANCIAL_AMOUNT,
-    ),
-    other_source_of_income: optionalText('Other source of income'),
-    facebook_account_name: optionalText('Facebook account name'),
-    spouse_occupation: optionalText('Occupation of spouse'),
-    spouse_gross_income: optionalAmount('Spouse income (gross)'),
-    spouse_income_type: z.enum(['monthly', 'daily', 'yearly']),
-    spouse_net_income: optionalAmount('Spouse income (net)'),
-    legal_beneficiaries: z.array(
-        z.object({
-            full_name: optionalText('Legal beneficiary name', 255),
-            relationship: optionalText('Relationship', 255),
-        }),
-    ),
-    real_properties_owned: optionalText('Real properties owned', 2000),
-});
-
-type CreateMemberForm = z.infer<typeof createMemberSchema>;
-type CreateMemberField = keyof CreateMemberForm;
-
-const initialFormData: CreateMemberForm = {
-    first_name: '',
-    middle_name: '',
-    last_name: '',
-    email: '',
-    role: 'member',
-    employee_id: '',
-    payroll_id: '',
-    place_of_birth: '',
-    date_of_birth: '',
-    civil_status: 'single',
-    sex: 'male',
-    educational_attainment: '',
-    permanent_address: '',
-    permanent_zip_code: '',
-    permanent_mobile_number: '',
-    present_address: '',
-    present_zip_code: '',
-    mobile_number: '',
-    position: '',
-    date_hired: '',
-    basic_salary: '',
-    income_type: 'monthly',
-    net_income: '',
-    share_capital_balance: '',
-    other_source_of_income: '',
-    facebook_account_name: '',
-    spouse_occupation: '',
-    spouse_gross_income: '',
-    spouse_income_type: 'monthly',
-    spouse_net_income: '',
-    legal_beneficiaries: [{ full_name: '', relationship: '' }],
-    real_properties_owned: '',
-};
-
-const civilStatusOptions = [
-    { label: 'Single', value: 'single' },
-    { label: 'Married', value: 'married' },
-    { label: 'Widower/Widow', value: 'widowed' },
-] as const;
-
-const sexOptions = [
-    { label: 'Male', value: 'male' },
-    { label: 'Female', value: 'female' },
-] as const;
-
-const incomeTypeOptions = [
-    { label: 'Monthly', value: 'monthly' },
-    { label: 'Daily', value: 'daily' },
-    { label: 'Yearly', value: 'yearly' },
-] as const;
-
-const educationalAttainmentOptions = [
-    'Elementary',
-    'High School',
-    'Vocational',
-    'College',
-    'Postgraduate',
-    'Other',
-];
-
-function getZodErrors(error: z.ZodError<CreateMemberForm>) {
-    const errors: Partial<Record<CreateMemberField, string>> = {};
-
-    for (const issue of error.issues) {
-        const field = issue.path[0];
-
-        if (typeof field === 'string' && !errors[field as CreateMemberField]) {
-            errors[field as CreateMemberField] = issue.message;
-        }
-    }
-
-    return errors;
+function getTodayISO(): string {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
 }
 
-export default function Create() {
-    const form = useForm<CreateMemberForm>(initialFormData);
-    const { data, setData, post, processing, errors, recentlySuccessful } =
-        form;
+function formatCurrency(raw: string): string {
+    const num = parseFloat(raw.replace(/,/g, ''));
+    if (isNaN(num)) return '';
+    return num.toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    });
+}
 
-    const submit = (event: FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
-        form.clearErrors();
+function parseCurrency(formatted: string): string {
+    return formatted.replace(/,/g, '');
+}
 
-        const result = createMemberSchema.safeParse(data);
+function formatPhone(raw: string): string {
+    const digits = raw.replace(/\D/g, '');
+    if (digits.length < 3) return digits;
+    if (digits.startsWith('63')) {
+        const rest = digits.slice(2);
+        if (rest.length <= 3) return `+63 ${rest}`;
+        if (rest.length <= 6) return `+63 ${rest.slice(0, 3)} ${rest.slice(3)}`;
+        return `+63 ${rest.slice(0, 3)} ${rest.slice(3, 6)} ${rest.slice(6, 10)}`;
+    }
+    if (digits.startsWith('0')) {
+        const rest = digits.slice(1);
+        if (rest.length <= 3) return digits;
+        if (rest.length <= 6) return `+63 ${rest.slice(0, 3)} ${rest.slice(3)}`;
+        return `+63 ${rest.slice(0, 3)} ${rest.slice(3, 6)} ${rest.slice(6, 10)}`;
+    }
+    return digits;
+}
 
-        if (!result.success) {
-            const clientErrors = getZodErrors(result.error);
+function parsePhone(formatted: string): string {
+    const digits = formatted.replace(/\D/g, '');
+    if (digits.startsWith('63')) return digits;
+    if (digits.startsWith('0')) return `63${digits.slice(1)}`;
+    return digits;
+}
 
-            for (const [field, message] of Object.entries(clientErrors)) {
-                form.setError(field as CreateMemberField, message);
-            }
+function titleCase(value: string): string {
+    return value
+        .toLowerCase()
+        .split(' ')
+        .map((w) => (w ? w[0].toUpperCase() + w.slice(1) : w))
+        .join(' ');
+}
 
-            toast.error('Please review the highlighted fields.');
+// ──────────────────────────────────────────────────
+// Types
+// ──────────────────────────────────────────────────
 
-            return;
+interface Beneficiary {
+    full_name: string;
+    relationship: string;
+}
+
+interface Props {
+    roles: string[];
+}
+
+interface FieldOpts {
+    required?: boolean;
+    placeholder?: string;
+    type?: string;
+    max?: string;
+    inputMode?: 'text' | 'decimal' | 'numeric' | 'tel' | 'search' | 'email' | 'url';
+    pattern?: string;
+    helperText?: string;
+    className?: string;
+}
+
+interface OptsBasic {
+    required?: boolean;
+    helperText?: string;
+}
+
+const SELECT_CLASS =
+    'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50';
+
+// ──────────────────────────────────────────────────
+// Component
+// ──────────────────────────────────────────────────
+
+export default function Create({ roles }: Props) {
+    const { post, processing, errors, setError, clearErrors, transform } = useForm({});
+
+    const [formData, setFormData] = useState({
+        // ── Identity ──
+        first_name: '',
+        middle_name: '',
+        last_name: '',
+        email: '',
+        role: 'member',
+
+        // ── Personal ──
+        place_of_birth: '',
+        date_of_birth: '',
+        civil_status: '',
+        sex: '',
+        educational_attainment: '',
+
+        // ── Contact & Address ──
+        permanent_mobile_number: '',
+        present_address: '',
+        present_zip_code: '',
+        permanent_address: '',
+        permanent_zip_code: '',
+
+        // ── Employment & Financial ──
+        position: '',
+        basic_salary: '',
+        income_type: 'monthly',
+        net_income: '',
+        share_capital_balance: '',
+        other_source_of_income: '',
+        facebook_account_name: '',
+
+        // ── Spouse ──
+        spouse_occupation: '',
+        spouse_gross_income: '',
+        spouse_income_type: 'monthly',
+        spouse_net_income: '',
+
+        // ── Assets ──
+        real_properties_owned: '',
+
+        // ── Beneficiaries ──
+        legal_beneficiary_1_name: '',
+        beneficiaries: [{ full_name: '', relationship: '' }] as Beneficiary[],
+    });
+
+    const handleChange = useCallback((field: string, value: string) => {
+        setFormData((prev) => ({ ...prev, [field]: value }));
+    }, []);
+
+    const handlePhoneChange = useCallback((value: string) => {
+        const digits = value.replace(/\D/g, '').slice(0, 12);
+        setFormData((prev) => ({ ...prev, permanent_mobile_number: digits }));
+    }, []);
+
+    const handleCurrencyChange = useCallback((field: string, raw: string) => {
+        const cleaned = raw.replace(/,/g, '');
+        if (/^\d*\.?\d{0,2}$/.test(cleaned) || cleaned === '') {
+            setFormData((prev) => ({ ...prev, [field]: cleaned }));
         }
+    }, []);
 
-        form.transform(() => result.data);
-
-        post(store.url(), {
-            preserveScroll: true,
-            onError: () => toast.error('Please review the highlighted fields.'),
+    const handleCurrencyBlur = useCallback((field: string) => {
+        setFormData((prev) => {
+            const val = prev[field as keyof typeof prev] as string;
+            if (!val) return prev;
+            return { ...prev, [field]: formatCurrency(val) };
         });
-    };
+    }, []);
+
+    const handleCurrencyFocus = useCallback((field: string) => {
+        setFormData((prev) => {
+            const val = prev[field as keyof typeof prev] as string;
+            if (!val) return prev;
+            return { ...prev, [field]: parseCurrency(val) };
+        });
+    }, []);
 
     const addBeneficiary = () => {
-        const current = data.legal_beneficiaries ?? [];
-        form.setData('legal_beneficiaries', [
-            ...current,
-            { full_name: '', relationship: '' },
-        ]);
+        setFormData((prev) => ({
+            ...prev,
+            beneficiaries: [...prev.beneficiaries, { full_name: '', relationship: '' }],
+        }));
     };
 
     const removeBeneficiary = (index: number) => {
-        const current = data.legal_beneficiaries ?? [];
-        if (current.length <= 1) return;
-        const updated = current.filter((_, i) => i !== index);
-        form.setData('legal_beneficiaries', updated);
+        setFormData((prev) => {
+            const updated = prev.beneficiaries.filter((_, i) => i !== index);
+            return {
+                ...prev,
+                beneficiaries: updated.length > 0 ? updated : [{ full_name: '', relationship: '' }],
+            };
+        });
     };
 
-    const updateBeneficiary = (
-        index: number,
-        field: 'full_name' | 'relationship',
-        value: string,
-    ) => {
-        const current = [...(data.legal_beneficiaries ?? [])];
-        current[index] = { ...current[index], [field]: value };
-        form.setData('legal_beneficiaries', current);
+    const updateBeneficiary = (index: number, field: keyof Beneficiary, value: string) => {
+        setFormData((prev) => {
+            const updated = [...prev.beneficiaries];
+            updated[index] = { ...updated[index], [field]: value };
+            return { ...prev, beneficiaries: updated };
+        });
     };
 
-    const renderTextInput = (
-    name: CreateMemberField,
-    label: string,
-    options: {
-        type?: string;
-        required?: boolean;
-        placeholder?: string;
-        min?: number;
-        max?: string | number;
-        step?: string;
-    } = {},
-) => (
-    <div className="space-y-2">
-        <Label htmlFor={name}>
-            {label}
-            {options.required && <span className="text-red-500"> *</span>}
-        </Label>
-        <Input
-            id={name}
-            name={name}
-            type={options.type ?? 'text'}
-            required={options.required}
-            min={options.min}
-            max={options.max}
-            step={options.step}
-            placeholder={options.placeholder}
-            value={String(data[name])}
-            onChange={(event) => setData(name, event.target.value)}
-            className={inputClass}
-        />
-        <InputError message={errors[name]} />
-    </div>
-);
-const yesterday = new Date();
-yesterday.setDate(yesterday.getDate() - 1);
+    // ── Field renderers (called inside form render prop) ──
 
-const maxHireDate = `${yesterday.getFullYear()}-${String(
-    yesterday.getMonth() + 1,
-).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
-
-
-    const renderSelect = <TValue extends string>(
-        name: CreateMemberField,
+    const renderInput = (
+        field: string,
         label: string,
-        value: TValue,
-        onValueChange: (value: TValue) => void,
-        options: ReadonlyArray<{ label: string; value: TValue }>,
-        required = true,
-    ) => (
-        <div className="space-y-2">
-            <Label htmlFor={name}>
-                {label}
-                {required && <span className="text-red-500"> *</span>}
-            </Label>
-            <Select value={value} onValueChange={onValueChange}>
-                <SelectTrigger id={name} className={selectClass}>
-                    <SelectValue
-                        placeholder={`Select ${label.toLowerCase()}`}
+        err: Record<string, string>,
+        opts: FieldOpts = {},
+    ): ReactNode => {
+        const value = formData[field as keyof typeof formData] as string;
+        return (
+            <div className="grid gap-1.5">
+                <Label htmlFor={field}>
+                    {label}
+                    {opts.required && <span className="text-red-500 ml-0.5">*</span>}
+                </Label>
+                <Input
+                    id={field}
+                    name={field}
+                    type={opts.type || 'text'}
+                    value={value}
+                    inputMode={opts.inputMode}
+                    pattern={opts.pattern}
+                    max={opts.max}
+                    placeholder={opts.placeholder}
+                    onChange={(e) => handleChange(field, e.target.value)}
+                    className={cn(
+                        opts.className,
+                        err[field] && 'border-destructive ring-destructive/20 dark:ring-destructive/40',
+                    )}
+                    aria-invalid={!!err[field]}
+                />
+                {opts.helperText && (
+                    <p className="text-xs text-muted-foreground">{opts.helperText}</p>
+                )}
+                {err[field] && <InputError message={err[field]} />}
+            </div>
+        );
+    };
+
+    const renderCurrency = (
+        field: string,
+        label: string,
+        err: Record<string, string>,
+        opts: OptsBasic = {},
+    ): ReactNode => {
+        const value = formData[field as keyof typeof formData] as string;
+        return (
+            <div className="grid gap-1.5">
+                <Label htmlFor={field}>
+                    {label}
+                    {opts.required && <span className="text-red-500 ml-0.5">*</span>}
+                </Label>
+                <div className="relative">
+                    <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-sm text-muted-foreground">
+                        ₱
+                    </span>
+                    <Input
+                        id={field}
+                        name={field}
+                        type="text"
+                        inputMode="decimal"
+                        value={value}
+                        placeholder="0.00"
+                        onChange={(e) => handleCurrencyChange(field, e.target.value)}
+                        onFocus={() => handleCurrencyFocus(field)}
+                        onBlur={() => handleCurrencyBlur(field)}
+                        className={cn(
+                            'pl-7',
+                            err[field] && 'border-destructive ring-destructive/20 dark:ring-destructive/40',
+                        )}
+                        aria-invalid={!!err[field]}
                     />
-                </SelectTrigger>
-                <SelectContent>
-                    {options.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                        </SelectItem>
+                </div>
+                {opts.helperText && (
+                    <p className="text-xs text-muted-foreground">{opts.helperText}</p>
+                )}
+                {err[field] && <InputError message={err[field]} />}
+            </div>
+        );
+    };
+
+    const renderSelect = (
+        field: string,
+        label: string,
+        options: { value: string; label: string }[],
+        err: Record<string, string>,
+        opts: OptsBasic & { placeholder?: string } = {},
+    ): ReactNode => {
+        const value = formData[field as keyof typeof formData] as string;
+        return (
+            <div className="grid gap-1.5">
+                <Label htmlFor={field}>
+                    {label}
+                    {opts.required && <span className="text-red-500 ml-0.5">*</span>}
+                </Label>
+                <select
+                    id={field}
+                    name={field}
+                    value={value}
+                    onChange={(e) => handleChange(field, e.target.value)}
+                    className={cn(
+                        SELECT_CLASS,
+                        err[field] && 'border-destructive ring-destructive/20 dark:ring-destructive/40',
+                    )}
+                    aria-invalid={!!err[field]}
+                >
+                    <option value="">
+                        {opts.placeholder || `Select ${label.toLowerCase()}`}
+                    </option>
+                    {options.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                        </option>
                     ))}
-                </SelectContent>
-            </Select>
-            <InputError message={errors[name]} />
-        </div>
-    );
+                </select>
+                {opts.helperText && (
+                    <p className="text-xs text-muted-foreground">{opts.helperText}</p>
+                )}
+                {err[field] && <InputError message={err[field]} />}
+            </div>
+        );
+    };
+
+    const renderTextarea = (
+        field: string,
+        label: string,
+        err: Record<string, string>,
+        opts: OptsBasic & { placeholder?: string } = {},
+    ): ReactNode => {
+        const value = formData[field as keyof typeof formData] as string;
+        return (
+            <div className="grid gap-1.5">
+                <Label htmlFor={field}>
+                    {label}
+                    {opts.required && <span className="text-red-500 ml-0.5">*</span>}
+                </Label>
+                <textarea
+                    id={field}
+                    name={field}
+                    value={value}
+                    onChange={(e) => handleChange(field, e.target.value)}
+                    placeholder={opts.placeholder}
+                    rows={3}
+                    className={cn(
+                        'flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
+                        err[field] && 'border-destructive ring-destructive/20 dark:ring-destructive/40',
+                    )}
+                    aria-invalid={!!err[field]}
+                />
+                {opts.helperText && (
+                    <p className="text-xs text-muted-foreground">{opts.helperText}</p>
+                )}
+                {err[field] && <InputError message={err[field]} />}
+            </div>
+        );
+    };
+
+    const todayISO = getTodayISO();
+
+    // ── Check if spouse fields are conditionally required ──
+    const hasSpouseOccupation = formData.spouse_occupation.trim().length > 0;
+
+    // ── Client-side conditional spouse validation errors ──
+    const getSpouseConditionalErrors = (): Record<string, string> => {
+        if (!hasSpouseOccupation) return {};
+        const errors: Record<string, string> = {};
+        if (!formData.spouse_gross_income || parseFloat(formData.spouse_gross_income.replace(/,/g, '')) <= 0) {
+            errors.spouse_gross_income = 'Spouse Income (Gross) is required when spouse occupation is provided.';
+        }
+        if (!formData.spouse_income_type) {
+            errors.spouse_income_type = 'Spouse Income Type is required when spouse occupation is provided.';
+        }
+        if (!formData.spouse_net_income || parseFloat(formData.spouse_net_income.replace(/,/g, '')) <= 0) {
+            errors.spouse_net_income = 'Spouse Net Income is required when spouse occupation is provided.';
+        }
+        return errors;
+    };
+
+    const buildPayload = () => {
+        const parseNum = (val: string) => {
+            const num = parseFloat(val.replace(/,/g, ''));
+            return isNaN(num) ? 0 : num;
+        };
+        const parseNullableNum = (val: string) => {
+            const cleaned = val.replace(/,/g, '');
+            return cleaned ? parseFloat(cleaned) : null;
+        };
+
+        const cleanedPhone = parsePhone(formData.permanent_mobile_number);
+        const tc = (v: string) => titleCase(v.trim());
+        const firstBeneficiary = formData.beneficiaries.find((b) => b.full_name);
+
+        return {
+            first_name: tc(formData.first_name),
+            middle_name: formData.middle_name ? tc(formData.middle_name) : null,
+            last_name: tc(formData.last_name),
+            email: formData.email.trim().toLowerCase(),
+            role: 'member',
+            place_of_birth: tc(formData.place_of_birth),
+            date_of_birth: formData.date_of_birth,
+            civil_status: formData.civil_status,
+            sex: formData.sex,
+            educational_attainment: formData.educational_attainment,
+            mobile_number: cleanedPhone,
+            permanent_mobile_number: cleanedPhone,
+            present_address: formData.present_address.trim(),
+            present_zip_code: formData.present_zip_code.trim(),
+            permanent_address: formData.permanent_address.trim(),
+            permanent_zip_code: formData.permanent_zip_code.trim(),
+            position: formData.position.trim(),
+            basic_salary: parseNum(formData.basic_salary),
+            income_type: formData.income_type,
+            net_income: parseNum(formData.net_income),
+            share_capital_balance: parseNum(formData.share_capital_balance),
+            other_source_of_income: formData.other_source_of_income.trim() || null,
+            facebook_account_name: formData.facebook_account_name.trim() || null,
+            spouse_occupation: formData.spouse_occupation.trim() || null,
+            spouse_gross_income: parseNullableNum(formData.spouse_gross_income),
+            spouse_income_type: formData.spouse_income_type,
+            spouse_net_income: parseNullableNum(formData.spouse_net_income),
+            real_properties_owned: formData.real_properties_owned.trim() || null,
+            legal_beneficiary_1_name: firstBeneficiary?.full_name
+                ? tc(firstBeneficiary.full_name)
+                : null,
+        };
+    };
+
+    const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        clearErrors();
+
+        const spouseConditionalErrors = getSpouseConditionalErrors();
+        if (Object.keys(spouseConditionalErrors).length > 0) {
+            setError(spouseConditionalErrors);
+            toast.error('Please complete the highlighted spouse fields.');
+            return;
+        }
+
+        transform(() => buildPayload());
+        post('/dashboards/HR/SeeUsers', {
+            onSuccess: () => {
+                toast.success(
+                    'Member created successfully! The application has been submitted for GM validation.',
+                );
+            },
+            onError: () => {
+                toast.error('Failed to create member. Please check the form for errors.');
+            },
+        });
+    };
 
     return (
         <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
             <Head title="Create Member" />
 
             <div className="flex flex-1 flex-col gap-6 p-6">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <HeadingSmall
-                        title="Create New Member"
-                        description="Add a new member to your organization"
-                    />
-                    <p className="text-sm text-muted-foreground">
-                        Fields marked * are required
-                    </p>
+                {/* ── Header ── */}
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <Button variant="outline" size="icon" asChild>
+                            <Link href="/dashboards/HR/SeeUsers">
+                                <ArrowLeft className="h-4 w-4" />
+                            </Link>
+                        </Button>
+                        <div>
+                            <HeadingSmall
+                                title="Create New Member Account"
+                                description="Fill in the details to create a new member. The member will receive their login credentials upon GM approval."
+                            />
+                        </div>
+                    </div>
                 </div>
 
-                <form onSubmit={submit} className="space-y-6">
-                    <Transition
-                        show={recentlySuccessful}
-                        enter="transition ease-out duration-300"
-                        enterFrom="opacity-0 translate-y-2"
-                        enterTo="opacity-100 translate-y-0"
-                    >
-                        <div className="flex items-start gap-4 rounded-xl border border-emerald-100 bg-emerald-50 px-6 py-5 shadow-sm">
-                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 text-sm font-bold text-white">
-                                OK
-                            </div>
-                            <div>
-                                <p className="font-semibold text-emerald-800">
-                                    Profile Submitted for Validation
-                                </p>
-                                <p className="text-sm text-emerald-700">
-                                    The member profile has been created and is now pending GM approval. The welcome email with credentials will be sent once the General Manager validates and accepts the member.
-                                </p>
-                            </div>
-                        </div>
-                    </Transition>
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    {(() => {
+                        const err = errors as Record<string, string>;
 
-                    <section className={`${sectionClass} space-y-6`}>
-                        <div>
-                            <h3 className="text-base font-semibold tracking-tight text-emerald-900 dark:text-emerald-100">
-                                Account Information
-                            </h3>
-                            <p className="text-sm text-muted-foreground">
-                                The member role is fixed and the temporary
-                                password is generated automatically.
-                            </p>
-                        </div>
+                        return (
+                            <>
+                                {/* ════════════════════════════════════════════ */}
+                                {/* SECTION 1 — Personal Information */}
+                                {/* ════════════════════════════════════════════ */}
+                                <Card>
+                                    <CardHeader className="flex flex-row items-center justify-between pb-2 border-b">
+                                        <div className="flex items-center gap-3">
+                                            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
+                                                <User className="h-5 w-5 text-primary" />
+                                            </div>
+                                            <div>
+                                                <CardTitle className="text-base">
+                                                    Personal Information
+                                                </CardTitle>
+                                                <CardDescription>
+                                                    Full name, birth details, and civil status
+                                                </CardDescription>
+                                            </div>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent className="pt-5">
+                                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                                       
 
-                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-                            {renderTextInput(
-                                'last_name',
-                                'Name - Family Name',
-                                {
-                                    required: true,
-                                    placeholder: 'Enter family name',
-                                },
-                            )}
-                            {renderTextInput(
-                                'first_name',
-                                'Name - First Name',
-                                {
-                                    required: true,
-                                    placeholder: 'Enter first name',
-                                },
-                            )}
-                            {renderTextInput(
-                                'middle_name',
-                                'Name - Middle Name',
-                                {
-                                    placeholder: 'Enter middle name',
-                                },
-                            )}
-                            {renderTextInput('email', 'Email Address', {
-                                type: 'email',
-                                required: true,
-                                placeholder: 'member@gmail.com',
-                            })}
-                            {renderTextInput('employee_id', 'Member ID', {
-                                required: true,
-                                placeholder: 'Enter member ID',
-                            })}
-                            {renderTextInput('payroll_id', 'Payroll ID', {
-                                placeholder: 'Optional payroll identifier',
-                            })}
+                                            {/* First Name */}
+                                            {renderInput('first_name', 'First Name', err, {
+                                                required: true,
+                                                placeholder: 'Juan',
+                                            })}
 
-                            <div className="space-y-2">
-                                <Label>
-                                    Role <span className="text-red-500">*</span>
-                                </Label>
-                                <Input
-                                    type="hidden"
-                                    name="role"
-                                    value={data.role}
-                                />
-                                <p className="flex h-10 items-center rounded-lg border border-emerald-100 bg-gray-50 px-3 text-sm font-medium text-muted-foreground">
-                                    MEMBER
-                                </p>
-                                <InputError message={errors.role} />
-                            </div>
-                        </div>
-                    </section>
+                                            {/* Middle Name */}
+                                            {renderInput('middle_name', 'Middle Name', err, {
+                                                placeholder: 'Dela Cruz',
+                                            })}
 
-                    <section className={`${sectionClass} space-y-6`}>
-                        <div>
-                            <h3 className="text-base font-semibold tracking-tight text-emerald-900 dark:text-emerald-100">
-                                Personal Information
-                            </h3>
-                            <p className="text-sm text-muted-foreground">
-                                Identity, birth, education, and family details.
-                            </p>
-                        </div>
+                                            {/* Last Name */}
+                                            {renderInput('last_name', 'Last Name', err, {
+                                                required: true,
+                                                placeholder: 'Santos',
+                                            })}
 
-                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-                            {renderSelect(
-                                'civil_status',
-                                'Civil Status',
-                                data.civil_status,
-                                (value) => setData('civil_status', value),
-                                civilStatusOptions,
-                            )}
-                            {renderSelect(
-                                'sex',
-                                'Sex',
-                                data.sex,
-                                (value) => setData('sex', value),
-                                sexOptions,
-                            )}
-                            {renderTextInput(
-                                'place_of_birth',
-                                'Place of Birth',
-                                {
-                                    required: true,
-                                    placeholder: 'Enter place of birth',
-                                },
-                            )}
-                            {renderTextInput('date_of_birth', 'Date of Birth', {
-                                type: 'date',
-                                required: true,
-                            })}
+                                             {/* Email */}
+                                            <div className="grid gap-1.5">
+                                                <Label htmlFor="email">
+                                                    Email Address <span className="text-red-500">*</span>
+                                                </Label>
+                                                <Input
+                                                    id="email"
+                                                    name="email"
+                                                    type="email"
+                                                    value={formData.email}
+                                                    onChange={(e) =>
+                                                        handleChange('email', e.target.value)
+                                                    }
+                                                    placeholder="e.g., member@company.com"
+                                                    className={cn(
+                                                        err.email && 'border-destructive ring-destructive/20 dark:ring-destructive/40',
+                                                    )}
+                                                    aria-invalid={!!err.email}
+                                                />
+                                                <InputError message={err.email} />
+                                            </div>
 
-                            <div className="space-y-2">
-                                <Label htmlFor="educational_attainment">
-                                    Educational Attainment{' '}
-                                    <span className="text-red-500">*</span>
-                                </Label>
-                                <Select
-                                    value={data.educational_attainment}
-                                    onValueChange={(value) =>
-                                        setData('educational_attainment', value)
-                                    }
-                                >
-                                    <SelectTrigger
-                                        id="educational_attainment"
-                                        className={selectClass}
-                                    >
-                                        <SelectValue placeholder="Select educational attainment" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {educationalAttainmentOptions.map(
-                                            (option) => (
-                                                <SelectItem
-                                                    key={option}
-                                                    value={option}
-                                                >
-                                                    {option}
-                                                </SelectItem>
-                                            ),
-                                        )}
-                                    </SelectContent>
-                                </Select>
-                                <InputError
-                                    message={errors.educational_attainment}
-                                />
-                            </div>
+                                            {/* Date of Birth */}
+                                            <div className="grid gap-1.5">
+                                                <Label htmlFor="date_of_birth">
+                                                    Date of Birth <span className="text-red-500">*</span>
+                                                </Label>
+                                                <Input
+                                                    id="date_of_birth"
+                                                    name="date_of_birth"
+                                                    type="date"
+                                                    value={formData.date_of_birth}
+                                                    max={todayISO}
+                                                    onChange={(e) =>
+                                                        handleChange('date_of_birth', e.target.value)
+                                                    }
+                                                    className={cn(
+                                                        err.date_of_birth && 'border-destructive ring-destructive/20 dark:ring-destructive/40',
+                                                    )}
+                                                    aria-invalid={!!err.date_of_birth}
+                                                />
+                                                
+                                                <InputError message={err.date_of_birth} />
+                                            </div>
 
-                            {renderTextInput(
-                                'facebook_account_name',
-                                'Facebook Account (Name)',
-                                {
-                                    placeholder: 'Enter Facebook account name',
-                                },
-                            )}
-                        </div>
-                    </section>
+                                            {/* Sex */}
+                                            {renderSelect(
+                                                'sex',
+                                                'Sex',
+                                                [
+                                                    { value: 'male', label: 'Male' },
+                                                    { value: 'female', label: 'Female' },
+                                                ],
+                                                err,
+                                                { required: true },
+                                            )}
 
-                    <section className={`${sectionClass} space-y-6`}>
-                        <div>
-                            <h3 className="text-base font-semibold tracking-tight text-emerald-900 dark:text-emerald-100">
-                                Contact and Address
-                            </h3>
-                            <p className="text-sm text-muted-foreground">
-                                Permanent and present address details.
-                            </p>
-                        </div>
+                                            {/* Civil Status */}
+                                            {renderSelect(
+                                                'civil_status',
+                                                'Civil Status',
+                                                [
+                                                    { value: 'single', label: 'Single' },
+                                                    { value: 'married', label: 'Married' },
+                                                    { value: 'widowed', label: 'Widower / Widow' },
+                                                ],
+                                                err,
+                                                { required: true },
+                                            )}
 
-                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-                            {renderTextInput(
-                                'permanent_address',
-                                'Permanent (Provincial) Address',
-                                {
-                                    required: true,
-                                    placeholder: 'Enter permanent address',
-                                },
-                            )}
-                            {renderTextInput(
-                                'permanent_zip_code',
-                                'Permanent Address Zip Code',
-                                {
-                                    required: true,
-                                    placeholder: 'Enter zip code',
-                                },
-                            )}
-                            {renderTextInput(
-                                'permanent_mobile_number',
-                                'Permanent Mobile Number',
-                                {
-                                    type: 'tel',
-                                    required: true,
-                                    placeholder: 'Enter mobile number',
-                                },
-                            )}
-                            {renderTextInput(
-                                'present_address',
-                                'Present Address',
-                                {
-                                    required: true,
-                                    placeholder: 'Enter present address',
-                                },
-                            )}
-                            {renderTextInput(
-                                'present_zip_code',
-                                'Present Address Zip Code',
-                                {
-                                    required: true,
-                                    placeholder: 'Enter zip code',
-                                },
-                            )}
-                            {renderTextInput(
-                                'mobile_number',
-                                'Present Cellphone Number',
-                                {
-                                    type: 'tel',
-                                    required: true,
-                                    placeholder: 'Enter cellphone number',
-                                },
-                            )}
-                        </div>
-                    </section>
+                                            {/* Place of Birth */}
+                                            {renderInput('place_of_birth', 'Place of Birth', err, {
+                                                required: true,
+                                                placeholder: 'City, Province',
+                                            })}
 
-                    <section className={`${sectionClass} space-y-6`}>
-                        <div>
-                            <h3 className="text-base font-semibold tracking-tight text-emerald-900 dark:text-emerald-100">
-                                Employment and Income
-                            </h3>
-                            <p className="text-sm text-muted-foreground">
-                                Income values are used for loan eligibility
-                                checks.
-                            </p>
-                        </div>
+                                            {/* Educational Attainment */}
+                                            {renderSelect(
+                                                'educational_attainment',
+                                                'Educational Attainment',
+                                                [
+                                                    { value: 'Elementary', label: 'Elementary' },
+                                                    { value: 'High School', label: 'High School' },
+                                                    { value: 'Vocational', label: 'Vocational' },
+                                                    { value: 'College', label: 'College' },
+                                                    { value: 'Postgraduate', label: 'Postgraduate' },
+                                                    { value: 'Other', label: 'Other' },
+                                                ],
+                                                err,
+                                                { required: true },
+                                            )}
 
-                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-                            {renderTextInput('position', 'Position', {
-                                required: true,
-                                placeholder: 'Enter position',
-                            })}
-                            {renderTextInput('date_hired', 'Date Hired', {
-    type: 'date',
-    required: true,
-    max: maxHireDate,
-})}
-                            {renderTextInput('basic_salary', 'Income (Gross)', {
-                                type: 'number',
-                                required: true,
-                                min: MIN_FINANCIAL_AMOUNT,
-                                step: '0.01',
-                                placeholder: '10000.00',
-                            })}
-                            {renderSelect(
-                                'income_type',
-                                'Income Type',
-                                data.income_type,
-                                (value) => setData('income_type', value),
-                                incomeTypeOptions,
-                            )}
-                            {renderTextInput('net_income', 'Income (Net)', {
-                                type: 'number',
-                                required: true,
-                                min: 0,
-                                step: '0.01',
-                                placeholder: '0.00',
-                            })}
-                            {renderTextInput(
-                                'share_capital_balance',
-                                'Share Capital Balance',
-                                {
-                                    type: 'number',
-                                    required: true,
-                                    min: MIN_FINANCIAL_AMOUNT,
-                                    step: '0.01',
-                                    placeholder: '10000.00',
-                                },
-                            )}
-                            {renderTextInput(
-                                'other_source_of_income',
-                                'Other Source of Income (Specify)',
-                                {
-                                    placeholder: 'Specify other income source',
-                                },
-                            )}
-                        </div>
-                    </section>
+                                            {/* Facebook Account */}
+                                            {renderInput('facebook_account_name', 'Facebook Account', err, {
+                                               
+                                                 required: true,
+                                                 placeholder: 'Profile name ',
+                                                helperText: 'For reference and verification',
+                                                
+                                            })}
+                                        </div>
+                                    </CardContent>
+                                </Card>
 
-                    <section className={`${sectionClass} space-y-6`}>
-                        <div>
-                            <h3 className="text-base font-semibold tracking-tight text-emerald-900 dark:text-emerald-100">
-                                Spouse, Beneficiary, and Assets
-                            </h3>
-                            <p className="text-sm text-muted-foreground">
-                                Optional household and property information.
-                            </p>
-                        </div>
+                                {/* ════════════════════════════════════════════ */}
+                                {/* SECTION 2 — Contact & Address Details */}
+                                {/* ════════════════════════════════════════════ */}
+                                <Card>
+                                    <CardHeader className="flex flex-row items-center justify-between pb-2 border-b">
+                                        <div className="flex items-center gap-3">
+                                            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
+                                                <MapPin className="h-5 w-5 text-primary" />
+                                            </div>
+                                            <div>
+                                                <CardTitle className="text-base">
+                                                    Contact &amp; Address Details
+                                                </CardTitle>
+                                                <CardDescription>
+                                                    Primary contact number and residential addresses
+                                                </CardDescription>
+                                            </div>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent className="pt-5">
+                                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                                            {/* Contact Number */}
+                                            <div className="grid gap-1.5 md:col-span-2 lg:col-span-1">
+                                                <Label htmlFor="permanent_mobile_number">
+                                                    Contact Number <span className="text-red-500">*</span>
+                                                </Label>
+                                                <div className="relative">
+                                                    <Phone className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground" />
+                                                    <Input
+                                                        id="permanent_mobile_number"
+                                                        name="permanent_mobile_number"
+                                                        type="tel"
+                                                        inputMode="numeric"
+                                                        value={formatPhone(
+                                                            formData.permanent_mobile_number,
+                                                        )}
+                                                        onChange={(e) =>
+                                                            handlePhoneChange(e.target.value)
+                                                        }
+                                                        placeholder="+63 912 345 6789"
+                                                        className={cn(
+                                                            'pl-9',
+                                                            err.permanent_mobile_number && 'border-destructive ring-destructive/20 dark:ring-destructive/40',
+                                                        )}
+                                                        aria-invalid={!!err.permanent_mobile_number}
+                                                    />
+                                                </div>
+                                               
+                                                <InputError message={err.permanent_mobile_number} />
+                                            </div>
 
-                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-                            {renderTextInput(
-                                'spouse_occupation',
-                                'Occupation of Spouse',
-                                {
-                                    placeholder: 'Enter spouse occupation',
-                                },
-                            )}
-                            {renderTextInput(
-                                'spouse_gross_income',
-                                'Spouse Income (Gross)',
-                                {
-                                    type: 'number',
-                                    min: 0,
-                                    step: '0.01',
-                                    placeholder: '0.00',
-                                },
-                            )}
-                            {renderSelect(
-                                'spouse_income_type',
-                                'Spouse Income Type',
-                                data.spouse_income_type,
-                                (value) => setData('spouse_income_type', value),
-                                incomeTypeOptions,
-                                false,
-                            )}
-                            {renderTextInput(
-                                'spouse_net_income',
-                                'Spouse Income (Net)',
-                                {
-                                    type: 'number',
-                                    min: 0,
-                                    step: '0.01',
-                                    placeholder: '0.00',
-                                },
-                            )}
-                            <div className="md:col-span-2 lg:col-span-3 space-y-4">
-                                <Label>Legal Beneficiaries</Label>
-                                {(data.legal_beneficiaries ?? [{ full_name: '', relationship: '' }]).map((beneficiary, index) => (
-                                    <div key={index} className="rounded-lg border border-emerald-100 p-4 bg-emerald-50/50">
-                                        <div className="mb-2 flex items-center justify-between">
-                                            <span className="text-sm font-medium text-emerald-800">
-                                                Legal Beneficiary {index + 1}
-                                            </span>
-                                            {(data.legal_beneficiaries?.length ?? 1) > 1 && (
-                                                <Button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => removeBeneficiary(index)}
-                                                    className="text-red-600 hover:text-red-700"
-                                                >
-                                                    Remove
-                                                </Button>
+                                            {/* Present Address */}
+                                            {renderTextarea('present_address', 'Present Address', err, {
+                                                required: true,
+                                                placeholder: 'House/Unit No., Street, Barangay, City',
+                                               
+                                            })}
+
+                                            {/* Present Zip Code */}
+                                            {renderInput('present_zip_code', 'Present Zip Code', err, {
+                                                required: true,
+                                                placeholder: 'e.g., 1000',
+                                              
+                                            })}
+
+                                            {/* Permanent Address */}
+                                            {renderTextarea(
+                                                'permanent_address',
+                                                'Permanent / Provincial Address',
+                                                err,
+                                                {
+                                                    required: true,
+                                                    placeholder:
+                                                        'House/Unit No., Street, Barangay, City, Province',
+                                                   
+                                                },
+                                            )}
+
+                                            {/* Permanent Zip Code */}
+                                            {renderInput('permanent_zip_code', 'Permanent Zip Code', err, {
+                                                required: true,
+                                                placeholder: 'e.g., 1000',
+                                              
+                                            })}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                {/* ════════════════════════════════════════════ */}
+                                {/* SECTION 3 — Employment & Financial Assessment */}
+                                {/* ════════════════════════════════════════════ */}
+                                <Card>
+                                    <CardHeader className="flex flex-row items-center justify-between pb-2 border-b">
+                                        <div className="flex items-center gap-3">
+                                            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
+                                                <Briefcase className="h-5 w-5 text-primary" />
+                                            </div>
+                                            <div>
+                                                <CardTitle className="text-base">
+                                                    Employment &amp; Financial Assessment
+                                                </CardTitle>
+                                                <CardDescription>
+                                                    Job details and income information for loan eligibility
+                                                </CardDescription>
+                                            </div>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent className="pt-5">
+                                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                                            {/* Position */}
+                                            {renderInput('position', 'Position', err, {
+                                                required: true,
+                                                placeholder: 'e.g., Software Engineer',
+                                            })}
+
+                                            {/* Income (Gross) */}
+                                            {renderCurrency('basic_salary', 'Income (Gross)', err, {
+                                                required: true,
+                                                helperText: 'Minimum ₱10,000.00',
+                                            })}
+
+                                            {/* Net Income */}
+                                            {renderCurrency('net_income', 'Net Income', err, {
+                                                required: true,
+                                                  helperText: 'Minimum ₱10,000.00',
+                                            })}
+
+                                            {/* Income Type */}
+                                            {renderSelect(
+                                                'income_type',
+                                                'Income Type',
+                                                [
+                                                    { value: 'monthly', label: 'Monthly' },
+                                                    { value: 'daily', label: 'Daily' },
+                                                    { value: 'yearly', label: 'Yearly' },
+                                                ],
+                                                err,
+                                                { required: true },
+                                            )}
+
+                                            {/* Share Capital Balance */}
+                                            {renderCurrency(
+                                                'share_capital_balance',
+                                                'Share Capital Balance',
+                                                err,
+                                                {
+                                                    required: true,
+                                                    helperText: 'Minimum ₱10,000.00',
+                                                },
+                                            )}
+
+                                            {/* Other Source of Income */}
+                                            {renderInput(
+                                                'other_source_of_income',
+                                                'Other Source of Income',
+                                                err,
+                                                {
+                                                    placeholder: 'e.g., Freelance, Business',
+                                                
+                                                },
                                             )}
                                         </div>
-                                        <div className="grid gap-4 md:grid-cols-2">
-                                            <div className="space-y-2">
-                                                <Label htmlFor={`legal-beneficiary-${index}-name`}>
-                                                    Full Name
-                                                </Label>
-                                                <Input
-                                                    id={`legal-beneficiary-${index}-name`}
-                                                    value={beneficiary.full_name}
-                                                    onChange={(e) => updateBeneficiary(index, 'full_name', e.target.value)}
-                                                    placeholder="Enter beneficiary name"
-                                                    className={inputClass}
-                                                />
+                                    </CardContent>
+                                </Card>
+
+                                {/* ════════════════════════════════════════════ */}
+                                {/* SECTION 4 — Spouse & Beneficiaries */}
+                                {/* ════════════════════════════════════════════ */}
+                                <Card>
+                                    <CardHeader className="flex flex-row items-center justify-between pb-2 border-b">
+                                        <div className="flex items-center gap-3">
+                                            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
+                                                <Heart className="h-5 w-5 text-primary" />
                                             </div>
-                                            <div className="space-y-2">
-                                                <Label htmlFor={`legal-beneficiary-${index}-relationship`}>
-                                                    Relationship
-                                                </Label>
-                                                <Input
-                                                    id={`legal-beneficiary-${index}-relationship`}
-                                                    value={beneficiary.relationship}
-                                                    onChange={(e) => updateBeneficiary(index, 'relationship', e.target.value)}
-                                                    placeholder="e.g., Wife, Daughter, Parent"
-                                                    className={inputClass}
-                                                />
+                                            <div>
+                                                <CardTitle className="text-base">
+                                                    Spouse &amp; Beneficiaries
+                                                </CardTitle>
+                                                <CardDescription>
+                                                    Spouse financial profile and beneficiary designations
+                                                    (if applicable)
+                                                </CardDescription>
                                             </div>
                                         </div>
-                                    </div>
-                                ))}
-                                {(errors.legal_beneficiaries as string | undefined) && (
-                                    <p className="text-sm text-red-600">{errors.legal_beneficiaries as string}</p>
-                                )}
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={addBeneficiary}
-                                    className="mt-1"
-                                >
-                                    Add Beneficiary
-                                </Button>
-                            </div>
+                                    </CardHeader>
+                                    <CardContent className="pt-5">
+                                        {/* ── Spouse Sub-section ── */}
+                                        <div className="mb-6">
+                                            <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+                                                <UserCircle className="h-4 w-4" />
+                                                Spouse Information
+                                            </h4>
+                                            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                                                {renderInput('spouse_occupation', 'Occupation of Spouse', err, {
+                                                    placeholder: 'Enter spouse occupation',
+                                                    helperText: 'Optional',
+                                                })}
 
-                            <div className="space-y-2 md:col-span-2 lg:col-span-3">
-                                <Label htmlFor="real_properties_owned">
-                                    Real Properties Owned (Specify)
-                                </Label>
-                                <Textarea
-                                    id="real_properties_owned"
-                                    name="real_properties_owned"
-                                    value={data.real_properties_owned}
-                                    onChange={(event) =>
-                                        setData(
-                                            'real_properties_owned',
-                                            event.target.value,
-                                        )
-                                    }
-                                    placeholder="Specify real properties owned"
-                                    className="min-h-28 rounded-lg border-emerald-100 focus-visible:ring-emerald-500/40"
-                                />
-                                <InputError
-                                    message={errors.real_properties_owned}
-                                />
-                            </div>
-                        </div>
-                    </section>
+                                                {renderCurrency(
+                                                    'spouse_gross_income',
+                                                    'Spouse Income (Gross)',
+                                                    err,
+                                                    { required: hasSpouseOccupation, helperText: hasSpouseOccupation ? 'Required' : 'Optional' },
+                                                )}
 
-                    <div className="flex flex-col gap-4 border-t border-emerald-100 pt-6 sm:flex-row sm:items-center sm:justify-between">
-                        <p className="text-sm text-muted-foreground">
-                            Double-check all information before submitting. The member profile will be submitted for GM validation, and the welcome email with credentials will be sent upon approval.
-                        </p>
+                                                {renderSelect(
+                                                    'spouse_income_type',
+                                                    'Spouse Income Type',
+                                                    [
+                                                        { value: 'monthly', label: 'Monthly' },
+                                                        { value: 'daily', label: 'Daily' },
+                                                        { value: 'yearly', label: 'Yearly' },
+                                                    ],
+                                                    err,
+                                                    { required: hasSpouseOccupation, helperText: hasSpouseOccupation ? 'Required' : 'Optional' },
+                                                )}
 
-                        <Button
-                            type="submit"
-                            disabled={processing}
-                            className="h-10 min-w-[180px] bg-emerald-600 font-medium hover:bg-emerald-700"
-                        >
-                            {processing && <Spinner className="mr-2 h-4 w-4" />}
-                            Create Member
-                        </Button>
-                    </div>
+                                                {renderCurrency(
+                                                    'spouse_net_income',
+                                                    'Spouse Income (Net)',
+                                                    err,
+                                                    { required: hasSpouseOccupation, helperText: hasSpouseOccupation ? 'Required' : 'Optional' },
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* ── Real Properties ── */}
+                                        <div className="mb-6">
+                                            <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+                                                <Building className="h-4 w-4" />
+                                                Assets
+                                            </h4>
+                                            <div className="grid gap-4 md:grid-cols-1">
+                                                {renderTextarea(
+                                                    'real_properties_owned',
+                                                    'Real Properties Owned',
+                                                    err,
+                                                    {
+                                                        placeholder:
+                                                            'Specify real properties owned (e.g., Lot in Quezon City, House in Batangas)',
+                                                        helperText: 'Optional — list properties if any',
+                                                    },
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* ── Beneficiaries ── */}
+                                        <div>
+                                            <div className="mb-3 flex items-center justify-between">
+                                                <h4 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+                                                    <Users className="h-4 w-4" />
+                                                    Beneficiaries
+                                                </h4>
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={addBeneficiary}
+                                                >
+                                                    Add Beneficiary
+                                                </Button>
+                                            </div>
+
+                                            <div className="space-y-3">
+                                                {formData.beneficiaries.map((beneficiary, index) => (
+                                                    <div
+                                                        key={index}
+                                                        className="rounded-lg border bg-muted/30 p-4 transition-colors hover:bg-muted/50"
+                                                    >
+                                                        <div className="mb-2 flex items-center justify-between">
+                                                            <span className="text-sm font-medium">
+                                                                Beneficiary {index + 1}
+                                                            </span>
+                                                            {formData.beneficiaries.length > 1 && (
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    onClick={() =>
+                                                                        removeBeneficiary(index)
+                                                                    }
+                                                                    className="text-destructive hover:text-destructive/80"
+                                                                >
+                                                                    Remove
+                                                                </Button>
+                                                            )}
+                                                        </div>
+                                                        <div className="grid gap-4 md:grid-cols-2">
+                                                            <div className="grid gap-1.5">
+                                                                <Label
+                                                                    htmlFor={`beneficiaries[${index}][full_name]`}
+                                                                >
+                                                                    Full Name
+                                                                </Label>
+                                                                <Input
+                                                                    id={`beneficiaries[${index}][full_name]`}
+                                                                    name={`beneficiaries[${index}][full_name]`}
+                                                                    value={beneficiary.full_name}
+                                                                    onChange={(e) =>
+                                                                        updateBeneficiary(
+                                                                            index,
+                                                                            'full_name',
+                                                                            e.target.value,
+                                                                        )
+                                                                    }
+                                                                    placeholder="Full name"
+                                                                />
+                                                            </div>
+                                                            <div className="grid gap-1.5">
+                                                                <Label
+                                                                    htmlFor={`beneficiaries[${index}][relationship]`}
+                                                                >
+                                                                    Relationship
+                                                                </Label>
+                                                                <Input
+                                                                    id={`beneficiaries[${index}][relationship]`}
+                                                                    name={`beneficiaries[${index}][relationship]`}
+                                                                    value={beneficiary.relationship}
+                                                                    onChange={(e) =>
+                                                                        updateBeneficiary(
+                                                                            index,
+                                                                            'relationship',
+                                                                            e.target.value,
+                                                                        )
+                                                                    }
+                                                                    placeholder="e.g., Wife, Daughter"
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                {/* ── Submit ── */}
+                                <div className="flex items-center gap-4 pb-8">
+                                    <Button disabled={processing} type="submit" size="lg">
+                                        {processing ? 'Creating...' : 'Create Member Account'}
+                                    </Button>
+                                </div>
+                            </>
+                        );
+                    })()}
                 </form>
             </div>
         </AppLayout>

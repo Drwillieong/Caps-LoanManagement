@@ -36,7 +36,7 @@ class ActivityLog extends Model
     public function scopeForAdministrativeActors($query, ?array $roles = null)
     {
         return $query->whereHas('user', function ($query) use ($roles) {
-            $query->whereIn('role', $roles ?? ['gm', 'hr']);
+            $query->whereIn('role', $roles ?? ['gm', 'hr', 'creditcom']);
         });
     }
 }

@@ -1,5 +1,5 @@
 import { Head, useForm, Link, router } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { LiveClock } from '@/components/live-clock';
 import { type BreadcrumbItem, type CoMakerProps } from '@/types';
@@ -24,7 +24,21 @@ import {
     Loader2,
     Mail,
     User,
+    Phone,
+    Briefcase,
+    IdCard,
 } from 'lucide-react';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -69,8 +83,67 @@ function formatCurrency(amount: number | string): string {
     })}`;
 }
 
+const COMAKER_EXPIRATION_HOURS = 48;
+
+/**
+ * Returns the expiration timestamp for a co-maker request.
+ * Prefers the server-provided `expires_at`, falling back to
+ * created_at + 48h so the UI still works for older records.
+ */
+function getExpiration(expiresAt: string | null | undefined, createdAt: string): Date {
+    if (expiresAt) {
+        return new Date(expiresAt);
+    }
+    return new Date(new Date(createdAt).getTime() + COMAKER_EXPIRATION_HOURS * 60 * 60 * 1000);
+}
+
+/**
+ * Returns a human-friendly label for the remaining time until expiry,
+ * and whether the request is considered expired.
+ */
+function getExpirationInfo(
+    expiresAt: string | null | undefined,
+    createdAt: string,
+    now: number
+): { label: string; expired: boolean; urgent: boolean } {
+    const deadline = getExpiration(expiresAt, createdAt).getTime();
+    const diffMs = deadline - now;
+
+    if (diffMs <= 0) {
+        return { label: 'Expired', expired: true, urgent: true };
+    }
+
+    const totalMinutes = Math.floor(diffMs / (1000 * 60));
+    const days = Math.floor(totalMinutes / (60 * 24));
+    const hours = Math.floor((totalMinutes % (60 * 24)) / 60);
+    const minutes = totalMinutes % 60;
+
+    let label: string;
+    if (days > 0) {
+        label = `Expires in ${days}d ${hours}h`;
+    } else if (hours > 0) {
+        label = `Expires in ${hours}h ${minutes}m`;
+    } else {
+        label = `Expires in ${minutes}m`;
+    }
+
+    return { label, expired: false, urgent: diffMs <= 12 * 60 * 60 * 1000 };
+}
+
 export default function CoMaker({ coMakerRequests }: CoMakerProps) {
     const [processingAction, setProcessingAction] = useState<'approve' | 'reject' | null>(null);
+    const [now, setNow] = useState(() => Date.now());
+
+    useEffect(() => {
+        const timer = setInterval(() => setNow(Date.now()), 60 * 1000);
+        return () => clearInterval(timer);
+    }, []);
+    const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
+    const [selectedRequest, setSelectedRequest] = useState<CoMakerProps['coMakerRequests'][number] | null>(null);
+
+    const rejectForm = useForm({
+        rejection_reason: '',
+    });
 
     async function handleResponse(loanId: number, action: 'accept' | 'reject') {
         if (processingAction) return;
@@ -89,10 +162,14 @@ export default function CoMaker({ coMakerRequests }: CoMakerProps) {
             {
                 loan_id: loanId,
                 action: action,
+                rejection_reason: action === 'reject' ? rejectForm.data.rejection_reason : undefined,
             },
             {
                 onSuccess: () => {
                     setProcessingAction(null);
+                    setIsRejectDialogOpen(false);
+                    setSelectedRequest(null);
+                    rejectForm.reset();
                     if (action === 'accept') {
                         toast.success('You have accepted the co-maker request!');
                     } else {
@@ -116,6 +193,12 @@ export default function CoMaker({ coMakerRequests }: CoMakerProps) {
                 },
             }
         );
+    }
+
+    function openRejectDialog(request: CoMakerProps['coMakerRequests'][number]) {
+        if (processingAction) return;
+        setSelectedRequest(request);
+        setIsRejectDialogOpen(true);
     }
 
     return (
@@ -169,31 +252,84 @@ export default function CoMaker({ coMakerRequests }: CoMakerProps) {
                                                 <Clock className="h-3.5 w-3.5 mr-1" />
                                                 Awaiting Response
                                             </Badge>
+                                            {(() => {
+                                                const info = getExpirationInfo(request.expires_at, request.created_at, now);
+                                                const variant = info.expired
+                                                    ? 'destructive'
+                                                    : info.urgent
+                                                      ? 'destructive'
+                                                      : 'secondary';
+                                                const className = info.expired
+                                                    ? 'border-red-200 text-red-700 bg-red-50'
+                                                    : info.urgent
+                                                      ? 'border-orange-200 text-orange-700 bg-orange-50'
+                                                      : 'border-slate-200 text-slate-600 bg-slate-50';
+
+                                                return (
+                                                    <Badge variant={variant} className={className}>
+                                                        <Clock className="h-3.5 w-3.5 mr-1" />
+                                                        {info.label}
+                                                    </Badge>
+                                                );
+                                            })()}
                                         </div>
                                     </CardHeader>
 
                                     <CardContent className="space-y-4">
                                         <div className="grid gap-4 md:grid-cols-2">
-                                            <div className="space-y-3">
-                                                <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                                                    <UserCheck className="h-4 w-4 text-slate-500" />
-                                                    Applicant Information
-                                                </div>
-                                                <div className="space-y-2.5">
-                                                    <div className="flex justify-between text-sm">
-                                                        <span className="text-muted-foreground">Name</span>
-                                                        <span className="font-medium">{request.requester.name}</span>
+                                                <div className="space-y-3">
+                                                    <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+                                                        <UserCheck className="h-4 w-4 text-slate-500" />
+                                                        Applicant Information
                                                     </div>
-                                                    <Separator />
-                                                    <div className="flex justify-between text-sm">
-                                                        <span className="text-muted-foreground flex items-center gap-1.5">
-                                                            <Mail className="h-3.5 w-3.5" />
-                                                            Email
-                                                        </span>
-                                                        <span className="font-medium truncate max-w-[200px]">{request.requester.email}</span>
+                                                    <div className="space-y-2.5">
+                                                        <div className="flex justify-between text-sm">
+                                                            <span className="text-muted-foreground">Name</span>
+                                                            <span className="font-medium">{request.requester.name}</span>
+                                                        </div>
+                                                        <Separator />
+                                                        <div className="flex justify-between text-sm">
+                                                            <span className="text-muted-foreground flex items-center gap-1.5">
+                                                                <IdCard className="h-3.5 w-3.5" />
+                                                                Employee ID
+                                                            </span>
+                                                            <span className="font-medium">{request.requester.employee_id}</span>
+                                                        </div>
+                                                        <Separator />
+                                                        <div className="flex justify-between text-sm">
+                                                            <span className="text-muted-foreground flex items-center gap-1.5">
+                                                                <Mail className="h-3.5 w-3.5" />
+                                                                Email
+                                                            </span>
+                                                            <span className="font-medium truncate max-w-[200px]">{request.requester.email}</span>
+                                                        </div>
+                                                        <Separator />
+                                                        <div className="flex justify-between text-sm">
+                                                            <span className="text-muted-foreground flex items-center gap-1.5">
+                                                                <Briefcase className="h-3.5 w-3.5" />
+                                                                Position
+                                                            </span>
+                                                            <span className="font-medium">{request.requester.position}</span>
+                                                        </div>
+                                                        <Separator />
+                                                        <div className="flex justify-between text-sm">
+                                                            <span className="text-muted-foreground flex items-center gap-1.5">
+                                                                <Phone className="h-3.5 w-3.5" />
+                                                                Mobile Number
+                                                            </span>
+                                                            <span className="font-medium">{request.requester.mobile_number}</span>
+                                                        </div>
+                                                          <Separator />
+                                                          <div className="flex justify-between text-sm">
+                                                            <span className="text-muted-foreground flex items-center gap-1.5">
+                                                                <UserCheck  className="h-3.5 w-3.5" />
+                                                                
+                                                              Facebook Account
+                                                            </span>
+                                                            <span className="font-medium">{request.requester.facebook_account_name}</span>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
 
                                             <div className="space-y-3">
                                                 <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
@@ -232,6 +368,14 @@ export default function CoMaker({ coMakerRequests }: CoMakerProps) {
                                                             {formatCurrency(request.monthly_amortization)}
                                                         </span>
                                                     </div>
+                                                    {request.disbursement_method && (
+                                                        <div className="flex justify-between text-sm">
+                                                            <span className="text-muted-foreground">Disbursement Method</span>
+                                                            <span className="font-medium capitalize">
+                                                                {request.disbursement_method.replace('_', ' ')}
+                                                            </span>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
@@ -257,24 +401,82 @@ export default function CoMaker({ coMakerRequests }: CoMakerProps) {
                                                     </>
                                                 )}
                                             </Button>
-                                            <Button
-                                                onClick={() => handleResponse(request.loan_id, 'reject')}
-                                                variant="destructive"
-                                                disabled={isProcessingThis || isRejectDisabled}
-                                                className="flex-1 sm:flex-none"
-                                            >
-                                                {processingAction === 'reject' ? (
-                                                    <>
-                                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                                        Rejecting...
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <XCircle className="h-4 w-4 mr-2" />
-                                                        Decline Request
-                                                    </>
-                                                )}
-                                            </Button>
+
+                                            <Dialog open={isRejectDialogOpen && selectedRequest?.loan_id === request.loan_id} onOpenChange={(open) => {
+                                                setIsRejectDialogOpen(open);
+                                                if (!open) {
+                                                    setSelectedRequest(null);
+                                                    rejectForm.reset();
+                                                }
+                                            }}>
+                                                <DialogContent>
+                                                    <DialogHeader>
+                                                        <DialogTitle>Decline Co-Maker Request</DialogTitle>
+                                                        <DialogDescription>
+                                                            Please provide a reason for declining the co-maker request from {request.requester.name}. This reason will be shared with the applicant.
+                                                        </DialogDescription>
+                                                    </DialogHeader>
+                                                    <div className="py-4">
+                                                        <Label htmlFor="rejection_reason">Rejection Reason *</Label>
+                                                        <Textarea
+                                                            id="rejection_reason"
+                                                            placeholder="Enter reason for declining..."
+                                                            value={rejectForm.data.rejection_reason}
+                                                            onChange={(e) => rejectForm.setData('rejection_reason', e.target.value)}
+                                                            className="mt-2 min-h-[100px]"
+                                                        />
+                                                        {rejectForm.errors.rejection_reason && (
+                                                            <p className="text-sm text-red-500 mt-1">{rejectForm.errors.rejection_reason}</p>
+                                                        )}
+                                                    </div>
+                                                    <DialogFooter>
+                                                        <Button variant="outline" onClick={() => {
+                                                            setIsRejectDialogOpen(false);
+                                                            setSelectedRequest(null);
+                                                            rejectForm.reset();
+                                                        }}>
+                                                            Cancel
+                                                        </Button>
+                                                        <Button
+                                                            variant="destructive"
+                                                            onClick={() => handleResponse(request.loan_id, 'reject')}
+                                                            disabled={!rejectForm.data.rejection_reason.trim() || processingAction !== null}
+                                                        >
+                                                            {processingAction === 'reject' ? (
+                                                                <>
+                                                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                                                    Declining...
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <XCircle className="h-4 w-4 mr-2" />
+                                                                    Confirm Decline
+                                                                </>
+                                                            )}
+                                                        </Button>
+                                                    </DialogFooter>
+                                                </DialogContent>
+                                                <DialogTrigger asChild>
+                                                    <Button
+                                                        variant="destructive"
+                                                        onClick={() => openRejectDialog(request)}
+                                                        disabled={isProcessingThis || isRejectDisabled}
+                                                        className="flex-1 sm:flex-none"
+                                                    >
+                                                        {processingAction === 'reject' ? (
+                                                            <>
+                                                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                                                Declining...
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <XCircle className="h-4 w-4 mr-2" />
+                                                                Decline Request
+                                                            </>
+                                                        )}
+                                                    </Button>
+                                                </DialogTrigger>
+                                            </Dialog>
                                         </div>
 
                                         <p className="text-xs text-muted-foreground text-center pt-1">

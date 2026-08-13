@@ -21,12 +21,23 @@ export interface NavItem {
     icon?: LucideIcon | null;
     isActive?: boolean;
     role?: string;
+    badgeKey?: keyof NotificationBadges;
     items?: NavItem[];
+}
+
+export interface NotificationBadges {
+    unreadMemberValidationCount?: number;
+    pendingComakerRequestsCount?: number;
+    pendingGmLoanValidationCount?: number;
+    pendingCreditCommitteeCount?: number;
+    gmApprovedLoanActionCount?: number;
+    hasMemberStatusChanged?: number | boolean;
 }
 
 export interface SharedData {
     name: string;
     auth: Auth;
+    notificationBadges: NotificationBadges;
     sidebarOpen: boolean;
     [key: string]: unknown;
 }
@@ -56,7 +67,6 @@ export interface LoanType {
 }
 
 export interface MemberProfile {
-    id?: number;
     user_id: number;
     employee_id: string;
     payroll_id?: string | null;
@@ -76,7 +86,6 @@ export interface MemberProfile {
     permanent_address?: string;
     permanent_zip_code?: string | null;
     position: string;
-    date_hired: string;
     basic_salary: number;
     income_type?: string | null;
     net_income?: number | null;
@@ -92,6 +101,7 @@ export interface MemberProfile {
     bank_account_number?: string;
     tin_number?: string;
     profile_picture?: string;
+    account_status?: 'active' | 'inactive';
 }
 
 export interface EligibleCoMaker {
@@ -129,6 +139,7 @@ export interface ApplyLoanProps {
         principal_amount: number;
         terms_months: number;
         co_maker_user_id: number | '';
+        disbursement_method: string;
     } | null;
 }
 
@@ -168,12 +179,18 @@ export interface CoMakerRequest {
     interest_amount: number;
     total_amount_due: number;
     monthly_amortization: number;
+    disbursement_method?: string;
     status: string;
     created_at: string;
+    expires_at?: string | null;
     requester: {
         id: number;
         name: string;
         email: string;
+        employee_id: string;
+        position: string;
+        mobile_number: string;
+        facebook_account_name?: string | null;
     };
 }
 
@@ -198,7 +215,6 @@ export interface GmMember {
     name: string;
     email: string;
     member_id: string;
-    date_hired: string | null;
     basic_salary: number;
     share_capital_balance: number;
 }
@@ -229,6 +245,7 @@ export interface GmPendingLoan {
     interest_amount: number;
     total_amount_due: number;
     monthly_amortization: number;
+    disbursement_method?: string;
     status: string;
     created_at: string;
     member: GmMember;
@@ -364,6 +381,7 @@ export interface CompletedLoan {
 export interface ActivityLogActor {
     id: number;
     name: string;
+    email: string;
     role: string;
 }
 
@@ -374,7 +392,6 @@ export interface ActivityLog {
     action_type: string;
     description: string;
     reject_reason: string | null;
-    ip_address: string | null;
     created_at: string;
     updated_at: string;
     actor: ActivityLogActor | null;
@@ -412,4 +429,33 @@ export interface MemberCompletedLoanProps {
     totalPrincipalRepaid: number;
     totalInterestPaid: number;
     avgLoanAmount: number;
+}
+
+// ======================================================================
+// Profile Update Request (Maker-Checker) Types
+// ======================================================================
+
+export interface ProfileUpdateRequest {
+    id: number;
+    member_id: string;
+    member_name: string;
+    member_email: string;
+    requested_by_name: string;
+    requested_by_email: string;
+    request_type: 'profile_update' | 'status_change';
+    proposed_status?: 'active' | 'inactive' | null;
+    reason?: string | null;
+    original_data: Record<string, any>;
+    pending_data: Record<string, any>;
+    status: 'pending' | 'approved' | 'rejected';
+    rejection_reason?: string | null;
+    created_at: string;
+}
+
+export interface PendingEditsApiResponse {
+    data: ProfileUpdateRequest[];
+}
+
+export interface PendingEditsProps {
+    pendingEdits: ProfileUpdateRequest[];
 }

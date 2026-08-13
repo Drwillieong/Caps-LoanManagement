@@ -2,25 +2,30 @@
 
 namespace App\Imports;
 
-use App\Models\User;
+use App\Mail\SendMembersPass;
 use App\Models\MemberProfile;
+use App\Models\User;
+use Carbon\Carbon;
+use DateTimeInterface;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Maatwebsite\Excel\Concerns\Importable;
+use Maatwebsite\Excel\Concerns\SkipsEmptyRows;
 use Maatwebsite\Excel\Concerns\ToCollection;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
-use Maatwebsite\Excel\Concerns\SkipsEmptyRows;
-use Maatwebsite\Excel\Concerns\Importable;
-use App\Mail\SendMembersPass;
+use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
 
-class BulkMemberImport implements ToCollection, WithHeadingRow, SkipsEmptyRows
+class BulkMemberImport implements SkipsEmptyRows, ToCollection, WithHeadingRow
 {
     use Importable;
 
     public int $successCount = 0;
+
     public int $sentEmailCount = 0;
+
     /** @var array<int, array{row: int, email: string, error: string}> */
     public array $failures = [];
 
@@ -35,9 +40,10 @@ class BulkMemberImport implements ToCollection, WithHeadingRow, SkipsEmptyRows
         'mobile_number',
         'present_address',
         'position',
-        'date_hired',
         'basic_salary',
     ];
+
+    protected ?int $nextEmployeeIdCounter = null;
 
     /**
      * Generate a cryptographically secure temporary password.
@@ -125,9 +131,6 @@ class BulkMemberImport implements ToCollection, WithHeadingRow, SkipsEmptyRows
                 'position' => 'position',
                 'job_title' => 'position',
                 'designation' => 'position',
-                'date_hired' => 'date_hired',
-                'hired_date' => 'date_hired',
-                'start_date' => 'date_hired',
                 'basic_salary' => 'basic_salary',
                 'gross_income' => 'basic_salary',
                 'salary' => 'basic_salary',
@@ -162,6 +165,34 @@ class BulkMemberImport implements ToCollection, WithHeadingRow, SkipsEmptyRows
     }
 
     /**
+     * Resolve or auto-generate a unique employee_id for the incoming row.
+     *
+     * If a value is provided in the spreadsheet it is returned as-is (duplicate
+     * validation is handled separately). If the value is blank the system will
+     * generate the next sequential ID (EMP-XXX) based on the highest existing
+     * value already stored in the database.
+     */
+    protected function resolveEmployeeId(?string $provided): string
+    {
+        if (filled($provided)) {
+            return $provided;
+        }
+
+        if ($this->nextEmployeeIdCounter === null) {
+            $max = MemberProfile::query()
+                ->where('employee_id', 'like', 'EMP-%')
+                ->selectRaw("MAX(SUBSTR(employee_id, INSTR(employee_id, '-') + 1) + 0) as max_num")
+                ->value('max_num');
+
+            $this->nextEmployeeIdCounter = (int) ($max ?: 0);
+        }
+
+        $this->nextEmployeeIdCounter++;
+
+        return 'EMP-'.str_pad((string) $this->nextEmployeeIdCounter, 3, '0', STR_PAD_LEFT);
+    }
+
+    /**
      * Validate a single row.
      *
      * @return string[] Array of error messages
@@ -169,6 +200,8 @@ class BulkMemberImport implements ToCollection, WithHeadingRow, SkipsEmptyRows
     protected function validateRow(array $row, int $rowNumber): array
     {
         $errors = [];
+
+        $row['employee_id'] = $this->resolveEmployeeId($row['employee_id'] ?? null);
 
         // Required field presence check
         foreach (self::REQUIRED_FIELDS as $field) {
@@ -227,17 +260,60 @@ class BulkMemberImport implements ToCollection, WithHeadingRow, SkipsEmptyRows
         }
 
         // Date validations
-        $dateFields = ['date_of_birth', 'date_hired'];
-        foreach ($dateFields as $field) {
-            if (! empty($row[$field])) {
-                $ts = strtotime($row[$field]);
-                if ($ts === false) {
-                    $errors[] = "Invalid date format for {$field}: {$row[$field]} (use YYYY-MM-DD)";
+        foreach (['date_of_birth'] as $field) {
+            $rawDate = $row[$field] ?? null;
+
+            if ($rawDate !== null && $rawDate !== '') {
+                $normalisedDate = $this->normaliseDate($rawDate);
+
+                if ($normalisedDate === null) {
+                    $errors[] = "Invalid date format for {$field}: {$rawDate} (use YYYY-MM-DD)";
+                } else {
+                    $row[$field] = $normalisedDate;
                 }
             }
         }
 
         return $errors;
+    }
+
+    protected function normaliseDate(mixed $value): ?string
+    {
+        if ($value instanceof Carbon) {
+            return $value->toDateString();
+        }
+
+        if ($value instanceof DateTimeInterface) {
+            return Carbon::instance($value)->toDateString();
+        }
+
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        if (is_numeric($value)) {
+            return Carbon::instance(ExcelDate::excelToDateTimeObject((float) $value))->toDateString();
+        }
+
+        $value = trim((string) $value);
+
+        foreach (['Y-m-d', 'd/m/Y', 'd-m-Y', 'm/d/Y', 'm-d-Y'] as $format) {
+            try {
+                $date = Carbon::createFromFormat($format, $value);
+
+                if ($date && $date->format($format) === $value) {
+                    return $date->toDateString();
+                }
+            } catch (\Throwable) {
+                // Try the next supported spreadsheet/user-entered date format.
+            }
+        }
+
+        try {
+            return Carbon::parse($value)->toDateString();
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     /**
@@ -263,6 +339,8 @@ class BulkMemberImport implements ToCollection, WithHeadingRow, SkipsEmptyRows
         if (isset($row['spouse_income_type'])) {
             $row['spouse_income_type'] = strtolower($row['spouse_income_type']);
         }
+
+        $row['date_of_birth'] = $this->normaliseDate($row['date_of_birth'] ?? null);
 
         // Numeric casts
         $numericFields = [
@@ -324,7 +402,6 @@ class BulkMemberImport implements ToCollection, WithHeadingRow, SkipsEmptyRows
                 'permanent_address' => $row['permanent_address'] ?? null,
                 'permanent_zip_code' => $row['permanent_zip_code'] ?? null,
                 'position' => $row['position'],
-                'date_hired' => $row['date_hired'],
                 'basic_salary' => $row['basic_salary'],
                 'income_type' => $row['income_type'] ?? 'monthly',
                 'net_income' => $row['net_income'] ?? null,
@@ -382,6 +459,7 @@ class BulkMemberImport implements ToCollection, WithHeadingRow, SkipsEmptyRows
                     'email' => $normalised['email'] ?? 'N/A',
                     'error' => implode('; ', $validationErrors),
                 ];
+
                 continue;
             }
 
@@ -399,4 +477,3 @@ class BulkMemberImport implements ToCollection, WithHeadingRow, SkipsEmptyRows
         }
     }
 }
-

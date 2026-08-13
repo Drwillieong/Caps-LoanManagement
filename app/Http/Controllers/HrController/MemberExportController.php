@@ -76,7 +76,6 @@ class MemberExportController extends Controller
                             'place_of_birth' => $user->memberProfile->place_of_birth,
                             'educational_attainment' => $user->memberProfile->educational_attainment,
                             'position' => $user->memberProfile->position,
-                            'date_hired' => $user->memberProfile->date_hired,
                             'basic_salary' => $user->memberProfile->basic_salary,
                             'income_type' => $user->memberProfile->income_type,
                             'net_income' => $user->memberProfile->net_income,
@@ -160,7 +159,6 @@ class MemberExportController extends Controller
 
             // Employment fields
             'position' => 'required|string|max:255',
-            'date_hired' => 'required|date',
             'basic_salary' => 'required|numeric|min:10000',
             'income_type' => 'required|in:monthly,daily,yearly',
             'net_income' => 'required|numeric|min:0',
@@ -208,7 +206,6 @@ class MemberExportController extends Controller
                 'permanent_address' => $validated['permanent_address'],
                 'permanent_zip_code' => $validated['permanent_zip_code'],
                 'position' => $validated['position'],
-                'date_hired' => $validated['date_hired'],
                 'basic_salary' => $validated['basic_salary'],
                 'income_type' => $validated['income_type'],
                 'net_income' => $validated['net_income'],

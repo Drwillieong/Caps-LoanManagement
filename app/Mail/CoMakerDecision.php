@@ -23,6 +23,7 @@ class CoMakerDecision extends Mailable
     public float|int $interestAmount;
     public float|int $monthlyPayment;
     public float|int $totalAmountDue;
+    public ?string $rejectionReason;
 
     public function __construct(
         string $borrowerName,
@@ -35,7 +36,8 @@ class CoMakerDecision extends Mailable
         int $terms,
         float|int $interestAmount,
         float|int $monthlyPayment,
-        float|int $totalAmountDue
+        float|int $totalAmountDue,
+        ?string $rejectionReason = null
     ) {
         $this->borrowerName = $borrowerName;
         $this->borrowerEmail = $borrowerEmail;
@@ -48,6 +50,7 @@ class CoMakerDecision extends Mailable
         $this->interestAmount = $interestAmount;
         $this->monthlyPayment = $monthlyPayment;
         $this->totalAmountDue = $totalAmountDue;
+        $this->rejectionReason = $rejectionReason;
     }
 
     public function envelope(): Envelope

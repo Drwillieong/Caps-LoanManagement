@@ -1,244 +1,264 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Loan Application Approved</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Loan Application Decision</title>
+  <style>
+    /* ----- base & reset (strictly from first template) ----- */
+    body {
+      margin: 0;
+      padding: 0;
+      background: #eef2f7;
+      color: #172033;
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1.6;
+    }
+    .container {
+      max-width: 680px;
+      margin: 0 auto;
+      background: #ffffff;
+      border: 1px solid #dbe3ef;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    /* header – white, bottom border, centered logo */
+    .header {
+      background: #ffffff;
+      padding: 28px 36px;
+      text-align: center;
+      border-bottom: 1px solid #e5eaf2;
+    }
+    .header img { max-width: 210px; height: auto; }
 
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f0f2f5;
-            margin: 0;
-            padding: 20px 0;
-        }
-        .email-container {
-            max-width: 600px;
-            margin: auto;
-            background: #ffffff;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 4px 20px rgba(0,0,0,.08);
-        }
-        .header {
-            padding: 30px 40px;
-            text-align: center;
-            border-bottom: 1px solid #e5e7eb;
-        }
-        .header img {
-            max-width: 240px;
-        }
-        .email-body {
-            padding: 40px;
-        }
-        .greeting {
-            font-size: 18px;
-            color: #1f2937;
-            margin-bottom: 20px;
-        }
-        .status-badge {
-            display: inline-block;
-            padding: 8px 22px;
-            border-radius: 999px;
-            font-weight: 600;
-            font-size: 14px;
-            background: #dcfce7;
-            color: #166534;
-            margin-bottom: 25px;
-        }
-        .status-badge.rejected {
-            background: #fee2e2;
-            color: #991b1b;
-        }
-        .message-text {
-            font-size: 15px;
-            color: #4b5563;
-            line-height: 1.7;
-            margin-bottom: 18px;
-        }
-        .action-box {
-            background: #f0fdf4;
-            border: 1px solid #bbf7d0;
-            border-radius: 10px;
-            padding: 20px;
-            margin: 25px 0;
-        }
-        .action-title {
-            font-size: 15px;
-            font-weight: 600;
-            color: #166534;
-            margin-bottom: 8px;
-        }
-        .action-box.rejected {
-            background: #fef2f2;
-            border-color: #fecaca;
-        }
-        .action-title.rejected {
-            color: #991b1b;
-        }
-        .action-text {
-            font-size: 14px;
-            color: #15803d;
-        }
-        .action-text.rejected {
-            color: #b91c1c;
-        }
-        .info-box {
-            background: #f8fafc;
-            border-radius: 10px;
-            padding: 25px;
-            border: 1px solid #e2e8f0;
-            margin-top: 25px;
-        }
-        .info-box-title {
-            font-size: 16px;
-            font-weight: 600;
-            margin-bottom: 15px;
-            color: #1e293b;
-        }
-        .info-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-        }
-        .info-label {
-            font-size: 12px;
-            color: #64748b;
-            text-transform: uppercase;
-        }
-        .info-value {
-            font-size: 15px;
-            color: #1e293b;
-            font-weight: 500;
-        }
-        .total-box {
-            background: #eff6ff;
-            padding: 18px 22px;
-            border-radius: 10px;
-            margin-top: 20px;
-            display: flex;
-            justify-content: space-between;
-            font-weight: 700;
-            color: #1e40af;
-        }
-        .divider {
-            height: 1px;
-            background: #e5e7eb;
-            margin: 30px 0;
-        }
-        .footer {
-            background: #f8fafc;
-            text-align: center;
-            padding: 25px 40px;
-            font-size: 13px;
-            color: #64748b;
-            border-top: 1px solid #e5e7eb;
-        }
-    </style>
+    /* body */
+    .body { padding: 34px 40px 28px; }
+
+    /* eyebrow + h1 */
+    .eyebrow {
+      color: #315d9f;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1.2px;
+      margin: 0 0 8px;
+      text-transform: uppercase;
+    }
+    h1 {
+      color: #111827;
+      font-size: 24px;
+      line-height: 1.3;
+      margin: 0 0 16px;
+    }
+    p { margin: 0 0 16px; }
+    .copy { color: #475569; font-size: 15px; }
+
+    /* ----- decision boxes (using .notice style from first template) ----- */
+    .decision {
+      border-radius: 8px;
+      margin: 24px 0;
+      padding: 18px 20px;
+      font-size: 14px;
+    }
+    .decision.approved {
+      background: #f0fdf4;
+      border-left: 4px solid #22c55e;
+    }
+    .decision.rejected {
+      background: #fef2f2;
+      border-left: 4px solid #ef4444;
+    }
+    .decision-label {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: .3px;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+    }
+    .approved .decision-label { color: #166534; }
+    .rejected .decision-label { color: #991b1b; }
+    .decision-text {
+      color: #1f2937;
+      font-size: 14px;
+      margin: 0;
+    }
+
+    /* ----- summary section – exact replica of first template's .section ----- */
+    .summary {
+      border: 1px solid #dbe3ef;
+      border-radius: 8px;
+      margin: 24px 0;
+      overflow: hidden;
+    }
+    .summary-title {
+      background: #f8fafc;
+      border-bottom: 1px solid #dbe3ef;
+      color: #111827;
+      font-size: 15px;
+      font-weight: 700;
+      padding: 14px 18px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    td {
+      border-bottom: 1px solid #edf2f7;
+      padding: 12px 18px;
+      vertical-align: top;
+    }
+    tr:last-child td { border-bottom: 0; }
+    .label {
+      color: #64748b;
+      font-size: 12px;
+      text-transform: uppercase;
+      width: 42%;
+    }
+    .value {
+      color: #1e293b;
+      font-size: 14px;
+      font-weight: 700;
+      text-align: right;
+    }
+    .amount { color: #173d7a; font-size: 16px; }
+
+    /* total row – subtle highlight (no gradient) */
+    .total-row td {
+      background: #f0f6ff;
+      color: #173d7a;
+      font-size: 15px;
+    }
+    .total-row .value { font-weight: 700; }
+
+    /* ----- notice / footer (first template style) ----- */
+    .notice {
+      background: #f8fafc;
+      border-left: 4px solid #315d9f;
+      color: #475569;
+      font-size: 13px;
+      margin-top: 26px;
+      padding: 16px 18px;
+      border-radius: 0 8px 8px 0;
+    }
+
+    .footer {
+      background: #172033;
+      color: #cbd5e1;
+      font-size: 12px;
+      padding: 24px 36px;
+      text-align: center;
+    }
+    .footer strong {
+      color: #ffffff;
+      display: block;
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+    .footer a { color: #bfdbfe; text-decoration: none; }
+
+    /* ----- responsive (same as first template) ----- */
+    @media only screen and (max-width: 600px) {
+      .page { padding: 12px; }
+      .header { padding: 24px 22px; }
+      .body { padding: 28px 22px 22px; }
+      td { display: block; padding: 10px 16px; }
+      .label { width: auto; padding-bottom: 0; }
+      .value { text-align: left; padding-top: 2px; }
+    }
+  </style>
 </head>
 <body>
 
-<div class="email-container">
+<div class="container">
 
-    <!-- Logo -->
-    <div class="header">
-        <img src="{{ $message->embed(public_path('LEIMCO.png')) }}" alt="LEIMCO Logo">
-    </div>
+  <!-- ===== HEADER ===== (exactly as first template) -->
+  <div class="header">
+    <img src="{{ $message->embed(public_path('LEIMCO.png')) }}" alt="LEIMCO Logo">
+  </div>
 
-    <!-- Body -->
-    <div class="email-body">
+  <!-- ===== BODY ===== -->
+  <div class="body">
 
-        <p class="greeting">Dear <strong>{{ $borrowerName }}</strong>,</p>
+    <p class="eyebrow">Official Loan Decision</p>
+    <h1>Dear {{ $borrowerName }},</h1>
 
-        @if ($decision === 'approved')
-            <div class="status-badge">✓ Loan Application Approved</div>
-
-            <p class="message-text">
-                We are pleased to inform you that your loan application has been
-                <strong>approved by the General Manager</strong> after careful
-                evaluation of your submitted requirements.
-            </p>
-
-            <p class="message-text">
-                Your application has now been endorsed for
-                <strong>check voucher preparation and processing</strong>.
-                Kindly allow sufficient time for internal verification and approval procedures.
-            </p>
-
-            <div class="action-box">
-                <div class="action-title">Next Steps</div>
-                <p class="action-text">
-                    You will receive a separate notification once your check voucher
-                    is ready for release or if additional information is required.
-                    Please wait for further instructions from our office.
-                </p>
-            </div>
-        @else
-            <div class="status-badge rejected">✕ Loan Application Rejected</div>
-
-            <p class="message-text">
-                We regret to inform you that your loan application has been
-                <strong>rejected by the General Manager</strong>.
-            </p>
-
-            <div class="action-box rejected">
-                <div class="action-title rejected">Reason for Rejection</div>
-                <p class="action-text rejected">
-                    {{ $remarks ?? 'Please contact our office for more details regarding the decision.' }}
-                </p>
-            </div>
-        @endif
-        
-        <div class="divider"></div>
-
-        <!-- Loan Info -->
-        <div class="info-box">
-            <div class="info-box-title">📋 Loan Application Summary</div>
-
-            <div class="info-grid">
-                <div>
-                    <div class="info-label">Loan Type</div>
-                    <div class="info-value">{{ $loanType }}</div>
-                </div>
-                <div>
-                    <div class="info-label">Application Date</div>
-                    <div class="info-value">{{ $applicationDate }}</div>
-                </div>
-                <div>
-                    <div class="info-label">Loan Term</div>
-                    <div class="info-value">{{ $terms }} Months</div>
-                </div>
-                <div>
-                    <div class="info-label">Principal Amount</div>
-                    <div class="info-value">₱{{ number_format($loanAmount, 2) }}</div>
-                </div>
-                <div>
-                    <div class="info-label">Interest Amount</div>
-                    <div class="info-value">₱{{ number_format($interestAmount, 2) }}</div>
-                </div>
-                <div>
-                    <div class="info-label">Monthly Amortization</div>
-                    <div class="info-value">₱{{ number_format($monthlyPayment, 2) }}</div>
-                </div>
-            </div>
-
-            <div class="total-box">
-                <span>Total Amount Due</span>
-                <span>₱{{ number_format($totalAmountDue, 2) }}</span>
-            </div>
-        </div>
-
-        <p class="message-text" style="font-size: 13px; color: #6b7280; margin-top: 30px;">
-            This is an automated notification from LEIMCO. Please do not reply directly
-            to this email. For inquiries, kindly contact our office through official channels.
+    <!-- ===== DECISION BLOCK (using .decision with .approved/.rejected) ===== -->
+    @if ($decision === 'approved')
+      <p class="copy">
+        Your loan application has been approved by the General Manager and has been forwarded to the Credit Coordinator for the next stage of validation.
+      </p>
+      <div class="decision approved">
+        <div class="decision-label">Decision: Approved by GM</div>
+        <p class="decision-text">
+          This approval confirms that your application passed GM review. Final processing will continue under the cooperative's standard credit validation procedure.
         </p>
+      </div>
+    @else
+      <p class="copy">
+        After review, your loan application was not approved by the General Manager at this time.
+      </p>
+      <div class="decision rejected">
+        <div class="decision-label">Decision: Rejected by GM</div>
+        <p class="decision-text">
+          {{ $remarks ?: 'Please contact the office for more information about this decision.' }}
+        </p>
+      </div>
+    @endif
 
+    <!-- ===== GM REMARKS (if any) ===== -->
+    @if ($decision === 'approved' && !empty($remarks))
+      <div class="decision approved" style="margin-top: 8px;">
+        <div class="decision-label">GM Remarks</div>
+        <p class="decision-text">{{ $remarks }}</p>
+      </div>
+    @endif
+
+    <!-- ===== LOAN SUMMARY (exact .section style from first template) ===== -->
+    <div class="summary">
+      <div class="summary-title">Loan Application Summary</div>
+      <table role="presentation">
+        <tr>
+          <td class="label">Loan Type</td>
+          <td class="value">{{ $loanType }}</td>
+        </tr>
+        <tr>
+          <td class="label">Application Date</td>
+          <td class="value">{{ $applicationDate }}</td>
+        </tr>
+        <tr>
+          <td class="label">Term</td>
+          <td class="value">{{ $terms }} {{ $terms === 1 ? 'Month' : 'Months' }}</td>
+        </tr>
+        <tr>
+          <td class="label">Principal Amount</td>
+          <td class="value amount">PHP {{ number_format($loanAmount, 2) }}</td>
+        </tr>
+        <tr>
+          <td class="label">Interest Amount</td>
+          <td class="value">PHP {{ number_format($interestAmount, 2) }}</td>
+        </tr>
+        <tr>
+          <td class="label">Monthly Amortization</td>
+          <td class="value">PHP {{ number_format($monthlyPayment, 2) }}</td>
+        </tr>
+        <tr class="total-row">
+          <td class="label">Total Amount Due</td>
+          <td class="value">PHP {{ number_format($totalAmountDue, 2) }}</td>
+        </tr>
+      </table>
     </div>
 
-    <!-- Footer -->
-    <div class="footer">
-        © {{ date('Y') }} LEIMCO – Lending & Investment Cooperative. All rights reserved.
+    <!-- ===== NOTICE (first template style) ===== -->
+    <div class="notice">
+      This is an automated notification from LEIMCO. Please do not reply directly to this email. For questions, contact the cooperative office through official channels.
     </div>
+
+  </div>
+
+  <!-- ===== FOOTER (exactly as first template) ===== -->
+  <div class="footer">
+    <strong>LEIMCO Lending and Investment Cooperative</strong>
+    Copyright {{ date('Y') }} LEIMCO. All rights reserved.
+  </div>
 
 </div>
 

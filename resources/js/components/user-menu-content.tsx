@@ -25,8 +25,10 @@ export function UserMenuContent({ user }: UserMenuContentProps) {
     // ✅ FIX: Add state for modal
     const [showLogoutModal, setShowLogoutModal] = useState(false);
 
+    // ✅ FIX: Proper logout handler
     const handleLogoutConfirm = () => {
-        router.post(logout());
+        router.flushAll();
+        router.post(logout().url);
     };
 
     const handleLogoutClick = (e: React.MouseEvent) => {

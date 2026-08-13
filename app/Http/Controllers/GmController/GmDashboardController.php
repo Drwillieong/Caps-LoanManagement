@@ -79,13 +79,13 @@ class GmDashboardController extends Controller
     public function activeLoans()
     {
         $loans = Loan::whereIn('status', ['released', 'active', 'approved'])
-            ->with(['user:id,first_name,middle_name,last_name', 'loanType:name'])
+            ->with(['user:id,first_name,middle_name,last_name', 'user.memberProfile:user_id,employee_id', 'loanType:name'])
             ->orderBy('release_date', 'desc')
             ->get()
             ->map(function ($loan) {
                 return [
                     'id' => $loan->id,
-                    'member_id' => 'MEM-'.str_pad($loan->user_id, 4, '0', STR_PAD_LEFT),
+                    'member_id' => $loan->user->memberProfile?->employee_id ?? 'N/A',
                     'member_name' => trim($loan->user->first_name.' '.($loan->user->middle_name ?? '').' '.$loan->user->last_name),
                     'loan_type' => $loan->loanType->name ?? 'Unknown',
                     'principal' => $loan->principal_amount,

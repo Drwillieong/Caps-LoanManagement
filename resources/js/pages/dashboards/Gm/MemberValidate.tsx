@@ -511,10 +511,7 @@ export default function MemberValidate({ pendingMembers }: Props) {
                                             </div>
                                             <p className="text-sm text-muted-foreground mb-3">{selectedMember.email}</p>
                                             <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                                                <span className="flex items-center gap-1.5">
-                                                    <FileText className="h-3.5 w-3.5" />
-                                                    ID: #{selectedMember.id}
-                                                </span>
+                                                
                                                 <span className="flex items-center gap-1.5">
                                                     <Calendar className="h-3.5 w-3.5" />
                                                     Applied {formatDateShort(selectedMember.created_at)}
@@ -575,7 +572,7 @@ export default function MemberValidate({ pendingMembers }: Props) {
 
                                     <SectionCard title="Employment & Financial Assessment" icon={Briefcase} description="Employment and income details">
                                         <InfoGrid>
-                                            <InfoField label="Employee ID" value={profile.employee_id} />
+                                            <InfoField label="Member ID" value={profile.employee_id} />
                                            
                                             <InfoField label="Position" value={profile.position} />
                                             <InfoField label="Basic Salary" value={profile.basic_salary} />

@@ -56,6 +56,7 @@ interface User {
 interface Filters {
     search: string | null
     filter: string
+    status: string
 }
 
 interface Props {
@@ -77,7 +78,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 export default function SeeUsers({ users, filters }: Props) {
     const [search, setSearch] = useState(filters.search || '')
     const [filter, setFilter] = useState(filters.filter || 'all')
-    const [status, setStatus] = useState('all')
+    const [status, setStatus] = useState(filters.status || 'all')
 
     // 1. Filter out users who do not have a member profile or valid employee_id
     const membersOnly = users.data.filter((user) => user.member_profile !== null && user.member_profile?.employee_id)
@@ -90,7 +91,7 @@ export default function SeeUsers({ users, filters }: Props) {
     }
 
     const getStatusLabel = (displayStatus: ReturnType<typeof getDisplayStatus>) => {
-        if (displayStatus === 'pending_gm_approval') return 'Pending General Manager Approval'
+        if (displayStatus === 'pending_gm_approval') return 'Active'
         if (displayStatus === 'rejected') return 'Rejected'
         if (displayStatus === 'inactive') return 'Inactive'
         return 'Active'
@@ -111,11 +112,11 @@ export default function SeeUsers({ users, filters }: Props) {
 
     useEffect(() => {
         const timeout = setTimeout(() => {
-            router.reload({ data: { search, filter } })
+            router.reload({ data: { search, filter, status } })
         }, 300)
 
         return () => clearTimeout(timeout)
-    }, [search, filter])
+    }, [search, filter, status])
 
     const formatDate = (date: string) =>
         new Date(date).toLocaleDateString('en-US', {
@@ -310,11 +311,13 @@ export default function SeeUsers({ users, filters }: Props) {
                                 <SelectValue placeholder="active" />
                             </SelectTrigger>
                             <SelectContent>
-                                 <SelectItem value="active">Active</SelectItem>
+                                
                                 <SelectItem value="all">All Statuses</SelectItem>
+                              <SelectItem value="active">Active</SelectItem>
                                 <SelectItem value="inactive">Inactive</SelectItem>
                                 <SelectItem value="rejected">Rejected</SelectItem>
                                 <SelectItem value="pending_gm_approval">Pending General Manager Approval</SelectItem>
+                                
                             </SelectContent>
                         </Select>
                     </div>

@@ -19,6 +19,7 @@ class CreateMemberController extends Controller
     {
         $search = $request->get('search');
         $filter = $request->get('filter', 'all');
+        $status = $request->get('status', 'all');
         $role = $request->get('role', 'all');
         $export = $request->get('export', false);
 
@@ -48,6 +49,19 @@ class CreateMemberController extends Controller
         // 🎭 Filter by role
         if ($role !== 'all') {
             $query->where('role', $role);
+        }
+
+        if ($status === 'pending_gm_approval') {
+            $query->whereIn('status', ['pending', 'pending_approval']);
+        } elseif ($status === 'rejected') {
+            $query->where('status', 'rejected');
+        } elseif ($status === 'active') {
+            $query->whereNotIn('status', ['pending', 'pending_approval', 'rejected'])
+                ->whereHas('memberProfile', fn ($profileQuery) => $profileQuery
+                    ->where('account_status', 'active')
+                    ->orWhereNull('account_status'));
+        } elseif ($status === 'inactive') {
+            $query->whereHas('memberProfile', fn ($profileQuery) => $profileQuery->where('account_status', 'inactive'));
         }
 
         // If export requested, return JSON response
@@ -143,6 +157,7 @@ class CreateMemberController extends Controller
             'filters' => [
                 'search' => $search,
                 'filter' => $filter,
+                'status' => $status,
                 'role' => $role,
             ],
             'roles' => [
@@ -194,7 +209,7 @@ class CreateMemberController extends Controller
             'position' => 'required|string|max:255',
             'basic_salary' => 'required|numeric|min:10000',
             'income_type' => 'required|in:monthly,daily,yearly',
-            'net_income' => 'required|numeric|min:10000',
+            'net_income' => 'required|numeric|min:8000',
             'share_capital_balance' => 'required|numeric|min:10000',
             'other_source_of_income' => 'nullable|string|max:255',
             'facebook_account_name' => 'nullable|string|max:255',

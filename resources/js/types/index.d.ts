@@ -27,6 +27,8 @@ export interface NavItem {
 
 export interface NotificationBadges {
     unreadMemberValidationCount?: number;
+    pendingMemberSignupsCount?: number;
+    pendingProfileEditsCount?: number;
     pendingComakerRequestsCount?: number;
     pendingGmLoanValidationCount?: number;
     pendingCreditCommitteeCount?: number;

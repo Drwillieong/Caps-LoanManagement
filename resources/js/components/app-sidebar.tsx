@@ -47,8 +47,9 @@ const mainNavItems: NavItem[] = [
 const hrNavItems: NavItem[] = [
     {
         title: 'Members',
-        href: '/dashboards/HR/SeeUsers',
+        href: '/dashboards/HR/SeeUsers?status=pending_gm_approval',
         icon: UsersRound,
+        badgeKey: 'pendingMemberSignupsCount',
     },
     {
         title: 'Active Loan',
@@ -125,7 +126,7 @@ const gmNavItems: NavItem[] = [
                 title: 'Member Application',
                 href: '/dashboards/Gm/MemberValidate',
                 icon: Users,
-                badgeKey: 'unreadMemberValidationCount',
+                badgeKey: 'pendingMemberSignupsCount',
             },
             {
                 title: 'Bulk Upload Members',
@@ -136,6 +137,7 @@ const gmNavItems: NavItem[] = [
                 title: 'Profile Updates',
                 href: '/dashboards/Gm/PendingEdits',
                 icon: FileEdit,
+                badgeKey: 'pendingProfileEditsCount',
             },
         ],
     },

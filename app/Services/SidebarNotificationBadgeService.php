@@ -15,6 +15,8 @@ class SidebarNotificationBadgeService
 {
     public const MEMBER_VALIDATION = 'member_validation';
 
+    public const PROFILE_EDITS = 'profile_edits';
+
     public const COMAKER_REQUESTS = 'comaker_requests';
 
     public const GM_LOAN_VALIDATION = 'gm_loan_validation';
@@ -27,6 +29,7 @@ class SidebarNotificationBadgeService
 
     public const KEYS = [
         self::MEMBER_VALIDATION,
+        self::PROFILE_EDITS,
         self::COMAKER_REQUESTS,
         self::GM_LOAN_VALIDATION,
         self::CREDIT_COMMITTEE,
@@ -38,9 +41,14 @@ class SidebarNotificationBadgeService
     {
         return match ($user->role) {
             'gm' => [
-                'unreadMemberValidationCount' => $this->memberValidationCount($user),
+                'pendingMemberSignupsCount' => $this->pendingMemberSignupsCount(),
+                'pendingProfileEditsCount' => $this->pendingProfileEditsCount(),
                 'pendingGmLoanValidationCount' => $this->pendingGmLoanValidationCount($user),
                 'gmApprovedLoanActionCount' => $this->gmApprovedLoanActionCount($user),
+            ],
+            'hr', 'secretary' => [
+                'pendingMemberSignupsCount' => $this->pendingMemberSignupsCount(),
+                'pendingProfileEditsCount' => $this->pendingProfileEditsCount(),
             ],
             'member' => [
                 'pendingComakerRequestsCount' => $this->pendingComakerRequestsCount($user),
@@ -82,10 +90,12 @@ class SidebarNotificationBadgeService
     {
         $badgeKey = match (true) {
             $user->role === 'gm' && $path === 'dashboards/Gm/MemberValidate' => self::MEMBER_VALIDATION,
+            $user->role === 'gm' && $path === 'dashboards/Gm/PendingEdits' => self::PROFILE_EDITS,
             $user->role === 'gm' && $path === 'dashboards/Gm/LoanApplication' => self::GM_LOAN_VALIDATION,
             $user->role === 'gm' && $path === 'dashboards/Gm/ApprovedLoan' => self::GM_APPROVED_LOAN_ACTION,
             $user->role === 'member' && $path === 'dashboards/Member/CoMaker' => self::COMAKER_REQUESTS,
             $user->role === 'member' && $path === 'dashboards/Member/PendingApplication' => self::MEMBER_STATUS_CHANGED,
+            in_array($user->role, ['hr', 'secretary'], true) && $path === 'dashboards/HR/SeeUsers' => self::MEMBER_VALIDATION,
             $user->role === 'creditcom' && $path === 'dashboards/CreditCom/LoanApplication' => self::CREDIT_COMMITTEE,
             default => null,
         };
@@ -95,22 +105,19 @@ class SidebarNotificationBadgeService
         }
     }
 
-    private function memberValidationCount(User $user): int
+    private function pendingMemberSignupsCount(): int
     {
-        $lastReadAt = $this->lastReadAt($user, self::MEMBER_VALIDATION);
-
-        $pendingMembers = User::query()
+        return User::query()
             ->where('role', 'member')
             ->where('status', 'pending')
-            ->when($lastReadAt, fn (Builder $query) => $query->where('updated_at', '>', $lastReadAt))
             ->count();
+    }
 
-        $pendingProfileEdits = ProfileUpdateRequest::query()
+    private function pendingProfileEditsCount(): int
+    {
+        return ProfileUpdateRequest::query()
             ->where('status', 'pending')
-            ->when($lastReadAt, fn (Builder $query) => $query->where('updated_at', '>', $lastReadAt))
             ->count();
-
-        return $pendingMembers + $pendingProfileEdits;
     }
 
     private function pendingComakerRequestsCount(User $user): int
@@ -118,7 +125,7 @@ class SidebarNotificationBadgeService
         return LoanCoMaker::query()
             ->where('user_id', $user->id)
             ->where('status', 'pending')
-            ->when($this->lastReadAt($user, self::COMAKER_REQUESTS), fn (Builder $query, Carbon $lastReadAt) => $query->where('updated_at', '>', $lastReadAt))
+            ->whereHas('loan', fn (Builder $query) => $query->where('status', 'awaiting_comaker'))
             ->count();
     }
 
@@ -126,7 +133,6 @@ class SidebarNotificationBadgeService
     {
         return Loan::query()
             ->where('status', 'pending_gm_review')
-            ->when($this->lastReadAt($user, self::GM_LOAN_VALIDATION), fn (Builder $query, Carbon $lastReadAt) => $query->where('updated_at', '>', $lastReadAt))
             ->count();
     }
 
@@ -134,7 +140,6 @@ class SidebarNotificationBadgeService
     {
         return Loan::query()
             ->whereIn('status', ['pending_cc_review', 'endorsed_by_gm'])
-            ->when($this->lastReadAt($user, self::CREDIT_COMMITTEE), fn (Builder $query, Carbon $lastReadAt) => $query->where('updated_at', '>', $lastReadAt))
             ->count();
     }
 

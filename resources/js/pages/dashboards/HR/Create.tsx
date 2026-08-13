@@ -109,6 +109,7 @@ interface FieldOpts {
     pattern?: string;
     helperText?: string;
     className?: string;
+    onInput?: (e: React.FormEvent<HTMLInputElement>) => void;
 }
 
 interface OptsBasic {
@@ -253,6 +254,7 @@ export default function Create({ roles }: Props) {
                     max={opts.max}
                     placeholder={opts.placeholder}
                     onChange={(e) => handleChange(field, e.target.value)}
+                    onInput={opts.onInput}
                     className={cn(
                         opts.className,
                         err[field] && 'border-destructive ring-destructive/20 dark:ring-destructive/40',
@@ -403,6 +405,11 @@ export default function Create({ roles }: Props) {
         if (!formData.spouse_net_income || parseFloat(formData.spouse_net_income.replace(/,/g, '')) <= 0) {
             errors.spouse_net_income = 'Spouse Net Income is required when spouse occupation is provided.';
         }
+        const spouseGross = formData.spouse_gross_income ? parseFloat(formData.spouse_gross_income.replace(/,/g, '')) : 0;
+        const spouseNet = formData.spouse_net_income ? parseFloat(formData.spouse_net_income.replace(/,/g, '')) : 0;
+        if (spouseGross > 0 && spouseNet > spouseGross) {
+            errors.spouse_net_income = 'Spouse Net Income cannot be higher than Spouse Gross Income.';
+        }
         return errors;
     };
 
@@ -459,10 +466,19 @@ export default function Create({ roles }: Props) {
         event.preventDefault();
         clearErrors();
 
-        const spouseConditionalErrors = getSpouseConditionalErrors();
-        if (Object.keys(spouseConditionalErrors).length > 0) {
-            setError(spouseConditionalErrors);
-            toast.error('Please complete the highlighted spouse fields.');
+        const validationErrors: Record<string, string> = {
+            ...getSpouseConditionalErrors(),
+        };
+
+        const gross = formData.basic_salary ? parseFloat(formData.basic_salary.replace(/,/g, '')) : 0;
+        const net = formData.net_income ? parseFloat(formData.net_income.replace(/,/g, '')) : 0;
+        if (gross > 0 && net > gross) {
+            validationErrors.net_income = 'Net Income cannot be higher than Gross Income.';
+        }
+
+        if (Object.keys(validationErrors).length > 0) {
+            setError(validationErrors);
+            toast.error('Please correct the highlighted fields.');
             return;
         }
 
@@ -633,7 +649,7 @@ export default function Create({ roles }: Props) {
                                                     { value: 'Vocational', label: 'Vocational' },
                                                     { value: 'College', label: 'College' },
                                                     { value: 'Postgraduate', label: 'Postgraduate' },
-                                                    { value: 'Other', label: 'Other' },
+                                                  
                                                 ],
                                                 err,
                                                 { required: true },
@@ -713,7 +729,14 @@ export default function Create({ roles }: Props) {
                                             {renderInput('present_zip_code', 'Present Zip Code', err, {
                                                 required: true,
                                                 placeholder: 'e.g., 1000',
-                                              
+                                                type: 'text',
+                                                inputMode: 'numeric',
+                                                pattern: '[0-9]*',
+                                                onInput: (e) => {
+                                                    const el = e.target as HTMLInputElement;
+                                                    el.value = el.value.replace(/[^0-9]/g, '');
+                                                    handleChange('present_zip_code', el.value);
+                                                },
                                             })}
 
                                             {/* Permanent Address */}
@@ -733,7 +756,14 @@ export default function Create({ roles }: Props) {
                                             {renderInput('permanent_zip_code', 'Permanent Zip Code', err, {
                                                 required: true,
                                                 placeholder: 'e.g., 1000',
-                                              
+                                                type: 'text',
+                                                inputMode: 'numeric',
+                                                pattern: '[0-9]*',
+                                                onInput: (e) => {
+                                                    const el = e.target as HTMLInputElement;
+                                                    el.value = el.value.replace(/[^0-9]/g, '');
+                                                    handleChange('permanent_zip_code', el.value);
+                                                },
                                             })}
                                         </div>
                                     </CardContent>

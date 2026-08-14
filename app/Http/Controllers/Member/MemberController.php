@@ -85,6 +85,10 @@ class MemberController extends Controller
                         'installment_number' => $a->installment_number,
                         'due_date' => $a->due_date?->format('Y-m-d'),
                         'amount_due' => $a->amount_due,
+                        'principal_amount' => $a->principal_amount,
+                        'interest_amount' => $a->interest_amount,
+                        'beginning_balance' => $a->beginning_balance,
+                        'ending_balance' => $a->ending_balance,
                         'amount_paid' => $a->amount_paid,
                         'status' => $a->status,
                     ])->sortBy('installment_number')->values(),
@@ -187,8 +191,8 @@ class MemberController extends Controller
             return [
                 'period' => $amort->installment_number,
                 'due_date' => $amort->due_date->format('Y-m-d'),
-                'principal_payment' => $amort->amount_due * 0.8, // Approx split
-                'interest_payment' => $amort->amount_due * 0.2, // Approx split
+                'principal_payment' => $amort->principal_amount ?? ($amort->amount_due * 0.8),
+                'interest_payment' => $amort->interest_amount ?? ($amort->amount_due * 0.2),
                 'total_payment' => $amort->amount_due,
                 'status' => $amort->status,
             ];

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\GmController\GmController as BaseGmController;
 use App\Models\Loan;
 use App\Models\LoanPayment;
+use App\Service\ApplyLoan\LoanAmortizationScheduleService;
 use App\Services\ActivityLogService;
 use App\Services\LoanService;
 use Inertia\Inertia;
@@ -31,32 +32,7 @@ class GmDashboardController extends Controller
         // The existing implementation is in GmController; call it if available.
         $hasAmortizations = $loan->amortizations()->exists();
         if (! $hasAmortizations) {
-            // Reuse GM controller's private method by duplicating behavior here.
-            $monthlyPayment = $loan->monthly_amortization;
-            $terms = $loan->terms_months;
-            $startDate = now()->addMonth();
-            $biMonthlyPayment = $monthlyPayment / 2;
-
-            $installmentNumber = 1;
-            for ($month = 0; $month < $terms; $month++) {
-                $dueDate10 = $startDate->copy()->addMonths($month)->day(10);
-                \App\Models\LoanAmortization::create([
-                    'loan_id' => $loan->id,
-                    'installment_number' => $installmentNumber++,
-                    'amount_due' => $biMonthlyPayment,
-                    'due_date' => $dueDate10,
-                    'status' => 'pending',
-                ]);
-
-                $dueDate25 = $startDate->copy()->addMonths($month)->day(25);
-                \App\Models\LoanAmortization::create([
-                    'loan_id' => $loan->id,
-                    'installment_number' => $installmentNumber++,
-                    'amount_due' => $biMonthlyPayment,
-                    'due_date' => $dueDate25,
-                    'status' => 'pending',
-                ]);
-            }
+            app(LoanAmortizationScheduleService::class)->generate($loan, now());
         }
 
         $loan->update([
@@ -117,7 +93,7 @@ class GmDashboardController extends Controller
             ->map(function ($loan) {
                 return [
                     'id' => $loan->id,
-                    'member_id' => 'MEM-'.str_pad($loan->user_id, 4, '0', STR_PAD_LEFT),
+                    'member_id' => ''.str_pad($loan->user_id, 4, '0', STR_PAD_LEFT),
                     'member_name' => trim($loan->user->first_name.' '.($loan->user->middle_name ?? '').' '.$loan->user->last_name),
                     'loan_type' => $loan->loanType->name ?? 'Unknown',
                     'principal' => $loan->principal_amount,
@@ -162,7 +138,7 @@ class GmDashboardController extends Controller
                     'id' => $loan->user->id,
                     'name' => trim($loan->user->first_name.' '.$loan->user->middle_name.' '.$loan->user->last_name),
                     'email' => $loan->user->email,
-                    'member_id' => 'MEM-'.str_pad($loan->user->id, 4, '0', STR_PAD_LEFT),
+                    'member_id' => ''.str_pad($loan->user->id, 4, '0', STR_PAD_LEFT),
                 ],
             ]);
 
@@ -186,7 +162,7 @@ class GmDashboardController extends Controller
                     'id' => $loan->user->id,
                     'name' => trim($loan->user->first_name.' '.$loan->user->middle_name.' '.$loan->user->last_name),
                     'email' => $loan->user->email,
-                    'member_id' => 'MEM-'.str_pad($loan->user->id, 4, '0', STR_PAD_LEFT),
+                    'member_id' => ''.str_pad($loan->user->id, 4, '0', STR_PAD_LEFT),
                 ],
             ]);
 
@@ -279,8 +255,8 @@ class GmDashboardController extends Controller
             return [
                 'period' => $amort->installment_number,
                 'due_date' => $amort->due_date->format('Y-m-d'),
-                'principal_payment' => $amort->amount_due * 0.8, // Approx split
-                'interest_payment' => $amort->amount_due * 0.2, // Approx split
+                'principal_payment' => $amort->principal_amount ?? ($amort->amount_due * 0.8),
+                'interest_payment' => $amort->interest_amount ?? ($amort->amount_due * 0.2),
                 'total_payment' => $amort->amount_due,
                 'status' => $amort->status,
             ];

@@ -86,6 +86,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware(['role:member', 'ensure.profile.completed', 'throttle:loan-application'])
         ->name('member.loan.store');
 
+    Route::post('dashboards/Member/ApplyLoan/preview', [LoanController::class, 'preview'])
+        ->middleware(['role:member', 'ensure.profile.completed'])
+        ->name('member.loan.preview');
+
     Route::put('dashboards/Member/Loan/{loan}', [LoanController::class, 'update'])
         ->middleware(['role:member', 'ensure.profile.completed'])
         ->name('member.loan.update');

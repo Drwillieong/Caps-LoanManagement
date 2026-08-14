@@ -291,7 +291,7 @@ export default function CoMaker({ coMakerRequests }: CoMakerProps) {
                                                         <div className="flex justify-between text-sm">
                                                             <span className="text-muted-foreground flex items-center gap-1.5">
                                                                 <IdCard className="h-3.5 w-3.5" />
-                                                                Employee ID
+                                                                Member ID
                                                             </span>
                                                             <span className="font-medium">{request.requester.employee_id}</span>
                                                         </div>

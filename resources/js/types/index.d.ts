@@ -304,6 +304,10 @@ export interface MemberActiveLoanAmortization {
     installment_number: number;
     due_date: string | null;
     amount_due: number;
+    principal_amount?: number | null;
+    interest_amount?: number | null;
+    beginning_balance?: number | null;
+    ending_balance?: number | null;
     amount_paid: number;
     status: string;
 }

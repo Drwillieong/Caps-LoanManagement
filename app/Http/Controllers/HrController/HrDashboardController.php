@@ -56,7 +56,7 @@ class HrDashboardController extends Controller
             ->map(function ($loan) {
                 return [
                     'id' => $loan->id,
-                    'member_id' => 'MEM-'.str_pad($loan->user_id, 4, '0', STR_PAD_LEFT),
+                    'member_id' => ''.str_pad($loan->user_id, 3, '0', STR_PAD_LEFT),
                     'member_name' => trim($loan->user->first_name.' '.($loan->user->middle_name ?? '').' '.$loan->user->last_name),
                     'loan_type' => $loan->loanType->name ?? 'Unknown',
                     'principal' => $loan->principal_amount,
@@ -104,8 +104,8 @@ class HrDashboardController extends Controller
             return [
                 'period' => $amort->installment_number,
                 'due_date' => $amort->due_date->format('Y-m-d'),
-                'principal_payment' => $amort->amount_due * 0.8,
-                'interest_payment' => $amort->amount_due * 0.2,
+                'principal_payment' => $amort->principal_amount ?? ($amort->amount_due * 0.8),
+                'interest_payment' => $amort->interest_amount ?? ($amort->amount_due * 0.2),
                 'total_payment' => $amort->amount_due,
                 'status' => $amort->status,
             ];
@@ -138,7 +138,7 @@ class HrDashboardController extends Controller
 
         $detailedLoan = [
             'id' => $loan->id,
-            'member_id' => 'MEM-'.str_pad($loan->user_id, 4, '0', STR_PAD_LEFT),
+            'member_id' => ''.str_pad($loan->user_id, 3, '0', STR_PAD_LEFT),
             'member_name' => trim($loan->user->first_name.' '.($loan->user->middle_name ?? '').' '.$loan->user->last_name),
             'beneficiary_name' => $loan->user->memberProfile?->beneficiary_name ?? null,
             'loan_type' => $loan->loanType->name ?? 'Unknown',

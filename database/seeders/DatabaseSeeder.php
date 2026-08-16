@@ -13,7 +13,7 @@ class DatabaseSeeder extends Seeder
     {
         // HR Admin
         User::create([
-            'first_name' => 'SecretaryAdmin',
+            'first_name' => 'Secretary Admin',
             'middle_name' => '',
             'last_name' => '',
             'email' => 'hradmin@gmail.com',
@@ -25,7 +25,7 @@ class DatabaseSeeder extends Seeder
 
         // GM Admin
         User::create([
-            'first_name' => 'Admin',
+            'first_name' => 'General Maneger Admin',
             'middle_name' => '',
             'last_name' => '',
             'email' => 'gmadmin@gmail.com',
@@ -38,7 +38,7 @@ class DatabaseSeeder extends Seeder
 
         // Credit Committee Admin
         User::create([
-            'first_name' => 'Admin',
+            'first_name' => 'Credit Committee Admin',
             'middle_name' => '',
             'last_name' => '',
             'email' => 'creditadmin@gmail.com',

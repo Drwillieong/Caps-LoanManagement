@@ -41,6 +41,27 @@ function getTodayISO(): string {
     return `${yyyy}-${mm}-${dd}`;
 }
 
+function getMaxDOBISO(): string {
+    const today = new Date();
+    const maxYear = today.getFullYear() - 18;
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    return `${maxYear}-${mm}-${dd}`;
+}
+
+function isAtLeast18(dateStr: string): boolean {
+    if (!dateStr) return false;
+    const dob = new Date(dateStr);
+    if (isNaN(dob.getTime())) return false;
+    const today = new Date();
+    const eighteenth = new Date(
+        today.getFullYear() - 18,
+        today.getMonth(),
+        today.getDate(),
+    );
+    return dob <= eighteenth;
+}
+
 function formatCurrency(raw: string): string {
     const num = parseFloat(raw.replace(/,/g, ''));
     if (isNaN(num)) return '';
@@ -387,7 +408,8 @@ export default function Create({ roles }: Props) {
         );
     };
 
-    const todayISO = getTodayISO();
+        const todayISO = getTodayISO();
+        const maxDOBISO = getMaxDOBISO();
 
     // ── Check if spouse fields are conditionally required ──
     const hasSpouseOccupation = formData.spouse_occupation.trim().length > 0;
@@ -474,6 +496,11 @@ export default function Create({ roles }: Props) {
         const net = formData.net_income ? parseFloat(formData.net_income.replace(/,/g, '')) : 0;
         if (gross > 0 && net > gross) {
             validationErrors.net_income = 'Net Income cannot be higher than Gross Income.';
+        }
+
+        if (!isAtLeast18(formData.date_of_birth)) {
+            validationErrors.date_of_birth =
+                'Member must be at least 18 years old.';
         }
 
         if (Object.keys(validationErrors).length > 0) {
@@ -595,7 +622,7 @@ export default function Create({ roles }: Props) {
                                                     name="date_of_birth"
                                                     type="date"
                                                     value={formData.date_of_birth}
-                                                    max={todayISO}
+                                                    max={maxDOBISO}
                                                     onChange={(e) =>
                                                         handleChange('date_of_birth', e.target.value)
                                                     }
@@ -604,7 +631,9 @@ export default function Create({ roles }: Props) {
                                                     )}
                                                     aria-invalid={!!err.date_of_birth}
                                                 />
-                                                
+                                                <p className="text-xs text-muted-foreground">
+                                                    Must be at least 18 years old.
+                                                </p>
                                                 <InputError message={err.date_of_birth} />
                                             </div>
 

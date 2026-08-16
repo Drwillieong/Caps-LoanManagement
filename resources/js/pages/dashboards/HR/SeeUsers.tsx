@@ -91,7 +91,7 @@ export default function SeeUsers({ users, filters }: Props) {
     }
 
     const getStatusLabel = (displayStatus: ReturnType<typeof getDisplayStatus>) => {
-        if (displayStatus === 'pending_gm_approval') return 'Active'
+        if (displayStatus === 'pending_gm_approval') return 'Pending GM Approval'
         if (displayStatus === 'rejected') return 'Rejected'
         if (displayStatus === 'inactive') return 'Inactive'
         return 'Active'

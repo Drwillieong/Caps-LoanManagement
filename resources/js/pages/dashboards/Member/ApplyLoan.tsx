@@ -62,6 +62,10 @@ export default function ApplyLoan({
     
     const isEditing = !!editingLoan;
 
+    // NOTE: No client-side timestamp is included in this payload. The loan's
+    // application timestamp (created_at) is generated server-side in Asia/Manila
+    // (see config/app.php 'timezone'), so relying on the client clock would risk
+    // timezone-shifted / inaccurate timestamps. Only user-entered fields are sent.
     const { data, setData, post, processing, errors, put } = useForm({
         loan_type_id: editingLoan?.loan_type_id?.toString() || '',
         principal_amount: editingLoan?.principal_amount?.toString() || '',

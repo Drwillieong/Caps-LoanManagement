@@ -5,7 +5,9 @@ namespace App\Http\Controllers\GmController;
 use App\Http\Controllers\Controller;
 use App\Models\MemberProfile;
 use App\Models\ProfileUpdateRequest;
+use App\Models\User;
 use App\Services\ActivityLogService;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
@@ -396,6 +398,33 @@ class ProfileUpdateRequestController extends Controller
         return $sanitized;
     }
 
+    private function notifyHr(ProfileUpdateRequest $updateRequest, string $decision, ?string $reason = null): void
+    {
+        $memberName = $updateRequest->member?->user?->name ?? 'member ID #'.$updateRequest->member_id;
+        $requestLabel = $updateRequest->request_type === 'status_change'
+            ? 'account '.($updateRequest->proposed_status === 'inactive' ? 'inactivation' : 'activation').' request'
+            : 'member detail update request';
+        $title = 'GM '.($decision === 'approved' ? 'Approved ' : 'Rejected ').ucfirst($requestLabel);
+        $message = 'GM '.$decision.' the '.$requestLabel.' for '.$memberName.' (request #'.$updateRequest->id.').';
+
+        if ($reason) {
+            $message .= ' Reason: '.$reason;
+        }
+
+        $notificationService = app(NotificationService::class);
+
+        User::query()
+            ->where('role', 'hr')
+            ->each(fn (User $hrUser) => $notificationService->createNotification(
+                $hrUser,
+                $title,
+                $message,
+                'gm_profile_decision',
+                $updateRequest->id,
+                ProfileUpdateRequest::class
+            ));
+    }
+
     /**
      * GM: Approve a profile update request.
      * Merges pending_data into the member_profiles table.
@@ -439,6 +468,8 @@ class ProfileUpdateRequestController extends Controller
                 null,
                 'GM approved account status change request #'.$updateRequest->id.' for member ID #'.$updateRequest->member_id.' to '.$proposedStatus.'.'
             );
+
+            $this->notifyHr($updateRequest->load('member.user'), 'approved');
 
             return redirect()->route('gm.pending-edits')
                 ->with('success', 'Account status change request approved successfully.');
@@ -529,6 +560,8 @@ class ProfileUpdateRequestController extends Controller
             'GM approved profile update request #'.$updateRequest->id.' for member ID #'.$updateRequest->member_id.'.'
         );
 
+        $this->notifyHr($updateRequest->load('member.user'), 'approved');
+
         return redirect()->route('gm.pending-edits')
             ->with('success', 'Profile update request approved successfully. Member profile has been updated.');
     }
@@ -542,7 +575,7 @@ class ProfileUpdateRequestController extends Controller
             'rejection_reason' => 'required|string|max:2000',
         ]);
 
-        $updateRequest = ProfileUpdateRequest::findOrFail($id);
+        $updateRequest = ProfileUpdateRequest::with('member.user')->findOrFail($id);
 
         if ($updateRequest->status !== 'pending') {
             return redirect()->route('gm.pending-edits')
@@ -562,6 +595,8 @@ class ProfileUpdateRequestController extends Controller
             'GM rejected profile update request #'.$updateRequest->id.' for member ID #'.$updateRequest->member_id.'. Reason: '.$validated['rejection_reason'],
             $validated['rejection_reason']
         );
+
+        $this->notifyHr($updateRequest, 'rejected', $validated['rejection_reason']);
 
         return redirect()->route('gm.pending-edits')
             ->with('success', 'Profile update request rejected.');

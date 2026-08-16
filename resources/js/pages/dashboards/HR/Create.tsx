@@ -108,6 +108,18 @@ function titleCase(value: string): string {
         .join(' ');
 }
 
+// Normalize a date <input type="date"> value into a plain "YYYY-MM-DD" string.
+// We deliberately avoid `new Date(...).toISOString()` because that converts the
+// calendar date into UTC (shifting it by the local offset). The backend treats
+// `date_of_birth` as a calendar date, so it must be sent exactly as entered.
+function toPlainDate(dateStr: string): string {
+    if (!dateStr) return '';
+    const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(dateStr);
+    if (!match) return dateStr;
+    const [, y, m, d] = match;
+    return `${y}-${m}-${d}`;
+}
+
 // ──────────────────────────────────────────────────
 // Types
 // ──────────────────────────────────────────────────
@@ -456,7 +468,10 @@ export default function Create({ roles }: Props) {
             email: formData.email.trim().toLowerCase(),
             role: 'member',
             place_of_birth: tc(formData.place_of_birth),
-            date_of_birth: formData.date_of_birth,
+            // `date_of_birth` is a calendar date — sent exactly as entered (no UTC shift).
+            // Creation timestamps (created_at) are generated server-side in Asia/Manila
+            // (config/app.php) and must NOT be supplied from the client clock.
+            date_of_birth: toPlainDate(formData.date_of_birth),
             civil_status: formData.civil_status,
             sex: formData.sex,
             educational_attainment: formData.educational_attainment,

@@ -27,6 +27,8 @@ class SidebarNotificationBadgeService
 
     public const MEMBER_STATUS_CHANGED = 'member_status_changed';
 
+    public const UNREAD_NOTIFICATIONS = 'unread_notifications';
+
     public const KEYS = [
         self::MEMBER_VALIDATION,
         self::PROFILE_EDITS,
@@ -35,6 +37,7 @@ class SidebarNotificationBadgeService
         self::CREDIT_COMMITTEE,
         self::GM_APPROVED_LOAN_ACTION,
         self::MEMBER_STATUS_CHANGED,
+        self::UNREAD_NOTIFICATIONS,
     ];
 
     public function countsFor(User $user): array
@@ -49,10 +52,12 @@ class SidebarNotificationBadgeService
             'hr', 'secretary' => [
                 'pendingMemberSignupsCount' => $this->pendingMemberSignupsCount(),
                 'pendingProfileEditsCount' => $this->pendingProfileEditsCount(),
+                'unreadNotificationsCount' => $this->unreadNotificationsCount($user),
             ],
             'member' => [
                 'pendingComakerRequestsCount' => $this->pendingComakerRequestsCount($user),
                 'hasMemberStatusChanged' => $this->memberStatusChangedCount($user),
+                'unreadNotificationsCount' => $this->unreadNotificationsCount($user),
             ],
             'creditcom' => [
                 'pendingCreditCommitteeCount' => $this->pendingCreditCommitteeCount($user),
@@ -84,6 +89,15 @@ class SidebarNotificationBadgeService
                     'read_at' => now(),
                 ]);
         }
+
+        if ($badgeKey === self::UNREAD_NOTIFICATIONS) {
+            NotificationLog::forUser($user)
+                ->unread()
+                ->update([
+                    'is_read' => true,
+                    'read_at' => now(),
+                ]);
+        }
     }
 
     public function markCurrentRouteRead(User $user, string $path): void
@@ -95,7 +109,9 @@ class SidebarNotificationBadgeService
             $user->role === 'gm' && $path === 'dashboards/Gm/ApprovedLoan' => self::GM_APPROVED_LOAN_ACTION,
             $user->role === 'member' && $path === 'dashboards/Member/CoMaker' => self::COMAKER_REQUESTS,
             $user->role === 'member' && $path === 'dashboards/Member/PendingApplication' => self::MEMBER_STATUS_CHANGED,
+            $user->role === 'member' && $path === 'dashboards/Member/Notification' => self::UNREAD_NOTIFICATIONS,
             in_array($user->role, ['hr', 'secretary'], true) && $path === 'dashboards/HR/SeeUsers' => self::MEMBER_VALIDATION,
+            in_array($user->role, ['hr', 'secretary'], true) && $path === 'dashboards/HR/SecActivityLog' => self::UNREAD_NOTIFICATIONS,
             $user->role === 'creditcom' && $path === 'dashboards/CreditCom/LoanApplication' => self::CREDIT_COMMITTEE,
             default => null,
         };
@@ -164,6 +180,13 @@ class SidebarNotificationBadgeService
     {
         return NotificationLog::forUser($user)
             ->where('type', 'loan_status')
+            ->unread()
+            ->count();
+    }
+
+    private function unreadNotificationsCount(User $user): int
+    {
+        return NotificationLog::forUser($user)
             ->unread()
             ->count();
     }

@@ -1,4 +1,5 @@
-import { Link, usePage } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
+import { useEffect } from 'react';
 import {
     BadgeDollarSign,
     Banknote,
@@ -12,6 +13,7 @@ import {
     History,
     LayoutGrid,
     Logs,
+    Bell,
     ShieldCheck,
     UserCircle2,
     Users,
@@ -114,6 +116,12 @@ const memberNavItems: NavItem[] = [
         href: '/dashboards/Member/UserProfile',
         icon: UserCircle2,
     },
+    {
+        title: 'Notifications',
+        href: '/dashboards/Member/Notification',
+        icon: Bell,
+        badgeKey: 'unreadNotificationsCount',
+    },
    
 ];
 
@@ -213,6 +221,7 @@ const footerNavItems: NavItem[] = [
         href: '/dashboards/HR/SecActivityLog',
         icon: Logs,
         role: 'hr',
+        badgeKey: 'unreadNotificationsCount',
     },
     {
         title: 'Activity Log',
@@ -225,6 +234,16 @@ const footerNavItems: NavItem[] = [
 export function AppSidebar() {
     const { auth } = usePage<SharedData>().props;
     const userRole = auth.user.role;
+
+    useEffect(() => {
+        const interval = window.setInterval(() => {
+            router.reload({
+                only: ['notificationBadges'],
+            });
+        }, 15000);
+
+        return () => window.clearInterval(interval);
+    }, []);
 
     let roleNavItems: NavItem[] = [];
 

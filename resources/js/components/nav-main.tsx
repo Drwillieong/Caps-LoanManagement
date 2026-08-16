@@ -33,6 +33,7 @@ const sidebarBadgeKeys: Record<keyof NotificationBadges, string> = {
     pendingCreditCommitteeCount: 'credit_committee',
     gmApprovedLoanActionCount: 'gm_approved_loan_action',
     hasMemberStatusChanged: 'member_status_changed',
+    unreadNotificationsCount: 'unread_notifications',
 };
 
 function getBadgeValue(

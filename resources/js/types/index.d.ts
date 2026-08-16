@@ -34,6 +34,7 @@ export interface NotificationBadges {
     pendingCreditCommitteeCount?: number;
     gmApprovedLoanActionCount?: number;
     hasMemberStatusChanged?: number | boolean;
+    unreadNotificationsCount?: number;
 }
 
 export interface SharedData {

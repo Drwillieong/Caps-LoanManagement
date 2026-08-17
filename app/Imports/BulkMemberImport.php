@@ -450,6 +450,12 @@ class BulkMemberImport implements SkipsEmptyRows, ToCollection, WithHeadingRow
                 continue;
             }
 
+            // Resolve (or auto-generate) the employee ID up front so both
+            // validation and persistence operate on the same value. Note:
+            // validateRow() receives the row by value, so doing this here
+            // prevents the generated ID from being discarded before insert.
+            $normalised['employee_id'] = $this->resolveEmployeeId($normalised['employee_id'] ?? null);
+
             // Validate
             $validationErrors = $this->validateRow($normalised, $rowIndex);
 
@@ -470,7 +476,7 @@ class BulkMemberImport implements SkipsEmptyRows, ToCollection, WithHeadingRow
                 $this->failures[] = [
                     'row' => $rowIndex,
                     'email' => $normalised['email'] ?? 'N/A',
-                    'error' => 'Database error: '.$e->getMessage(),
+                    'error' => $this->friendlyDatabaseError($e, $normalised),
                 ];
                 Log::error("Bulk member import failed on row {$rowIndex}: ".$e->getMessage());
             }

@@ -93,7 +93,7 @@ class GmDashboardController extends Controller
             ->map(function ($loan) {
                 return [
                     'id' => $loan->id,
-                    'member_id' => ''.str_pad($loan->user_id, 4, '0', STR_PAD_LEFT),
+                    'member_id' => ''.str_pad($loan->user_id, 3, '0', STR_PAD_LEFT),
                     'member_name' => trim($loan->user->first_name.' '.($loan->user->middle_name ?? '').' '.$loan->user->last_name),
                     'loan_type' => $loan->loanType->name ?? 'Unknown',
                     'principal' => $loan->principal_amount,
@@ -138,7 +138,7 @@ class GmDashboardController extends Controller
                     'id' => $loan->user->id,
                     'name' => trim($loan->user->first_name.' '.$loan->user->middle_name.' '.$loan->user->last_name),
                     'email' => $loan->user->email,
-                    'member_id' => ''.str_pad($loan->user->id, 4, '0', STR_PAD_LEFT),
+                    'member_id' => ''.str_pad($loan->user->id, 3, '0', STR_PAD_LEFT),
                 ],
             ]);
 
@@ -162,7 +162,7 @@ class GmDashboardController extends Controller
                     'id' => $loan->user->id,
                     'name' => trim($loan->user->first_name.' '.$loan->user->middle_name.' '.$loan->user->last_name),
                     'email' => $loan->user->email,
-                    'member_id' => ''.str_pad($loan->user->id, 4, '0', STR_PAD_LEFT),
+                    'member_id' => ''.str_pad($loan->user->id, 3, '0', STR_PAD_LEFT),
                 ],
             ]);
 
@@ -214,7 +214,7 @@ class GmDashboardController extends Controller
                 'id' => $loan->user->id,
                 'name' => trim($loan->user->first_name.' '.$loan->user->middle_name.' '.$loan->user->last_name),
                 'email' => $loan->user->email,
-                'member_id' => 'MEM-'.str_pad($loan->user->id, 4, '0', STR_PAD_LEFT),
+                'member_id' => 'MEM-'.str_pad($loan->user->id, 3, '0', STR_PAD_LEFT),
                 'basic_salary' => $loan->user->memberProfile?->basic_salary ?? 0,
                 'share_capital_balance' => $loan->user->memberProfile?->share_capital_balance ?? 0,
             ],
@@ -289,7 +289,7 @@ class GmDashboardController extends Controller
 
         $detailedLoan = [
             'id' => $loan->id,
-            'member_id' => 'MEM-'.str_pad($loan->user_id, 4, '0', STR_PAD_LEFT),
+            'member_id' => 'MEM-'.str_pad($loan->user_id, 3, '0', STR_PAD_LEFT),
             'member_name' => trim($loan->user->first_name.' '.($loan->user->middle_name ?? '').' '.$loan->user->last_name),
             'beneficiary_name' => $loan->user->memberProfile?->beneficiary_name ?? null,
             'loan_type' => $loan->loanType->name ?? 'Unknown',

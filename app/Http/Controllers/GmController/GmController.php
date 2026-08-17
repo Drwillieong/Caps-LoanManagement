@@ -745,7 +745,7 @@ class GmController extends Controller
             'ABCDEFGHJKLMNPQRSTUVWXYZ',
             'abcdefghijkmnopqrstuvwxyz',
             '23456789',
-            '!@#$%^&*',
+           
         ];
 
         $characters = implode('', $groups);

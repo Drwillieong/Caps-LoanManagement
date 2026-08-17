@@ -79,6 +79,7 @@ export default function SeeUsers({ users, filters }: Props) {
     const [search, setSearch] = useState(filters.search || '')
     const [filter, setFilter] = useState(filters.filter || 'all')
     const [status, setStatus] = useState(filters.status || 'all')
+    const [page, setPage] = useState(users.current_page || 1)
 
     // 1. Filter out users who do not have a member profile or valid employee_id
     const membersOnly = users.data.filter((user) => user.member_profile !== null && user.member_profile?.employee_id)
@@ -112,11 +113,17 @@ export default function SeeUsers({ users, filters }: Props) {
 
     useEffect(() => {
         const timeout = setTimeout(() => {
-            router.reload({ data: { search, filter, status } })
+            router.reload({ data: { search, filter, status, page: 1 } })
         }, 300)
 
         return () => clearTimeout(timeout)
     }, [search, filter, status])
+
+    const changePage = (newPage: number) => {
+        if (newPage < 1 || newPage > users.last_page || newPage === users.current_page) return
+        setPage(newPage)
+        router.reload({ data: { search, filter, status, page: newPage } })
+    }
 
     const formatDate = (date: string) =>
         new Date(date).toLocaleDateString('en-US', {
@@ -454,6 +461,44 @@ export default function SeeUsers({ users, filters }: Props) {
                         </tbody>
                     </table>
                 </div>
+
+                {/* Pagination */}
+                {users.last_page > 1 && (
+                    <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
+                        <p className="text-sm text-muted-foreground">
+                            Showing {users.data.length} of {users.total} member(s)
+                            {' · '}Page {users.current_page} of {users.last_page}
+                        </p>
+                        <div className="flex items-center gap-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={users.current_page <= 1}
+                                onClick={() => changePage(users.current_page - 1)}
+                            >
+                                Previous
+                            </Button>
+                            {Array.from({ length: users.last_page }, (_, i) => i + 1).map((p) => (
+                                <Button
+                                    key={p}
+                                    variant={p === users.current_page ? 'default' : 'outline'}
+                                    size="sm"
+                                    onClick={() => changePage(p)}
+                                >
+                                    {p}
+                                </Button>
+                            ))}
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={users.current_page >= users.last_page}
+                                onClick={() => changePage(users.current_page + 1)}
+                            >
+                                Next
+                            </Button>
+                        </div>
+                    </div>
+                )}
             </div>
         </AppLayout>
     )

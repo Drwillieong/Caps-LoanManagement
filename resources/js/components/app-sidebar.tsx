@@ -116,12 +116,7 @@ const memberNavItems: NavItem[] = [
         href: '/dashboards/Member/UserProfile',
         icon: UserCircle2,
     },
-    {
-        title: 'Notifications',
-        href: '/dashboards/Member/Notification',
-        icon: Bell,
-        badgeKey: 'unreadNotificationsCount',
-    },
+ 
    
 ];
 

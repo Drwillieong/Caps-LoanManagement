@@ -119,7 +119,7 @@ class LoanController extends Controller
             'eligibleCoMakers' => User::where('role', 'member')
                 ->where('id', '!=', $user->id)
                 ->whereDoesntHave('coMakerLoans', function ($q) {
-                    $q->where('status', 'accepted')
+                    $q->whereIn('status', ['accepted', 'pending'])
                       ->whereHas('loan', function ($q2) {
                           $q2->whereNotIn('status', ['rejected', 'paid_off']);
                       });
@@ -524,7 +524,7 @@ class LoanController extends Controller
         $eligibleCoMakers = User::where('role', 'member')
             ->where('id', '!=', $user->id)
             ->whereDoesntHave('coMakerLoans', function ($q) {
-                $q->where('status', 'accepted')
+                $q->whereIn('status', ['accepted', 'pending'])
                   ->whereHas('loan', function ($q2) {
                       $q2->whereNotIn('status', ['rejected', 'paid_off']);
                   });
@@ -679,7 +679,7 @@ class LoanController extends Controller
             );
             // If accepted, check if loan can proceed (if co-maker was required)
             $requiredCoMakers = $loanType->requires_comaker ? 1 : 0;
-            $acceptedCoMakers = $loan->coMakers()->where('status', 'accepted')->count();
+            $acceptedCoMakers = $loan->coMakers()->whereIn('status', ['accepted', 'pending'])->count();
             
             // If co-maker is accepted and no more co-makers needed, update loan status
             if ($acceptedCoMakers >= $requiredCoMakers) {
@@ -778,7 +778,7 @@ class LoanController extends Controller
                 // - released: loan is active and being paid
                 $isBoundToLoan = Loan::whereHas('coMakers', function ($q) use ($member) {
                     $q->where('user_id', $member->id)
-                      ->where('status', 'accepted');
+                      ->whereIn('status', ['accepted', 'pending']);
                 })
                 ->whereNotIn('status', ['rejected', 'paid_off'])
                 ->exists();

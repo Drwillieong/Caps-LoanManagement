@@ -24,7 +24,7 @@ test('salary deduction export includes open schedules due through the selected c
     ]);
 
     $member->memberProfile()->update([
-        'employee_id' => 'EMP-001',
+        'members_id' => 'EMP-001',
         'payroll_id' => 'PAY-001',
         'account_status' => 'active',
     ]);
@@ -88,7 +88,7 @@ test('salary deduction export includes open schedules due through the selected c
         ->all();
 
     expect($rows)->toHaveCount(1)
-        ->and($rows[0]['employee_id'])->toBe('EMP-001')
+        ->and($rows[0]['members_id'])->toBe('EMP-001')
         ->and($rows[0]['payroll_id'])->toBe('PAY-001')
         ->and($rows[0])->not->toHaveKey('member_id')
         ->and($rows[0]['cutoff_date'])->toBe('2026-07-25')
@@ -110,7 +110,7 @@ test('salary deduction export falls forward to the next open schedule when no in
     ]);
 
     $member->memberProfile()->update([
-        'employee_id' => 'EMP-002',
+        'members_id' => 'EMP-002',
         'payroll_id' => 'PAY-002',
         'account_status' => 'active',
     ]);
@@ -149,7 +149,7 @@ test('salary deduction export falls forward to the next open schedule when no in
         ->all();
 
     expect($rows)->toHaveCount(1)
-        ->and($rows[0]['employee_id'])->toBe('EMP-002')
+        ->and($rows[0]['members_id'])->toBe('EMP-002')
         ->and($rows[0])->not->toHaveKey('member_id')
         ->and($rows[0]['cutoff_date'])->toBe('2026-08-25')
         ->and($rows[0]['deduction_amount'])->toBe(500.0)

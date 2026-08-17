@@ -132,7 +132,7 @@ interface Beneficiary {
 
 interface MemberProfile {
     user_id: number;
-    employee_id: string;
+    members_id: string;
     first_name: string;
     middle_name?: string;
     last_name: string;
@@ -168,14 +168,14 @@ interface Props {
     isNewUser: boolean;
     isAdmin?: boolean;
     profileCompleted: boolean;
-    targetEmployeeId?: string;
+    targetMembersId?: string;
     targetUserName?: string;
 }
 
-export default function UserProfile({ memberProfile, beneficiaries, isNewUser, isAdmin = false, profileCompleted, targetEmployeeId, targetUserName }: Props) {
+export default function UserProfile({ memberProfile, beneficiaries, isNewUser, isAdmin = false, profileCompleted, targetMembersId, targetUserName }: Props) {
     const { auth } = usePage<SharedData>().props;
     const userEmail = auth.user.email;
-    const isHREditingMember = isAdmin && targetEmployeeId;
+    const isHREditingMember = isAdmin && targetMembersId;
     
     // For HR editing, always enable editing
 const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
@@ -224,7 +224,7 @@ const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
     // Initialize form data from existing profile or defaults
     const [formData, setFormData] = useState<any>({
         email: userEmail || '',
-        employee_id: memberProfile?.employee_id || '',
+        members_id: memberProfile?.members_id || '',
         first_name: memberProfile?.first_name || '',
         middle_name: memberProfile?.middle_name || '',
         last_name: memberProfile?.last_name || '',
@@ -280,7 +280,7 @@ const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
 
     // Fields that are required for new users
     const requiredFields = isNewUser ? [
-        'employee_id', 'first_name', 'last_name', 'date_of_birth', 'sex', 
+        'members_id', 'first_name', 'last_name', 'date_of_birth', 'sex',
         'civil_status', 'mobile_number', 'present_address', 'position', 
         'basic_salary'
     ] : [];
@@ -305,7 +305,7 @@ const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
             '₱' + amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
         const userInfo: string[][] = [
-            ['Employee ID:', memberProfile.employee_id],
+            ['Members ID:', memberProfile.members_id],
             ['First Name:', memberProfile.first_name],
             ['Middle Name:', memberProfile.middle_name || 'N/A'],
             ['Last Name:', memberProfile.last_name],
@@ -395,7 +395,7 @@ const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
 
     // Get the appropriate URL for form action
     const formActionUrl = isHREditingMember 
-        ? `/dashboards/HR/EditMember/${targetEmployeeId}` 
+        ? `/dashboards/HR/EditMember/${targetMembersId}`
         : '/dashboards/Member/UserProfile';
 
     const formMethod = isHREditingMember ? 'put' : 'post';
@@ -611,19 +611,19 @@ const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
                                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
 
                                   <div className="grid gap-2">
-                                        <Label htmlFor="employee_id">
+                                        <Label htmlFor="members_id">
                                             Member ID <span className="text-red-500">*</span>
                                         </Label>
                                         <Input
-                                            id="employee_id"
-                                            name="employee_id"
-                                            value={formData.employee_id}
-                                            onChange={(e) => setFormData({ ...formData, employee_id: e.target.value })}
-                                            required={isRequired('employee_id')}
+                                            id="members_id"
+                                            name="members_id"
+                                            value={formData.members_id}
+                                            onChange={(e) => setFormData({ ...formData, members_id: e.target.value })}
+                                            required={isRequired('members_id')}
                                             placeholder="e.g., EMP-001"
                                             disabled
                                         />
-                                    <InputError message={errors.employee_id} />
+                                    <InputError message={errors.members_id} />
                                     </div>
  
                                     

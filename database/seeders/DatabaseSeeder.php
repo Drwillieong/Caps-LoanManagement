@@ -65,7 +65,7 @@ class DatabaseSeeder extends Seeder
         MemberProfile::create([
             'user_id' => $user->id,
 
-            'employee_id' => '001',
+            'members_id' => '001',
            'first_name' => 'Jairus',
             'middle_name' => 'Sotto',
             'last_name' => 'Pecho',
@@ -107,7 +107,7 @@ class DatabaseSeeder extends Seeder
         MemberProfile::create([
             'user_id' => $user->id,
 
-            'employee_id' => '002', // fixed duplicate
+            'members_id' => '002', // fixed duplicate
             'first_name' => 'Kevin ',
             'middle_name' => 'Corpuz',
             'last_name' => 'Bolado',
@@ -148,7 +148,7 @@ $user = User::create([
 MemberProfile::create([
     'user_id' => $user->id,
 
-    'employee_id' => '003',
+    'members_id' => '003',
     'first_name' => 'Kayhleen',
     'middle_name' => '',
     'last_name' => 'Minor',
@@ -187,7 +187,7 @@ $user = User::create([
 MemberProfile::create([
     'user_id' => $user->id,
 
-    'employee_id' => '004',
+    'members_id' => '004',
     'first_name' => 'Jackie',
     'middle_name' => '',
     'last_name' => 'Gallora',
@@ -226,7 +226,7 @@ $user = User::create([
 MemberProfile::create([
     'user_id' => $user->id,
 
-    'employee_id' => '005',
+    'members_id' => '005',
     'first_name' => 'John Vincent',
     'middle_name' => 'Almogera',
     'last_name' => 'Saberdo',

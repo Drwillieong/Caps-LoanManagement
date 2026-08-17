@@ -22,7 +22,7 @@ class MemberTemplateExport implements FromCollection, ShouldAutoSize, WithHeadin
             'middle_name',
             'last_name',
             'email',
-            'employee_id',
+            'members_id',
             'date_of_birth',
             'sex',
             'civil_status',

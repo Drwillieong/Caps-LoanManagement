@@ -271,10 +271,10 @@ class MemberController extends Controller
                     ->orWhere('last_name', 'like', "%{$query}%")
                     ->orWhere('middle_name', 'like', "%{$query}%")
                     ->orWhereHas('memberProfile', fn ($q) => $q
-                        ->where('employee_id', 'like', "%{$query}%")
+                        ->where('members_id', 'like', "%{$query}%")
                         ->orWhere('payroll_id', 'like', "%{$query}%"));
             })
-            ->with(['memberProfile' => fn ($q) => $q->select('user_id', 'basic_salary', 'share_capital_balance', 'employee_id', 'payroll_id')])
+            ->with(['memberProfile' => fn ($q) => $q->select('user_id', 'basic_salary', 'share_capital_balance', 'members_id', 'payroll_id')])
             ->limit(10)
             ->get()
             ->map(function ($user) {
@@ -282,7 +282,7 @@ class MemberController extends Controller
                     'id' => $user->id,
                     'name' => trim($user->first_name.' '.($user->middle_name ?? '').' '.$user->last_name),
                     'email' => $user->email,
-                    'employee_id' => $user->memberProfile->employee_id ?? 'N/A',
+                    'members_id' => $user->memberProfile->members_id ?? 'N/A',
                     'payroll_id' => $user->memberProfile->payroll_id ?? null,
                     'basic_salary' => (float) $user->memberProfile->basic_salary,
                     'share_capital_balance' => (float) $user->memberProfile->share_capital_balance,

@@ -635,7 +635,7 @@ class GmController extends Controller
                     'status' => $user->status,
                     'created_at' => $user->created_at->format('Y-m-d H:i:s'),
                     'member_profile' => $profile ? [
-                        'employee_id' => $profile->employee_id,
+                        'members_id' => $profile->members_id,
                         'payroll_id' => $profile->payroll_id,
                         'first_name' => $profile->first_name,
                         'middle_name' => $profile->middle_name,

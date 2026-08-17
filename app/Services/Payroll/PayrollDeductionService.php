@@ -34,12 +34,12 @@ class PayrollDeductionService
 
         return [
             'required_identifier' => $hasPayrollId
-                ? 'employee_id preferred; payroll_id accepted as fallback'
-                : 'employee_id is required',
+                ? 'members_id preferred; payroll_id accepted as fallback'
+                : 'members_id is required',
             'required_amount' => 'deduction_amount',
             'required_cutoff' => 'cutoff_date can be supplied per row, otherwise the upload cutoff date is used',
             'accepted_columns' => [
-                'employee_id',
+                'members_id',
                 'payroll_id',
                 'employee_name',
                 'cutoff_date',
@@ -47,8 +47,8 @@ class PayrollDeductionService
                 'remarks',
             ],
             'matching_order' => $hasPayrollId
-                ? ['employee_id', 'payroll_id']
-                : ['employee_id'],
+                ? ['members_id', 'payroll_id']
+                : ['members_id'],
         ];
     }
 
@@ -161,7 +161,7 @@ class PayrollDeductionService
     public function payrollTemplateCsv(): string
     {
         return implode(',', [
-            'employee_id',
+            'members_id',
             'payroll_id',
             'employee_name',
             'cutoff_date',
@@ -191,7 +191,7 @@ class PayrollDeductionService
         $headings = array_keys($rows->first()->toArray());
         $aliases = $this->columnAliases();
 
-        $hasIdentifier = collect(['employee_id', 'payroll_id'])
+        $hasIdentifier = collect(['members_id', 'payroll_id'])
             ->contains(fn ($column) => $this->hasAnyHeading($headings, $aliases[$column]));
         $hasAmount = $this->hasAnyHeading($headings, $aliases['deduction_amount']);
 
@@ -235,7 +235,7 @@ class PayrollDeductionService
                 $uploadRowPayload = [
                     'payroll_upload_id' => $upload->id,
                     'row_number' => $rowNumber,
-                    'employee_id' => $payload['employee_id'] ?? null,
+                    'members_id' => $payload['members_id'] ?? null,
                     'payroll_id' => $payload['payroll_id'] ?? null,
                     'employee_name' => $payload['employee_name'] ?? null,
                     'cutoff_date' => $cutoffDate->toDateString(),
@@ -287,7 +287,7 @@ class PayrollDeductionService
 
                 $uploadRow->update([
                     'matched_user_id' => $memberProfile->user_id,
-                    'matched_member_profile_id' => $memberProfile->employee_id,
+                    'matched_member_profile_id' => $memberProfile->members_id,
                 ]);
 
                 try {
@@ -299,7 +299,7 @@ class PayrollDeductionService
                         [
                             'payroll_upload_id' => $upload->id,
                             'payroll_upload_row_id' => $uploadRow->id,
-                            'member_profile_id' => $memberProfile->employee_id,
+                            'member_profile_id' => $memberProfile->members_id,
                             'cutoff_date' => $cutoffDate,
                             'reference_number' => 'PAYROLL-'.$upload->id.'-'.$rowNumber,
                             'remarks' => $payload['remarks'] ?? 'Payroll deduction upload.',
@@ -355,9 +355,9 @@ class PayrollDeductionService
     {
         $errors = [];
 
-        if (! filled($payload['employee_id'] ?? null)
+        if (! filled($payload['members_id'] ?? null)
             && ! filled($payload['payroll_id'] ?? null)) {
-            $errors[] = 'Provide employee_id or payroll_id.';
+            $errors[] = 'Provide members_id or payroll_id.';
         }
 
         if ($deductionAmount === null) {
@@ -375,9 +375,9 @@ class PayrollDeductionService
 
     private function matchMemberProfile(array $payload): ?MemberProfile
     {
-        if (filled($payload['employee_id'] ?? null)) {
+        if (filled($payload['members_id'] ?? null)) {
             $profile = MemberProfile::query()
-                ->where('employee_id', trim((string) $payload['employee_id']))
+                ->where('members_id', trim((string) $payload['members_id']))
                 ->first();
 
             if ($profile) {
@@ -422,7 +422,7 @@ class PayrollDeductionService
     private function columnAliases(): array
     {
         return [
-            'employee_id' => ['employee_id', 'employee_no', 'employee_number', 'emp_id', 'id_number'],
+            'members_id' => ['members_id', 'employee_no', 'employee_number', 'emp_id', 'id_number'],
             'payroll_id' => ['payroll_id', 'payroll_no', 'payroll_number', 'payroll_code'],
             'employee_name' => ['employee_name', 'member_name', 'full_name', 'name'],
             'cutoff_date' => ['cutoff_date', 'payroll_date', 'deduction_date', 'date'],
@@ -438,7 +438,7 @@ class PayrollDeductionService
 
     private function dedupeKey(array $payload, Carbon $cutoffDate): ?string
     {
-        foreach (['employee_id', 'payroll_id'] as $identifier) {
+        foreach (['members_id', 'payroll_id'] as $identifier) {
             if (filled($payload[$identifier] ?? null)) {
                 return $identifier.':'.strtolower((string) $payload[$identifier]).':'.$cutoffDate->toDateString();
             }
@@ -540,7 +540,7 @@ class PayrollDeductionService
             'id' => $row->id,
             'upload_id' => $row->payroll_upload_id,
             'row_number' => $row->row_number,
-            'employee_id' => $row->employee_id,
+            'members_id' => $row->members_id,
             'payroll_id' => $row->payroll_id,
             'employee_name' => $row->employee_name,
             'cutoff_date' => $row->cutoff_date?->format('Y-m-d'),
@@ -579,7 +579,7 @@ class PayrollDeductionService
                 return [
                     'id' => $loan->id,
                     'member_name' => trim($loan->user->first_name.' '.$loan->user->last_name),
-                    'employee_id' => $loan->user->memberProfile?->employee_id,
+                    'members_id' => $loan->user->memberProfile?->members_id,
                     'loan_type' => $loan->loanType?->name ?? 'Loan',
                     'status' => $loan->status,
                     'remaining_balance' => max(0, (float) $loan->total_amount_due - $totalPaid),
@@ -613,7 +613,7 @@ class PayrollDeductionService
                     'id' => $loan->id,
                     'label' => '#'.$loan->id.' - '.$memberName.' - '.($loan->loanType?->name ?? 'Loan'),
                     'member_name' => $memberName,
-                    'employee_id' => $loan->user->memberProfile?->employee_id,
+                    'members_id' => $loan->user->memberProfile?->members_id,
                     'loan_type' => $loan->loanType?->name ?? 'Loan',
                     'remaining_balance' => max(0, (float) $loan->total_amount_due - $totalPaid),
                     'next_due_amount' => (float) ($loan->amortizations->first()?->amount_due ?? 0),

@@ -33,7 +33,7 @@ class CreateMemberController extends Controller
                     ->orWhere('last_name', 'like', "%{$search}%")
                     ->orWhere('email', 'like', "%{$search}%")
                     ->orWhereHas('memberProfile', function ($query) use ($search) {
-                        $query->where('employee_id', 'like', "%{$search}%")
+                        $query->where('members_id', 'like', "%{$search}%")
                             ->orWhere('payroll_id', 'like', "%{$search}%");
                     });
             });
@@ -85,7 +85,7 @@ class CreateMemberController extends Controller
                         'has_rejected_update_request' => $user->has_rejected_update_request ?? false,
                         'update_request_rejection_reason' => $user->update_request_rejection_reason ?? null,
                         'member_profile' => $user->memberProfile ? [
-                            'employee_id' => $user->memberProfile->employee_id,
+                            'members_id' => $user->memberProfile->members_id,
                             'payroll_id' => $user->memberProfile->payroll_id,
                             'date_of_birth' => $user->memberProfile->date_of_birth,
                             'sex' => $user->memberProfile->sex,
@@ -142,12 +142,12 @@ class CreateMemberController extends Controller
 
         $users->getCollection()->transform(function ($user) use ($pendingRequestMemberIds, $rejectedUpdateRequests) {
             $memberProfile = $user->memberProfile;
-            $user->has_pending_update_request = $memberProfile && in_array($memberProfile->employee_id, $pendingRequestMemberIds);
+            $user->has_pending_update_request = $memberProfile && in_array($memberProfile->members_id, $pendingRequestMemberIds);
             $user->has_rejected_update_request = false;
             $user->update_request_rejection_reason = null;
-            if ($memberProfile && isset($rejectedUpdateRequests[$memberProfile->employee_id])) {
+            if ($memberProfile && isset($rejectedUpdateRequests[$memberProfile->members_id])) {
                 $user->has_rejected_update_request = true;
-                $user->update_request_rejection_reason = $rejectedUpdateRequests[$memberProfile->employee_id];
+                $user->update_request_rejection_reason = $rejectedUpdateRequests[$memberProfile->members_id];
             }
             return $user;
         });
@@ -255,9 +255,9 @@ class CreateMemberController extends Controller
         $validated['spouse_net_income'] = $request->input('spouse_net_income');
 
         $temporaryPassword = $this->generateTemporaryPassword();
-        $nextEmployeeId = $this->generateNextEmployeeId();
+        $nextMembersId = $this->generateNextMembersId();
 
-        $user = DB::transaction(function () use ($validated, $temporaryPassword, $nextEmployeeId) {
+        $user = DB::transaction(function () use ($validated, $temporaryPassword, $nextMembersId) {
             $user = User::create([
                 'first_name' => $validated['first_name'],
                 'middle_name' => $validated['middle_name'] ?? null,
@@ -271,7 +271,7 @@ class CreateMemberController extends Controller
             ]);
 
             $user->memberProfile()->create([
-                'employee_id' => $nextEmployeeId,
+                'members_id' => $nextMembersId,
                 'payroll_id' => $validated['payroll_id'] ?? null,
                 'first_name' => $validated['first_name'],
                 'middle_name' => $validated['middle_name'] ?? null,
@@ -316,11 +316,10 @@ class CreateMemberController extends Controller
         return redirect()->route('users')->with('success', 'Member created successfully. The application has been submitted for GM validation. The welcome email with credentials will be sent upon GM approval.');
     }
 
-    private function generateNextEmployeeId(): string
+    private function generateNextMembersId(): string
     {
         $maxNum = MemberProfile::query()
-            ->select('employee_id')
-            ->get()
+            ->pluck('members_id')
             ->filter(fn ($id) => preg_match('/\d/', $id))
             ->max(fn ($id) => (int) preg_replace('/\D/', '', $id));
 
@@ -408,7 +407,7 @@ return implode('', $password);
                 'status' => $user->status,
                 'rejection_reason' => $user->rejection_reason,
                 'member_profile' => $profile ? [
-                    'employee_id' => $profile->employee_id,
+                    'members_id' => $profile->members_id,
                     'payroll_id' => $profile->payroll_id,
                     'first_name' => $profile->first_name,
                     'middle_name' => $profile->middle_name,

@@ -157,8 +157,8 @@
                         <td class="value">{{ $borrowerName }}</td>
                     </tr>
                     <tr>
-                        <td class="label">Employee ID</td>
-                        <td class="value">{{ $borrower->memberProfile->employee_id ?? 'N/A' }}</td>
+                        <td class="label">Members ID</td>
+                        <td class="value">{{ $borrower->memberProfile->members_id ?? 'N/A' }}</td>
                     </tr>
                     <tr>
                         <td class="label">Position</td>

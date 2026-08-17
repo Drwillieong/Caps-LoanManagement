@@ -95,7 +95,7 @@ function titleCase(value: string): string {
 // ──────────────────────────────────────────────────
 
 interface MemberProfileData {
-    employee_id: string | null;
+    members_id: string | null;
     payroll_id: string | null;
     first_name: string | null;
     middle_name: string | null;

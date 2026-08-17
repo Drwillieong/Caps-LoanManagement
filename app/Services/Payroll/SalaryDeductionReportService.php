@@ -14,7 +14,7 @@ class SalaryDeductionReportService
     public function headingRow(): array
     {
         return [
-            'employee_id',
+            'members_id',
             'payroll_id',
             'employee_name',
             'cutoff_date',
@@ -110,7 +110,7 @@ class SalaryDeductionReportService
             return null;
         }
 
-        $employeeId = (string) ($profile->employee_id ?? '');
+        $membersId = (string) ($profile->members_id ?? '');
         $payrollId = (string) ($profile->payroll_id ?? '');
         $employeeName = trim(($profile->first_name ?? $user->first_name).' '.($profile->middle_name ?? $user->middle_name ?? '').' '.($profile->last_name ?? $user->last_name));
         $remarks = sprintf(
@@ -120,7 +120,7 @@ class SalaryDeductionReportService
         );
 
         return [
-            'employee_id' => $employeeId,
+            'members_id' => $membersId,
             'payroll_id' => $payrollId,
             'employee_name' => $employeeName,
             'cutoff_date' => $cutoffDate,
@@ -159,12 +159,12 @@ class SalaryDeductionReportService
     /**
      * Aggregate rows by upload dedupe key to prevent duplicates in the exported file.
      * Key rules come from PayrollDeductionService::dedupeKey():
-     * - prefer employee_id
+     * - prefer members_id
      * - else payroll_id
      */
     public function dedupeKey(array $row): ?string
     {
-        foreach (['employee_id', 'payroll_id'] as $identifier) {
+        foreach (['members_id', 'payroll_id'] as $identifier) {
             if (filled($row[$identifier] ?? null)) {
                 return $identifier.':'.strtolower((string) $row[$identifier]).':'.(string) $row['cutoff_date'];
             }

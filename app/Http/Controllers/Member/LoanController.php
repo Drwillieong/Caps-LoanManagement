@@ -605,7 +605,7 @@ class LoanController extends Controller
                         'id' => $loanUser->id,
                         'name' => trim($loanUser->first_name . ($loanUser->middle_name ? ' ' . $loanUser->middle_name : '') . ' ' . $loanUser->last_name),
                         'email' => $loanUser->email,
-                        'employee_id' => $loanUser->memberProfile?->employee_id ?? 'N/A',
+                        'members_id' => $loanUser->memberProfile?->members_id ?? 'N/A',
                         'position' => $loanUser->memberProfile?->position ?? 'N/A',
                         'mobile_number' => $loanUser->memberProfile?->mobile_number ?? 'N/A',
                     ],

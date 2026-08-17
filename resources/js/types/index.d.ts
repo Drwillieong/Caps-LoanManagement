@@ -71,7 +71,7 @@ export interface LoanType {
 
 export interface MemberProfile {
     user_id: number;
-    employee_id: string;
+    members_id: string;
     payroll_id?: string | null;
     first_name: string;
     middle_name?: string;
@@ -190,7 +190,7 @@ export interface CoMakerRequest {
         id: number;
         name: string;
         email: string;
-        employee_id: string;
+        members_id: string;
         position: string;
         mobile_number: string;
         facebook_account_name?: string | null;

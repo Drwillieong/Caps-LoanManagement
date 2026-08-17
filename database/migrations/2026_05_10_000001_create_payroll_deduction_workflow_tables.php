@@ -11,7 +11,7 @@ return new class extends Migration
     {
         Schema::table('member_profiles', function (Blueprint $table) {
             if (! Schema::hasColumn('member_profiles', 'payroll_id')) {
-                $table->string('payroll_id')->nullable()->unique()->after('employee_id');
+                $table->string('payroll_id')->nullable()->unique()->after('members_id');
             }
         });
 
@@ -61,7 +61,7 @@ return new class extends Migration
             $table->foreignId('matched_user_id')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignId('matched_member_profile_id')->nullable()->constrained('member_profiles')->nullOnDelete();
             $table->unsignedInteger('row_number');
-            $table->string('employee_id')->nullable();
+            $table->string('members_id')->nullable();
             $table->string('payroll_id')->nullable();
             $table->string('member_id')->nullable();
             $table->string('employee_name')->nullable();
@@ -77,7 +77,7 @@ return new class extends Migration
             $table->timestamp('processed_at')->nullable();
             $table->timestamps();
 
-            $table->index(['employee_id', 'payroll_id', 'member_id']);
+            $table->index(['members_id', 'payroll_id', 'member_id']);
             $table->index(['status', 'deduction_status']);
         });
 

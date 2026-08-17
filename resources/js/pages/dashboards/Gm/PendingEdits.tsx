@@ -517,7 +517,7 @@ export default function PendingEdits({ pendingEdits }: Props) {
                                         <h2 className="text-xl font-bold">{selectedRequest.member_name}</h2>
                                         <p className="text-sm text-muted-foreground">{selectedRequest.member_email}</p>
                                         <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">
-                                            <span>Employee ID: {selectedRequest.member_id}</span>
+                                            <span>Members ID: {selectedRequest.member_id}</span>
                                             <span>Requested by: {selectedRequest.requested_by_name}</span>
                                             <span>{formatDate(selectedRequest.created_at)}</span>
                                         </div>

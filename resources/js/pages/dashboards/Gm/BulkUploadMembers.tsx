@@ -353,7 +353,7 @@ export default function BulkUploadMembers() {
                                         </h3>
                                         <p className="mt-0.5 text-sm text-emerald-700 dark:text-emerald-400">
                                             Get a pre-formatted Excel (.xlsx) file with all required columns and example data.
-                                            Leave the Employee ID column blank to auto-assign unique IDs (EMP-001, EMP-002, ...).
+                                            Leave the Members ID column blank to auto-assign unique IDs (EMP-001, EMP-002, ...).
                                         </p>
                                     </div>
                                 </div>
@@ -375,7 +375,7 @@ export default function BulkUploadMembers() {
                                 <CardDescription>
                                     Select an Excel (.xlsx, .xls) or CSV file containing your member records.
                                     The file must include the required columns as shown in the template.
-                                    Leave Employee ID blank to auto-assign unique IDs.
+                                    Leave Members ID blank to auto-assign unique IDs.
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>

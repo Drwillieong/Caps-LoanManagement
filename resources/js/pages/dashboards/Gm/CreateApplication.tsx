@@ -36,7 +36,7 @@ interface MemberSearchResult {
     id: number;
     name: string;
     email: string;
-    employee_id: string;
+    members_id: string;
     basic_salary: number;
     share_capital_balance: number;
 }
@@ -192,7 +192,7 @@ post('/dashboards/Gm/CreateApplication' as string);
                                 Select Member
                             </CardTitle>
                             <CardDescription>
-                                Search by email, employee ID, or name
+                                Search by email, Members ID, or name
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
@@ -219,7 +219,7 @@ post('/dashboards/Gm/CreateApplication' as string);
                                             <div className="flex-1 min-w-0">
                                                 <p className="font-medium truncate">{member.name}</p>
                                                 <p className="text-sm text-muted-foreground truncate">{member.email}</p>
-                                                <p className="text-xs text-muted-foreground">{member.employee_id}</p>
+                                                <p className="text-xs text-muted-foreground">{member.members_id}</p>
                                             </div>
                                             <div className="text-right">
                                                 <p className="text-sm">{formatCurrency(member.basic_salary)}</p>
@@ -272,8 +272,8 @@ post('/dashboards/Gm/CreateApplication' as string);
                                         <p>{selectedMember.email}</p>
                                     </div>
                                     <div className="space-y-1">
-                                        <p className="text-sm font-medium">Employee ID</p>
-                                        <p>{selectedMember.employee_id}</p>
+                                        <p className="text-sm font-medium">Members ID</p>
+                                        <p>{selectedMember.members_id}</p>
                                     </div>
                                     <div className="space-y-1">
                                         <p className="text-sm font-medium">Basic Salary</p>

@@ -49,7 +49,7 @@ class ProfileUpdateRequestController extends Controller
     ];
 
     private const IMMUTABLE_FIELDS = [
-        'employee_id', 'id', 'user_id', 'created_at', 'updated_at',
+        'members_id', 'id', 'user_id', 'created_at', 'updated_at',
     ];
 
     /**
@@ -103,7 +103,7 @@ class ProfileUpdateRequestController extends Controller
         $memberUserId = $memberProfile->user?->id;
 
         $validated = $request->validate([
-            'member_id' => 'required|string|exists:member_profiles,employee_id',
+            'member_id' => 'required|string|exists:member_profiles,members_id',
             'pending_data' => 'required|array',
         ]);
 
@@ -247,9 +247,9 @@ class ProfileUpdateRequestController extends Controller
             ->with('success', 'Profile update request submitted successfully and is awaiting GM approval.');
     }
 
-    public function requestStatusChange(Request $request, string $employeeId)
+    public function requestStatusChange(Request $request, string $membersId)
     {
-        $memberProfile = MemberProfile::with('user')->findOrFail($employeeId);
+        $memberProfile = MemberProfile::with('user')->findOrFail($membersId);
 
         $validated = $request->validate([
             'proposed_status' => 'required|string|in:active,inactive',
@@ -266,7 +266,7 @@ class ProfileUpdateRequestController extends Controller
                 ->with('error', 'This member account is already '.$validated['proposed_status'].'.');
         }
 
-        $existingPending = ProfileUpdateRequest::where('member_id', $employeeId)
+        $existingPending = ProfileUpdateRequest::where('member_id', $membersId)
             ->where('status', 'pending')
             ->exists();
 
@@ -276,7 +276,7 @@ class ProfileUpdateRequestController extends Controller
         }
 
         ProfileUpdateRequest::create([
-            'member_id' => $employeeId,
+            'member_id' => $membersId,
             'request_type' => 'status_change',
             'proposed_status' => $validated['proposed_status'],
             'reason' => $validated['reason'] ?? null,
@@ -293,7 +293,7 @@ class ProfileUpdateRequestController extends Controller
         app(ActivityLogService::class)->logActivity(
             'member_status_change_requested',
             null,
-            'HR requested account status change for member ID #'.$employeeId.' to '.$validated['proposed_status'].'.'
+            'HR requested account status change for member ID #'.$membersId.' to '.$validated['proposed_status'].'.'
         );
 
         return redirect()->route('users')

@@ -49,7 +49,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { type BreadcrumbItem } from '@/types';
 
 interface MemberProfile {
-    employee_id: string;
+    members_id: string;
     payroll_id: string | null;
     first_name: string;
     middle_name: string | null;
@@ -206,7 +206,7 @@ export default function MemberValidate({ pendingMembers }: Props) {
         return (
             member.name.toLowerCase().includes(term) ||
             member.email.toLowerCase().includes(term) ||
-            (member.member_profile?.employee_id || '').toLowerCase().includes(term) ||
+            (member.member_profile?.members_id || '').toLowerCase().includes(term) ||
             member.first_name.toLowerCase().includes(term) ||
             member.last_name.toLowerCase().includes(term)
         );
@@ -318,7 +318,7 @@ export default function MemberValidate({ pendingMembers }: Props) {
                                     <Input
                                         value={search}
                                         onChange={(e) => setSearch(e.target.value)}
-                                        placeholder="Search by name, email, or employee ID..."
+                                        placeholder="Search by name, email, or Members ID..."
                                         className="pl-9"
                                     />
                                 </div>
@@ -332,7 +332,7 @@ export default function MemberValidate({ pendingMembers }: Props) {
                                         <thead className="border-b bg-muted/40">
                                             <tr>
                                                 <th className="px-6 py-3 text-left font-medium text-muted-foreground">Member</th>
-                                                <th className="px-6 py-3 text-left font-medium text-muted-foreground">Employee ID</th>
+                                                <th className="px-6 py-3 text-left font-medium text-muted-foreground">Members ID</th>
                                                 <th className="px-6 py-3 text-left font-medium text-muted-foreground">Position</th>
                                                 <th className="px-6 py-3 text-left font-medium text-muted-foreground">Applied On</th>
                                                 <th className="px-6 py-3 text-right font-medium text-muted-foreground">Actions</th>
@@ -353,7 +353,7 @@ export default function MemberValidate({ pendingMembers }: Props) {
                                                         </div>
                                                     </td>
                                                     <td className="px-6 py-4 font-mono text-xs">
-                                                        {member.member_profile?.employee_id || 'N/A'}
+                                                        {member.member_profile?.members_id || 'N/A'}
                                                     </td>
                                                     <td className="px-6 py-4 text-muted-foreground">
                                                         {member.member_profile?.position || 'N/A'}
@@ -572,7 +572,7 @@ export default function MemberValidate({ pendingMembers }: Props) {
 
                                     <SectionCard title="Employment & Financial Assessment" icon={Briefcase} description="Employment and income details">
                                         <InfoGrid>
-                                            <InfoField label="Member ID" value={profile.employee_id} />
+                                            <InfoField label="Member ID" value={profile.members_id} />
                                            
                                             <InfoField label="Position" value={profile.position} />
                                             <InfoField label="Basic Salary" value={profile.basic_salary} />

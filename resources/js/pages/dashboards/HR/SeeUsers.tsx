@@ -18,7 +18,7 @@ import { LiveClock } from '@/components/live-clock'
 import { type BreadcrumbItem } from '@/types'
 
 interface MemberProfile {
-    employee_id: string
+    members_id: string
     payroll_id: string | null
     date_of_birth: string
     sex: string
@@ -81,8 +81,8 @@ export default function SeeUsers({ users, filters }: Props) {
     const [status, setStatus] = useState(filters.status || 'all')
     const [page, setPage] = useState(users.current_page || 1)
 
-    // 1. Filter out users who do not have a member profile or valid employee_id
-    const membersOnly = users.data.filter((user) => user.member_profile !== null && user.member_profile?.employee_id)
+    // 1. Filter out users who do not have a member profile or valid members_id
+    const membersOnly = users.data.filter((user) => user.member_profile !== null && user.member_profile?.members_id)
 
     const getDisplayStatus = (user: User): 'active' | 'inactive' | 'rejected' | 'pending_gm_approval' => {
         if (user.status === 'pending' || user.status === 'pending_approval') return 'pending_gm_approval'
@@ -178,7 +178,7 @@ export default function SeeUsers({ users, filters }: Props) {
             doc.text(`Total Members: ${allUsers.length}`, 14, 34)
 
             const tableData = allUsers.map((user: User) => [
-                user.member_profile?.employee_id || 'N/A',
+                user.member_profile?.members_id || 'N/A',
                 getFullName(user),
                 user.email,
                 user.member_profile?.position || 'N/A',
@@ -189,7 +189,7 @@ export default function SeeUsers({ users, filters }: Props) {
 
             autoTable(doc, {
                 startY: 40,
-                head: [['Employee ID', 'Name', 'Email', 'Position', 'Salary', 'Share Capital', 'Status']],
+                head: [['Members ID', 'Name', 'Email', 'Position', 'Salary', 'Share Capital', 'Status']],
                 body: tableData,
                 theme: 'striped',
                 headStyles: { fillColor: [59, 130, 246] },
@@ -215,7 +215,7 @@ export default function SeeUsers({ users, filters }: Props) {
 
                 doc.setFontSize(12)
                 doc.setFont('helvetica', 'bold')
-                doc.text(`${user.member_profile?.employee_id || user.id} - ${getFullName(user)}`, 14, currentY)
+                doc.text(`${user.member_profile?.members_id || user.id} - ${getFullName(user)}`, 14, currentY)
                 currentY += 7
 
                 doc.setFontSize(10)
@@ -223,7 +223,7 @@ export default function SeeUsers({ users, filters }: Props) {
 
                 if (user.member_profile) {
                     const details = [
-                        ['Employee ID:', user.member_profile.employee_id],
+                        ['Members ID:', user.member_profile.members_id],
                         ['Payroll ID:', user.member_profile.payroll_id || 'N/A'],
                         ['Date of Birth:', formatDate(user.member_profile.date_of_birth)],
                         ['Sex:', user.member_profile.sex],
@@ -348,16 +348,16 @@ export default function SeeUsers({ users, filters }: Props) {
                             {filteredMembers.length ? (
                                 filteredMembers.map((user) => (
                                     <tr
-                                        key={user.member_profile?.employee_id || user.id}
+                                        key={user.member_profile?.members_id || user.id}
                                         className="border-b transition-colors hover:bg-muted/30"
                                     >
                                         <td className="px-6 py-4 font-medium">
-                                            {user.member_profile?.employee_id}
+                                            {user.member_profile?.members_id}
                                         </td>
 
                                         <td className="px-6 py-4">
                                             <Link 
-                                                href={`/dashboards/HR/MembersProfile/${user.member_profile?.employee_id}`}
+                                                href={`/dashboards/HR/MembersProfile/${user.member_profile?.members_id}`}
                                                 className="text-primary hover:underline cursor-pointer font-medium"
                                             >
                                                 {getFullName(user)}
@@ -432,7 +432,7 @@ export default function SeeUsers({ users, filters }: Props) {
                                             ) : (
                                                 <div className="flex justify-end gap-2">
                                                     <Button variant="ghost" size="sm" asChild>
-                                                        <Link href={`/dashboards/HR/MembersProfile/${user.member_profile?.employee_id}`}>
+                                                        <Link href={`/dashboards/HR/MembersProfile/${user.member_profile?.members_id}`}>
                                                             Edit
                                                         </Link>
                                                     </Button>

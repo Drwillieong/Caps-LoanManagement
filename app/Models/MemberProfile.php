@@ -11,7 +11,7 @@ class MemberProfile extends Model
 {
     use HasFactory;
 
-    protected $primaryKey = 'employee_id';
+    protected $primaryKey = 'members_id';
     protected $keyType = 'string';
     public $incrementing = false;
 
@@ -22,7 +22,7 @@ class MemberProfile extends Model
      */
     protected $fillable = [
         'user_id',
-        'employee_id',
+        'members_id',
         'payroll_id',
         'first_name',
         'middle_name',
@@ -88,12 +88,12 @@ class MemberProfile extends Model
      */
     public function beneficiaries(): HasMany
     {
-        return $this->hasMany(Beneficiary::class, 'member_profile_id', 'employee_id');
+        return $this->hasMany(Beneficiary::class, 'member_profile_id', 'members_id');
     }
 
     public function deductionRecords(): HasMany
     {
-        return $this->hasMany(DeductionRecord::class, 'member_profile_id', 'employee_id');
+        return $this->hasMany(DeductionRecord::class, 'member_profile_id', 'members_id');
     }
 
     /**

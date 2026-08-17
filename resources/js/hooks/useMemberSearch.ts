@@ -4,7 +4,7 @@ interface MemberSearchResult {
   id: number;
   name: string;
   email: string;
-  employee_id: string;
+  members_id: string;
   basic_salary: number;
   share_capital_balance: number;
 }

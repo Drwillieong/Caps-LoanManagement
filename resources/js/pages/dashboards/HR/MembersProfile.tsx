@@ -144,7 +144,7 @@ interface Beneficiary {
 
 interface MemberProfileData {
     user_id: number;
-    employee_id: string;
+    members_id: string;
     first_name: string;
     middle_name?: string;
     last_name: string;
@@ -194,12 +194,12 @@ interface Props {
     isAdmin: boolean;
     isNewUser: boolean;
     profileCompleted: boolean;
-    targetEmployeeId: string;
+    targetMembersId: string;
     targetUserName: string;
     hasPendingUpdateRequest?: boolean;
 }
 
-export default function MembersProfile({ user, memberProfile, beneficiaries, isAdmin, isNewUser, profileCompleted, targetEmployeeId, targetUserName, hasPendingUpdateRequest = false }: Props) {
+export default function MembersProfile({ user, memberProfile, beneficiaries, isAdmin, isNewUser, profileCompleted, targetMembersId, targetUserName, hasPendingUpdateRequest = false }: Props) {
     const isRejected = user.status === 'rejected'
     const isPending = user.status === 'pending'
     const [isEditing, setIsEditing] = useState(false);
@@ -264,7 +264,7 @@ export default function MembersProfile({ user, memberProfile, beneficiaries, isA
     // Initialize form data from existing profile or defaults
     const [formData, setFormData] = useState<any>({
         email: user.email || '',
-        employee_id: memberProfile?.employee_id || '',
+        members_id: memberProfile?.members_id || '',
         first_name: memberProfile?.first_name || '',
         middle_name: memberProfile?.middle_name || '',
         last_name: memberProfile?.last_name || '',
@@ -341,7 +341,7 @@ export default function MembersProfile({ user, memberProfile, beneficiaries, isA
             return;
         }
 
-        router.post(`/dashboards/HR/Members/${targetEmployeeId}/status-change-request`, {
+        router.post(`/dashboards/HR/Members/${targetMembersId}/status-change-request`, {
             proposed_status: proposedStatus,
             reason: proposedStatus === 'inactive' ? deactivationReason.trim() : null,
         }, {
@@ -395,7 +395,7 @@ export default function MembersProfile({ user, memberProfile, beneficiaries, isA
 
         // Personal Information
         const personalInfo: string[][] = [
-            ['Employee ID:', memberProfile.employee_id],
+            ['Members ID:', memberProfile.members_id],
             ['First Name:', memberProfile.first_name],
             ['Middle Name:', memberProfile.middle_name || 'N/A'],
             ['Last Name:', memberProfile.last_name],
@@ -490,7 +490,7 @@ export default function MembersProfile({ user, memberProfile, beneficiaries, isA
 
     const formActionUrl = hasPendingUpdateRequest 
         ? '#' 
-        : `/dashboards/HR/EditMember/${targetEmployeeId}/update-request`;
+        : `/dashboards/HR/EditMember/${targetMembersId}/update-request`;
     const formMethod = 'post';
 
     return (
@@ -624,7 +624,7 @@ export default function MembersProfile({ user, memberProfile, beneficiaries, isA
                     method={formMethod}
                     action={formActionUrl}
                     transform={() => {
-                        const { employee_id, ...pendingData } = formData as any;
+                        const { members_id, ...pendingData } = formData as any;
                         const cleanedPhone = parsePhone(
                             pendingData.permanent_mobile_number || pendingData.mobile_number || '',
                         );
@@ -641,7 +641,7 @@ export default function MembersProfile({ user, memberProfile, beneficiaries, isA
                         pendingData.beneficiaries = normalizeBeneficiariesForSubmit(pendingData.beneficiaries || []);
 
                         return {
-                            member_id: targetEmployeeId,
+                            member_id: targetMembersId,
                             pending_data: pendingData,
                         };
                     }}
@@ -748,18 +748,18 @@ export default function MembersProfile({ user, memberProfile, beneficiaries, isA
                                        
 
                                         <div className="grid gap-2">
-                                            <Label htmlFor="employee_id">
+                                            <Label htmlFor="members_id">
                                                 Member ID <span className="text-red-500">*</span>
                                             </Label>
                                             <Input
-                                                id="employee_id"
-                                                name="employee_id"
-                                                value={formData.employee_id}
+                                                id="members_id"
+                                                name="members_id"
+                                                value={formData.members_id}
                                                 placeholder="e.g., EMP-001"
                                                 readOnly
                                                 disabled
                                             />
-                                            <InputError message={errors.employee_id} />
+                                            <InputError message={errors.members_id} />
                                         </div>
 
                                         <div className="grid gap-2">

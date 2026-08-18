@@ -10,39 +10,36 @@ return new class extends Migration
     {
         Schema::create('loans', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained(); // The Borrower
+            $table->foreignId('user_id')->constrained();
             $table->foreignId('loan_type_id')->constrained();
-            
-            // Application Details
             $table->decimal('principal_amount', 12, 2);
-            $table->integer('terms_months'); // e.g., 12 months
-            
-            // System Calculated Logic (Snapshots)
-            $table->decimal('interest_amount', 12, 2); // Calculated at approval
-            $table->decimal('total_amount_due', 12, 2); // Principal + Interest
+            $table->integer('terms_months');
+            $table->decimal('interest_amount', 12, 2);
+            $table->decimal('total_amount_due', 12, 2);
             $table->decimal('monthly_amortization', 12, 2);
-            
-            // Voucher Details (For the PDF Generation)
-            $table->string('voucher_number')->nullable()->unique(); // "CV-2026-001"
+            $table->string('voucher_number')->nullable()->unique();
             $table->string('check_number')->nullable();
+            $table->string('disbursement_method')->nullable();
             $table->date('release_date')->nullable();
-            
-            // Approval Flow Status
             $table->enum('status', [
-                'draft',                  // Initial draft
-                'awaiting_comaker',       // Waiting for co-maker confirmation
-                'pending_gm_review',      // Pending GM review
-                'endorsed_by_gm',         // Endorsed by GM (legacy - pending CC review)
-                'pending_cc_review',      // Pending Credit Coordinator review
-                'approved',               // Approved by Board/GM
-                'released',               // Money given (Active)
+                'draft',
+                'awaiting_comaker',
+                'pending_gm_review',
+                'endorsed_by_gm',
+                'pending_cc_review',
+                'approved',
+                'released',
                 'rejected_by_co_maker',
                 'rejected_by_gm',
-                'rejected_by_credit_com',        // Failed eligibility
-                'paid_off'                // Fully paid
+                'rejected_by_credit_com',
+                'paid_off',
             ])->default('draft');
-
-            $table->text('remarks')->nullable(); // For rejection reasons
+            $table->text('remarks')->nullable();
+            $table->text('co_maker_rejection_reason')->nullable();
+            $table->enum('rejected_by', ['gm', 'credit_com', 'co_maker'])->nullable();
+            $table->timestamp('rejected_at')->nullable();
+            $table->timestamp('notifications_read_at')->nullable();
+            $table->boolean('has_edited')->default(false);
             $table->timestamps();
         });
     }
@@ -52,4 +49,3 @@ return new class extends Migration
         Schema::dropIfExists('loans');
     }
 };
-

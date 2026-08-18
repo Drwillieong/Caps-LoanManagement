@@ -11,11 +11,10 @@ return new class extends Migration
         Schema::create('loan_co_makers', function (Blueprint $table) {
             $table->id();
             $table->foreignId('loan_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('user_id')->constrained(); // The Co-Maker (must be a member)
-            
+            $table->foreignId('user_id')->constrained();
             $table->enum('status', ['pending', 'accepted', 'rejected'])->default('pending');
             $table->timestamp('responded_at')->nullable();
-            
+            $table->timestamp('expires_at')->nullable();
             $table->timestamps();
         });
     }
@@ -25,4 +24,3 @@ return new class extends Migration
         Schema::dropIfExists('loan_co_makers');
     }
 };
-

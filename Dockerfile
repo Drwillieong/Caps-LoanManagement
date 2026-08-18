@@ -65,4 +65,4 @@ RUN composer dump-autoload --optimize
 RUN php artisan package:discover --ansi
 
 # Railway uses the PORT environment variable
-CMD ["sh", "-c", "php artisan migrate --force && frankenphp php-server --listen :${PORT:-8080} --root /app/public"]
+CMD ["sh", "-c", "php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=${PORT:-8080}"]

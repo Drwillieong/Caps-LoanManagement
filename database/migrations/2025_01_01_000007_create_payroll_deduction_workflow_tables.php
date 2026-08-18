@@ -8,14 +8,6 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('system_settings', function (Blueprint $table) {
-            $table->id();
-            $table->string('key')->unique();
-            $table->json('value')->nullable();
-            $table->text('description')->nullable();
-            $table->timestamps();
-        });
-
         Schema::create('payroll_uploads', function (Blueprint $table) {
             $table->id();
             $table->foreignId('uploaded_by')->nullable()->constrained('users')->nullOnDelete();
@@ -128,6 +120,5 @@ return new class extends Migration
         Schema::dropIfExists('deduction_records');
         Schema::dropIfExists('payroll_upload_rows');
         Schema::dropIfExists('payroll_uploads');
-        Schema::dropIfExists('system_settings');
     }
 };

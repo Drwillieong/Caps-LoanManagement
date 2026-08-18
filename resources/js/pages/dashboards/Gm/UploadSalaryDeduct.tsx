@@ -211,7 +211,7 @@ export default function UploadSalaryDeduct({
             onSuccess: () => {
                 uploadForm.reset('payroll_file', 'remarks');
                 setUploadInputKey((key) => key + 1);
-                toast.success('File uploaded successfully. Emails are being sent in the background.');
+                toast.success('File uploaded successfully. Member emails have been sent.');
             },
             onError: () => {
                 toast.error('Upload failed. Please review the file and highlighted fields.');

@@ -57,7 +57,7 @@ class PayrollDeductionController extends Controller
             $validated['remarks'] ?? null,
         );
 
-        SendPayrollDeductionNotifications::dispatch($upload->id);
+        SendPayrollDeductionNotifications::dispatchSync($upload->id);
 
         $cutoffDate = $upload->cutoff_date?->toDateString() ?? 'N/A';
 
@@ -69,7 +69,7 @@ class PayrollDeductionController extends Controller
 
         return redirect()
             ->route('gm.payroll-deductions')
-            ->with('success', "Payroll upload #{$upload->id} processed. {$upload->processed_rows} row(s) applied, {$upload->failed_rows} failed. Member emails are being sent in the background.");
+            ->with('success', "Payroll upload #{$upload->id} processed. {$upload->processed_rows} row(s) applied, {$upload->failed_rows} failed. Member emails have been sent.");
     }
 
     public function manualPayment(Request $request, LoanPaymentPostingService $postingService)

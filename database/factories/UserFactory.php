@@ -22,7 +22,7 @@ class UserFactory extends Factory
         return $this->afterCreating(function (User $user) {
             if ($user->role === 'member' && ! $user->memberProfile()->exists()) {
                 $user->memberProfile()->create([
-                    'employee_id' => 'EMP-'.str_pad((string) $user->id, 5, '0', STR_PAD_LEFT),
+                    'members_id' => 'EMP-'.str_pad((string) $user->id, 5, '0', STR_PAD_LEFT),
                     'first_name' => $user->first_name,
                     'middle_name' => $user->middle_name,
                     'last_name' => $user->last_name,

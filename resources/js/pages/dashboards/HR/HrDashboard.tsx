@@ -77,6 +77,14 @@ export default function HrDashboard({
         })
     }
 
+    function formatStatusLabel(key: string): string {
+        const labels: Record<string, string> = {
+            rejected_by_credit_com: 'Rejected by Credit Committee',
+            rejected_by_gm: 'Rejected by General Manager',
+        }
+        return labels[key] ?? key.replace(/_/g, ' ')
+    }
+
     if (!stats || !loan_status_breakdown || !recent_members) {
         return (
             <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
@@ -172,7 +180,7 @@ export default function HrDashboard({
                                             className="rounded-lg p-4 border bg-emerald-50/60 dark:bg-emerald-950/10 border-emerald-100"
                                         >
                                             <p className="text-xs text-muted-foreground capitalize">
-                                                {key.replace('_', ' ')}
+                                                {formatStatusLabel(key)}
                                             </p>
                                             <p className="text-xl font-bold text-emerald-700 dark:text-emerald-300">
                                                 {value as number}

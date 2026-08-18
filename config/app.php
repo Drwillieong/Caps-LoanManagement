@@ -63,9 +63,14 @@ return [
     | will be used by the PHP date and date-time functions. The timezone
     | is set to "UTC" by default as it is suitable for most use cases.
     |
+    | This application operates in the Philippines, so timestamps
+    | (created_at, updated_at, rejected_at, etc.) are generated and stored
+    | in Asia/Manila (UTC+8) to match the local wall-clock time the user
+    | actually performed the action.
+    |
     */
 
-    'timezone' => 'UTC',
+    'timezone' => 'Asia/Manila',
 
     /*
     |--------------------------------------------------------------------------

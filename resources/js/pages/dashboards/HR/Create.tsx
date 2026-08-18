@@ -41,6 +41,27 @@ function getTodayISO(): string {
     return `${yyyy}-${mm}-${dd}`;
 }
 
+function getMaxDOBISO(): string {
+    const today = new Date();
+    const maxYear = today.getFullYear() - 18;
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    return `${maxYear}-${mm}-${dd}`;
+}
+
+function isAtLeast18(dateStr: string): boolean {
+    if (!dateStr) return false;
+    const dob = new Date(dateStr);
+    if (isNaN(dob.getTime())) return false;
+    const today = new Date();
+    const eighteenth = new Date(
+        today.getFullYear() - 18,
+        today.getMonth(),
+        today.getDate(),
+    );
+    return dob <= eighteenth;
+}
+
 function formatCurrency(raw: string): string {
     const num = parseFloat(raw.replace(/,/g, ''));
     if (isNaN(num)) return '';
@@ -87,6 +108,18 @@ function titleCase(value: string): string {
         .join(' ');
 }
 
+// Normalize a date <input type="date"> value into a plain "YYYY-MM-DD" string.
+// We deliberately avoid `new Date(...).toISOString()` because that converts the
+// calendar date into UTC (shifting it by the local offset). The backend treats
+// `date_of_birth` as a calendar date, so it must be sent exactly as entered.
+function toPlainDate(dateStr: string): string {
+    if (!dateStr) return '';
+    const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(dateStr);
+    if (!match) return dateStr;
+    const [, y, m, d] = match;
+    return `${y}-${m}-${d}`;
+}
+
 // ──────────────────────────────────────────────────
 // Types
 // ──────────────────────────────────────────────────
@@ -109,6 +142,7 @@ interface FieldOpts {
     pattern?: string;
     helperText?: string;
     className?: string;
+    onInput?: (e: React.FormEvent<HTMLInputElement>) => void;
 }
 
 interface OptsBasic {
@@ -253,6 +287,7 @@ export default function Create({ roles }: Props) {
                     max={opts.max}
                     placeholder={opts.placeholder}
                     onChange={(e) => handleChange(field, e.target.value)}
+                    onInput={opts.onInput}
                     className={cn(
                         opts.className,
                         err[field] && 'border-destructive ring-destructive/20 dark:ring-destructive/40',
@@ -385,7 +420,8 @@ export default function Create({ roles }: Props) {
         );
     };
 
-    const todayISO = getTodayISO();
+        const todayISO = getTodayISO();
+        const maxDOBISO = getMaxDOBISO();
 
     // ── Check if spouse fields are conditionally required ──
     const hasSpouseOccupation = formData.spouse_occupation.trim().length > 0;
@@ -402,6 +438,11 @@ export default function Create({ roles }: Props) {
         }
         if (!formData.spouse_net_income || parseFloat(formData.spouse_net_income.replace(/,/g, '')) <= 0) {
             errors.spouse_net_income = 'Spouse Net Income is required when spouse occupation is provided.';
+        }
+        const spouseGross = formData.spouse_gross_income ? parseFloat(formData.spouse_gross_income.replace(/,/g, '')) : 0;
+        const spouseNet = formData.spouse_net_income ? parseFloat(formData.spouse_net_income.replace(/,/g, '')) : 0;
+        if (spouseGross > 0 && spouseNet > spouseGross) {
+            errors.spouse_net_income = 'Spouse Net Income cannot be higher than Spouse Gross Income.';
         }
         return errors;
     };
@@ -427,7 +468,10 @@ export default function Create({ roles }: Props) {
             email: formData.email.trim().toLowerCase(),
             role: 'member',
             place_of_birth: tc(formData.place_of_birth),
-            date_of_birth: formData.date_of_birth,
+            // `date_of_birth` is a calendar date — sent exactly as entered (no UTC shift).
+            // Creation timestamps (created_at) are generated server-side in Asia/Manila
+            // (config/app.php) and must NOT be supplied from the client clock.
+            date_of_birth: toPlainDate(formData.date_of_birth),
             civil_status: formData.civil_status,
             sex: formData.sex,
             educational_attainment: formData.educational_attainment,
@@ -459,10 +503,24 @@ export default function Create({ roles }: Props) {
         event.preventDefault();
         clearErrors();
 
-        const spouseConditionalErrors = getSpouseConditionalErrors();
-        if (Object.keys(spouseConditionalErrors).length > 0) {
-            setError(spouseConditionalErrors);
-            toast.error('Please complete the highlighted spouse fields.');
+        const validationErrors: Record<string, string> = {
+            ...getSpouseConditionalErrors(),
+        };
+
+        const gross = formData.basic_salary ? parseFloat(formData.basic_salary.replace(/,/g, '')) : 0;
+        const net = formData.net_income ? parseFloat(formData.net_income.replace(/,/g, '')) : 0;
+        if (gross > 0 && net > gross) {
+            validationErrors.net_income = 'Net Income cannot be higher than Gross Income.';
+        }
+
+        if (!isAtLeast18(formData.date_of_birth)) {
+            validationErrors.date_of_birth =
+                'Member must be at least 18 years old.';
+        }
+
+        if (Object.keys(validationErrors).length > 0) {
+            setError(validationErrors);
+            toast.error('Please correct the highlighted fields.');
             return;
         }
 
@@ -579,7 +637,7 @@ export default function Create({ roles }: Props) {
                                                     name="date_of_birth"
                                                     type="date"
                                                     value={formData.date_of_birth}
-                                                    max={todayISO}
+                                                    max={maxDOBISO}
                                                     onChange={(e) =>
                                                         handleChange('date_of_birth', e.target.value)
                                                     }
@@ -588,7 +646,9 @@ export default function Create({ roles }: Props) {
                                                     )}
                                                     aria-invalid={!!err.date_of_birth}
                                                 />
-                                                
+                                                <p className="text-xs text-muted-foreground">
+                                                    Must be at least 18 years old.
+                                                </p>
                                                 <InputError message={err.date_of_birth} />
                                             </div>
 
@@ -633,7 +693,7 @@ export default function Create({ roles }: Props) {
                                                     { value: 'Vocational', label: 'Vocational' },
                                                     { value: 'College', label: 'College' },
                                                     { value: 'Postgraduate', label: 'Postgraduate' },
-                                                    { value: 'Other', label: 'Other' },
+                                                  
                                                 ],
                                                 err,
                                                 { required: true },
@@ -713,7 +773,14 @@ export default function Create({ roles }: Props) {
                                             {renderInput('present_zip_code', 'Present Zip Code', err, {
                                                 required: true,
                                                 placeholder: 'e.g., 1000',
-                                              
+                                                type: 'text',
+                                                inputMode: 'numeric',
+                                                pattern: '[0-9]*',
+                                                onInput: (e) => {
+                                                    const el = e.target as HTMLInputElement;
+                                                    el.value = el.value.replace(/[^0-9]/g, '');
+                                                    handleChange('present_zip_code', el.value);
+                                                },
                                             })}
 
                                             {/* Permanent Address */}
@@ -733,7 +800,14 @@ export default function Create({ roles }: Props) {
                                             {renderInput('permanent_zip_code', 'Permanent Zip Code', err, {
                                                 required: true,
                                                 placeholder: 'e.g., 1000',
-                                              
+                                                type: 'text',
+                                                inputMode: 'numeric',
+                                                pattern: '[0-9]*',
+                                                onInput: (e) => {
+                                                    const el = e.target as HTMLInputElement;
+                                                    el.value = el.value.replace(/[^0-9]/g, '');
+                                                    handleChange('permanent_zip_code', el.value);
+                                                },
                                             })}
                                         </div>
                                     </CardContent>

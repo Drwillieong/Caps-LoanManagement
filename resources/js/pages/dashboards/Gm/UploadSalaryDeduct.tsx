@@ -93,7 +93,7 @@ type FailedRow = {
     id: number;
     upload_id: number;
     row_number: number;
-    employee_id: string | null;
+    members_id: string | null;
     payroll_id: string | null;
     employee_name: string | null;
     cutoff_date: string | null;
@@ -107,7 +107,7 @@ type FailedRow = {
 type ExceptionLoan = {
     id: number;
     member_name: string;
-    employee_id: string | null;
+    members_id: string | null;
     loan_type: string;
     status: string;
     remaining_balance: number;
@@ -119,7 +119,7 @@ type ManualPaymentLoan = {
     id: number;
     label: string;
     member_name: string;
-    employee_id: string | null;
+    members_id: string | null;
     loan_type: string;
     remaining_balance: number;
     next_due_amount: number;
@@ -191,7 +191,7 @@ export default function UploadSalaryDeduct({
     const filteredExceptions = useMemo(
         () =>
             exceptionLoans.filter((loan) =>
-                `${loan.member_name} ${loan.employee_id ?? ''} ${loan.loan_type}`
+                `${loan.member_name} ${loan.members_id ?? ''} ${loan.loan_type}`
                     .toLowerCase()
                     .includes(exceptionSearch.toLowerCase()),
             ),
@@ -361,10 +361,7 @@ export default function UploadSalaryDeduct({
                         <Dialog open={manualOpen} onOpenChange={setManualOpen}>
 
                             <DialogTrigger asChild>
-                                <Button variant="outline">
-                                    <Banknote className="size-4" />
-                                    Manual Payment
-                                </Button>
+
                             </DialogTrigger>
                             <DialogContent className="sm:max-w-2xl">
                                 <form onSubmit={submitManualPayment} className="space-y-5">
@@ -696,7 +693,7 @@ export default function UploadSalaryDeduct({
                                                     <TableCell>
                                                         <div className="font-medium">{loan.member_name}</div>
                                                         <div className="text-xs text-muted-foreground">
-                                                            {loan.employee_id ?? 'No employee ID'}
+                                                            {loan.members_id ?? 'No Members ID'}
                                                         </div>
                                                     </TableCell>
                                                     <TableCell>{loan.loan_type}</TableCell>
@@ -742,7 +739,7 @@ export default function UploadSalaryDeduct({
                                                     <TableCell>#{row.row_number}</TableCell>
                                                     <TableCell>
                                                         <div className="font-medium">
-                                                            {row.employee_id ?? row.payroll_id ?? 'N/A'}
+                                                            {row.members_id ?? row.payroll_id ?? 'N/A'}
                                                         </div>
                                                         <div className="text-xs text-muted-foreground">
                                                             Upload #{row.upload_id}

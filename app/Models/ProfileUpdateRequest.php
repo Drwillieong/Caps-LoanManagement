@@ -43,7 +43,7 @@ class ProfileUpdateRequest extends Model
      */
     public function member(): BelongsTo
     {
-        return $this->belongsTo(MemberProfile::class, 'member_id', 'employee_id');
+        return $this->belongsTo(MemberProfile::class, 'member_id', 'members_id');
     }
 
     /**

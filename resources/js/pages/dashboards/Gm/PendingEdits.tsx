@@ -447,6 +447,14 @@ export default function PendingEdits({ pendingEdits }: Props) {
                                                     <ChevronRight className="h-5 w-5 text-muted-foreground" />
                                                 </div>
                                             </div>
+                                            {edit.request_type === 'status_change' && edit.proposed_status === 'inactive' && edit.reason && (
+                                                <div className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3">
+                                                    <p className="text-xs font-semibold uppercase tracking-wider text-red-700">
+                                                        Deactivation Reason
+                                                    </p>
+                                                    <p className="mt-1 text-sm text-red-800">{edit.reason}</p>
+                                                </div>
+                                            )}
                                         </CardContent>
                                     </Card>
                                 ))}
@@ -509,7 +517,7 @@ export default function PendingEdits({ pendingEdits }: Props) {
                                         <h2 className="text-xl font-bold">{selectedRequest.member_name}</h2>
                                         <p className="text-sm text-muted-foreground">{selectedRequest.member_email}</p>
                                         <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">
-                                            <span>Employee ID: {selectedRequest.member_id}</span>
+                                            <span>Members ID: {selectedRequest.member_id}</span>
                                             <span>Requested by: {selectedRequest.requested_by_name}</span>
                                             <span>{formatDate(selectedRequest.created_at)}</span>
                                         </div>

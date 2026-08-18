@@ -85,6 +85,10 @@ class MemberController extends Controller
                         'installment_number' => $a->installment_number,
                         'due_date' => $a->due_date?->format('Y-m-d'),
                         'amount_due' => $a->amount_due,
+                        'principal_amount' => $a->principal_amount,
+                        'interest_amount' => $a->interest_amount,
+                        'beginning_balance' => $a->beginning_balance,
+                        'ending_balance' => $a->ending_balance,
                         'amount_paid' => $a->amount_paid,
                         'status' => $a->status,
                     ])->sortBy('installment_number')->values(),
@@ -187,8 +191,8 @@ class MemberController extends Controller
             return [
                 'period' => $amort->installment_number,
                 'due_date' => $amort->due_date->format('Y-m-d'),
-                'principal_payment' => $amort->amount_due * 0.8, // Approx split
-                'interest_payment' => $amort->amount_due * 0.2, // Approx split
+                'principal_payment' => $amort->principal_amount ?? ($amort->amount_due * 0.8),
+                'interest_payment' => $amort->interest_amount ?? ($amort->amount_due * 0.2),
                 'total_payment' => $amort->amount_due,
                 'status' => $amort->status,
             ];
@@ -267,10 +271,10 @@ class MemberController extends Controller
                     ->orWhere('last_name', 'like', "%{$query}%")
                     ->orWhere('middle_name', 'like', "%{$query}%")
                     ->orWhereHas('memberProfile', fn ($q) => $q
-                        ->where('employee_id', 'like', "%{$query}%")
+                        ->where('members_id', 'like', "%{$query}%")
                         ->orWhere('payroll_id', 'like', "%{$query}%"));
             })
-            ->with(['memberProfile' => fn ($q) => $q->select('user_id', 'basic_salary', 'share_capital_balance', 'employee_id', 'payroll_id')])
+            ->with(['memberProfile' => fn ($q) => $q->select('user_id', 'basic_salary', 'share_capital_balance', 'members_id', 'payroll_id')])
             ->limit(10)
             ->get()
             ->map(function ($user) {
@@ -278,7 +282,7 @@ class MemberController extends Controller
                     'id' => $user->id,
                     'name' => trim($user->first_name.' '.($user->middle_name ?? '').' '.$user->last_name),
                     'email' => $user->email,
-                    'employee_id' => $user->memberProfile->employee_id ?? 'N/A',
+                    'members_id' => $user->memberProfile->members_id ?? 'N/A',
                     'payroll_id' => $user->memberProfile->payroll_id ?? null,
                     'basic_salary' => (float) $user->memberProfile->basic_salary,
                     'share_capital_balance' => (float) $user->memberProfile->share_capital_balance,

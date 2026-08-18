@@ -89,7 +89,7 @@ class User extends Authenticatable
         
         // Check all required fields are filled (spouse_name and beneficiaries are optional)
         $requiredFields = [
-            'employee_id',
+            'members_id',
             'first_name',
             'last_name',
             'date_of_birth',

@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers\GmController;
 
+use App\Exports\MemberTemplateExport;
 use App\Http\Controllers\Controller;
 use App\Imports\BulkMemberImport;
 use App\Services\ActivityLogService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Maatwebsite\Excel\Excel as ExcelFormat;
 use Maatwebsite\Excel\Facades\Excel;
 
 class BulkMemberUploadController extends Controller
@@ -20,87 +22,15 @@ class BulkMemberUploadController extends Controller
     }
 
     /**
-     * Download a sample Excel template pre-formatted with all required columns.
+     * Download a sample Excel (.xlsx) template pre-formatted with all required columns.
      */
     public function template()
     {
-        $headers = [
-            'first_name',
-            'middle_name',
-            'last_name',
-            'email',
-            'employee_id',
-            'payroll_id',
-            'date_of_birth',
-            'sex',
-            'civil_status',
-            'place_of_birth',
-            'educational_attainment',
-            'mobile_number',
-            'permanent_mobile_number',
-            'present_address',
-            'present_zip_code',
-            'permanent_address',
-            'permanent_zip_code',
-            'position',
-            'basic_salary',
-            'income_type',
-            'net_income',
-            'share_capital_balance',
-            'other_source_of_income',
-            'facebook_account_name',
-            'spouse_occupation',
-            'spouse_gross_income',
-            'spouse_income_type',
-            'spouse_net_income',
-            'legal_beneficiary_1_name',
-            'real_properties_owned',
-        ];
-
-        $exampleRow = [
-            'Juan',
-            'Dela Cruz',
-            'Santos',
-            'juan.santos@example.com',
-            '',
-            'PAY-001',
-            '1990-01-15',
-            'male',
-            'married',
-            'Manila City',
-            'College',
-            '09171234567',
-            '09189876543',
-            '123 Rizal St, Brgy. 1, Manila City',
-            '1000',
-            '456 Mabini St, Batangas City',
-            '4200',
-            'Staff',
-            '2020-06-01',
-            '25000.00',
-            'monthly',
-            '22000.00',
-            '15000.00',
-            'Freelance Photography',
-            'Juan Santos FB',
-            'Teacher',
-            '18000.00',
-            'monthly',
-            '16000.00',
-            'Maria Santos',
-            'Residential lot in Batangas',
-        ];
-
-        // Build CSV content
-        $csv = implode(',', array_map(fn ($h) => '"'.$h.'"', $headers))."\n";
-        $csv .= implode(',', array_map(fn ($v) => '"'.str_replace('"', '""', $v).'"', $exampleRow));
-
-        return response()->streamDownload(function () use ($csv) {
-            echo $csv;
-        }, 'member_bulk_import_template.csv', [
-            'Content-Type' => 'text/csv',
-            'Content-Disposition' => 'attachment; filename="member_bulk_import_template.csv"',
-        ]);
+        return Excel::download(
+            new MemberTemplateExport(),
+            'member_bulk_import_template.xlsx',
+            ExcelFormat::XLSX
+        );
     }
 
     /**

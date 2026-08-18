@@ -54,6 +54,10 @@ return [
             'unix_socket' => env('DB_SOCKET', ''),
             'charset' => env('DB_CHARSET', 'utf8mb4'),
             'collation' => env('DB_COLLATION', 'utf8mb4_unicode_ci'),
+            // Matches config('app.timezone') = Asia/Manila (UTC+8). Ensures MySQL
+            // TIMESTAMP columns are interpreted/stored in local time so the
+            // application's created_at/updated_at values are not shifted to UTC.
+            'timezone' => env('DB_TIMEZONE', '+08:00'),
             'prefix' => '',
             'prefix_indexes' => true,
             'strict' => true,
@@ -74,6 +78,10 @@ return [
             'unix_socket' => env('DB_SOCKET', ''),
             'charset' => env('DB_CHARSET', 'utf8mb4'),
             'collation' => env('DB_COLLATION', 'utf8mb4_unicode_ci'),
+            // Matches config('app.timezone') = Asia/Manila (UTC+8). Ensures MariaDB
+            // TIMESTAMP columns are interpreted/stored in local time so the
+            // application's created_at/updated_at values are not shifted to UTC.
+            'timezone' => env('DB_TIMEZONE', '+08:00'),
             'prefix' => '',
             'prefix_indexes' => true,
             'strict' => true,

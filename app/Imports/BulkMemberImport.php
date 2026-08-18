@@ -33,7 +33,7 @@ class BulkMemberImport implements SkipsEmptyRows, ToCollection, WithHeadingRow
         'first_name',
         'last_name',
         'email',
-        'employee_id',
+        'members_id',
         'date_of_birth',
         'sex',
         'civil_status',
@@ -43,7 +43,7 @@ class BulkMemberImport implements SkipsEmptyRows, ToCollection, WithHeadingRow
         'basic_salary',
     ];
 
-    protected ?int $nextEmployeeIdCounter = null;
+    protected ?int $nextMembersIdCounter = null;
 
     /**
      * Generate a cryptographically secure temporary password.
@@ -101,9 +101,9 @@ class BulkMemberImport implements SkipsEmptyRows, ToCollection, WithHeadingRow
                 'middlename' => 'middle_name',
                 'email_address' => 'email',
                 'e_mail' => 'email',
-                'member_id' => 'employee_id',
-                'employeeid' => 'employee_id',
-                'id_number' => 'employee_id',
+                'member_id' => 'members_id',
+                'membersId' => 'members_id',
+                'id_number' => 'members_id',
                 'payrollid' => 'payroll_id',
                 'birth_date' => 'date_of_birth',
                 'birthdate' => 'date_of_birth',
@@ -165,31 +165,31 @@ class BulkMemberImport implements SkipsEmptyRows, ToCollection, WithHeadingRow
     }
 
     /**
-     * Resolve or auto-generate a unique employee_id for the incoming row.
+     * Resolve or auto-generate a unique members_id for the incoming row.
      *
      * If a value is provided in the spreadsheet it is returned as-is (duplicate
      * validation is handled separately). If the value is blank the system will
      * generate the next sequential ID (EMP-XXX) based on the highest existing
      * value already stored in the database.
      */
-    protected function resolveEmployeeId(?string $provided): string
+    protected function resolveMembersId(?string $provided): string
     {
         if (filled($provided)) {
             return $provided;
         }
 
-        if ($this->nextEmployeeIdCounter === null) {
+        if ($this->nextMembersIdCounter === null) {
             $max = MemberProfile::query()
-                ->where('employee_id', 'like', 'EMP-%')
-                ->selectRaw("MAX(SUBSTR(employee_id, INSTR(employee_id, '-') + 1) + 0) as max_num")
+                ->where('members_id', 'like', 'EMP-%')
+                ->selectRaw("MAX(SUBSTR(members_id, INSTR(members_id, '-') + 1) + 0) as max_num")
                 ->value('max_num');
 
-            $this->nextEmployeeIdCounter = (int) ($max ?: 0);
+            $this->nextMembersIdCounter = (int) ($max ?: 0);
         }
 
-        $this->nextEmployeeIdCounter++;
+        $this->nextMembersIdCounter++;
 
-        return 'EMP-'.str_pad((string) $this->nextEmployeeIdCounter, 3, '0', STR_PAD_LEFT);
+        return 'EMP-'.str_pad((string) $this->nextMembersIdCounter, 3, '0', STR_PAD_LEFT);
     }
 
     /**
@@ -201,7 +201,7 @@ class BulkMemberImport implements SkipsEmptyRows, ToCollection, WithHeadingRow
     {
         $errors = [];
 
-        $row['employee_id'] = $this->resolveEmployeeId($row['employee_id'] ?? null);
+        $row['members_id'] = $this->resolveMembersId($row['members_id'] ?? null);
 
         // Required field presence check
         foreach (self::REQUIRED_FIELDS as $field) {
@@ -224,9 +224,9 @@ class BulkMemberImport implements SkipsEmptyRows, ToCollection, WithHeadingRow
             $errors[] = "Duplicate email: {$row['email']} (already exists)";
         }
 
-        // Unique employee_id
-        if (MemberProfile::where('employee_id', $row['employee_id'])->exists()) {
-            $errors[] = "Duplicate Employee ID: {$row['employee_id']} (already exists)";
+        // Unique members_id
+        if (MemberProfile::where('members_id', $row['members_id'])->exists()) {
+            $errors[] = "Duplicate Members ID: {$row['members_id']} (already exists)";
         }
 
         // Sex validation
@@ -385,7 +385,7 @@ class BulkMemberImport implements SkipsEmptyRows, ToCollection, WithHeadingRow
             ]);
 
             $user->memberProfile()->create([
-                'employee_id' => $row['employee_id'],
+                'members_id' => $row['members_id'],
                 'payroll_id' => $row['payroll_id'] ?? null,
                 'first_name' => $row['first_name'],
                 'middle_name' => $row['middle_name'] ?? null,
@@ -450,6 +450,12 @@ class BulkMemberImport implements SkipsEmptyRows, ToCollection, WithHeadingRow
                 continue;
             }
 
+            // Resolve (or auto-generate) the Members ID up front so both
+            // validation and persistence operate on the same value. Note:
+            // validateRow() receives the row by value, so doing this here
+            // prevents the generated ID from being discarded before insert.
+            $normalised['members_id'] = $this->resolveMembersId($normalised['members_id'] ?? null);
+
             // Validate
             $validationErrors = $this->validateRow($normalised, $rowIndex);
 
@@ -470,7 +476,7 @@ class BulkMemberImport implements SkipsEmptyRows, ToCollection, WithHeadingRow
                 $this->failures[] = [
                     'row' => $rowIndex,
                     'email' => $normalised['email'] ?? 'N/A',
-                    'error' => 'Database error: '.$e->getMessage(),
+                    'error' => $this->friendlyDatabaseError($e, $normalised),
                 ];
                 Log::error("Bulk member import failed on row {$rowIndex}: ".$e->getMessage());
             }

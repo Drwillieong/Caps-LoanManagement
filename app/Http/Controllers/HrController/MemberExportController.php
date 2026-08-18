@@ -61,7 +61,7 @@ class MemberExportController extends Controller
                         'is_active' => $user->is_active,
                         'created_at' => $user->created_at,
                         'member_profile' => $user->memberProfile ? [
-                            'employee_id' => $user->memberProfile->employee_id,
+                            'members_id' => $user->memberProfile->members_id,
                             'payroll_id' => $user->memberProfile->payroll_id,
                             'date_of_birth' => $user->memberProfile->date_of_birth,
                             'sex' => $user->memberProfile->sex,
@@ -138,8 +138,8 @@ class MemberExportController extends Controller
             'email' => 'required|string|lowercase|email|max:255|unique:users',
             'role' => 'required|in:member',
 
-            // Employee ID
-            'employee_id' => 'required|string|max:255|unique:member_profiles,employee_id',
+            // Members ID
+            'members_id' => 'required|string|max:255|unique:member_profiles,members_id',
             'payroll_id' => 'nullable|string|max:255|unique:member_profiles,payroll_id',
 
             // Personal fields
@@ -189,7 +189,7 @@ class MemberExportController extends Controller
             ]);
 
             $user->memberProfile()->create([
-                'employee_id' => $validated['employee_id'],
+                'members_id' => $validated['members_id'],
                 'payroll_id' => $validated['payroll_id'] ?? null,
                 'first_name' => $validated['first_name'],
                 'middle_name' => $validated['middle_name'] ?? null,

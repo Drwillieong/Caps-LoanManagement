@@ -12,7 +12,7 @@ import LogoutConfirmationModal from '@/components/modals/LogoutConfirmationModal
 import { UserInfo } from '@/components/user-info';
 import { useMobileNavigation } from '@/hooks/use-mobile-navigation';
 import { logout } from '@/routes';
-import { edit } from '@/routes/profile';
+import { edit } from '@/routes/user-password';
 import { type User } from '@/types';
 
 interface UserMenuContentProps {
@@ -25,8 +25,10 @@ export function UserMenuContent({ user }: UserMenuContentProps) {
     // ✅ FIX: Add state for modal
     const [showLogoutModal, setShowLogoutModal] = useState(false);
 
+    // ✅ FIX: Proper logout handler
     const handleLogoutConfirm = () => {
-        router.post(logout());
+        router.flushAll();
+        router.post(logout().url);
     };
 
     const handleLogoutClick = (e: React.MouseEvent) => {

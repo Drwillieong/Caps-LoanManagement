@@ -8,6 +8,7 @@ import {
     Upload,
     XCircle,
 } from 'lucide-react';
+import axios from 'axios';
 import { useCallback, useRef, useState } from 'react';
 
 import HeadingSmall from '@/components/heading-small';
@@ -130,7 +131,7 @@ export default function BulkUploadMembers() {
         if (file) handleFileDrop(file);
     };
 
-    const handleUpload = (e: React.FormEvent) => {
+    const handleUpload = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!selectedFile) return;
 
@@ -139,74 +140,59 @@ export default function BulkUploadMembers() {
         const formData = new FormData();
         formData.append('file', selectedFile);
 
-        const xhr = new XMLHttpRequest();
+        try {
+            const response = await axios.post(
+                '/dashboards/Gm/BulkUploadMembers',
+                formData,
+                {
+                    withCredentials: true,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        Accept: 'application/json',
+                    },
+                    onUploadProgress: (progressEvent) => {
+                        if (progressEvent.total) {
+                            const progress = Math.round(
+                                (progressEvent.loaded / progressEvent.total) * 100,
+                            );
+                            setUploadState({ status: 'uploading', progress });
+                        }
+                    },
+                },
+            );
 
-        xhr.upload.onprogress = (e) => {
-            if (e.lengthComputable) {
-                const progress = Math.round((e.loaded / e.total) * 100);
-                setUploadState({ status: 'uploading', progress });
-            }
-        };
+            const data = response.data;
 
-        xhr.onload = () => {
-            try {
-                const raw = xhr.responseText.trim();
-
-                if (xhr.status === 419) {
-                    setUploadState({
-                        status: 'error',
-                        message: 'Your session has expired. Please refresh the page and try again.',
-                    });
-                    return;
-                }
-
-                if (!raw) {
-                    setUploadState({
-                        status: 'error',
-                        message: 'Server returned an empty response. Please try again.',
-                    });
-                    return;
-                }
-
-                const response = JSON.parse(raw);
-
-                if (xhr.status >= 200 && xhr.status < 300 && response.success) {
-                    setUploadState({
-                        status: 'success',
-                        result: response.data,
-                    });
-                } else {
-                    setUploadState({
-                        status: 'error',
-                        message: response.message || 'An unexpected error occurred during import.',
-                    });
-                }
-            } catch {
+            if (data.success) {
+                setUploadState({
+                    status: 'success',
+                    result: data.data,
+                });
+            } else {
                 setUploadState({
                     status: 'error',
-                    message: 'Failed to process the server response. Please try again.',
+                    message: data.message || 'An unexpected error occurred during import.',
                 });
             }
-        };
+        } catch (err: unknown) {
+            const status = (err as { response?: { status?: number } })?.response?.status;
+            const serverMessage = (err as { response?: { data?: { message?: string } } })
+                ?.response?.data?.message;
 
-        xhr.onerror = () => {
+            if (status === 419) {
+                setUploadState({
+                    status: 'error',
+                    message: 'Your session has expired. Please refresh the page and try again.',
+                });
+                return;
+            }
+
             setUploadState({
                 status: 'error',
-                message: 'Network error. Please check your connection and try again.',
+                message:
+                    serverMessage || 'Network error. Please check your connection and try again.',
             });
-        };
-
-        xhr.withCredentials = true;
-
-        xhr.open('POST', '/dashboards/Gm/BulkUploadMembers');
-        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-        xhr.setRequestHeader('Accept', 'application/json');
-
-        const metaToken = document.querySelector('meta[name="csrf-token"]');
-        const csrfToken = metaToken?.getAttribute('content') || '';
-        xhr.setRequestHeader('X-CSRF-TOKEN', csrfToken);
-
-        xhr.send(formData);
+        }
     };
 
     const handleDownloadTemplate = () => {
@@ -366,8 +352,8 @@ export default function BulkUploadMembers() {
                                             Download Sample Template
                                         </h3>
                                         <p className="mt-0.5 text-sm text-emerald-700 dark:text-emerald-400">
-                                            Get a pre-formatted CSV file with all required columns and example data.
-                                            Leave the Employee ID column blank to auto-assign unique IDs (EMP-001, EMP-002, ...).
+                                            Get a pre-formatted Excel (.xlsx) file with all required columns and example data.
+                                            Leave the Members ID column blank to auto-assign unique IDs (EMP-001, EMP-002, ...).
                                         </p>
                                     </div>
                                 </div>
@@ -389,7 +375,7 @@ export default function BulkUploadMembers() {
                                 <CardDescription>
                                     Select an Excel (.xlsx, .xls) or CSV file containing your member records.
                                     The file must include the required columns as shown in the template.
-                                    Leave Employee ID blank to auto-assign unique IDs.
+                                    Leave Members ID blank to auto-assign unique IDs.
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>

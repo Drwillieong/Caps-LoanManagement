@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('profile_update_requests', function (Blueprint $table) {
             $table->id();
-            $table->string('member_id'); // FK to member_profiles.employee_id
+            $table->string('member_id'); // FK to member_profiles.members_id
             $table->foreignId('requested_by')->constrained('users')->onDelete('cascade');
             $table->json('original_data');
             $table->json('pending_data');
@@ -24,7 +24,7 @@ return new class extends Migration
 
             // Foreign key for member_id referencing member_profiles
             $table->foreign('member_id')
-                  ->references('employee_id')
+                  ->references('members_id')
                   ->on('member_profiles')
                   ->onDelete('cascade');
 

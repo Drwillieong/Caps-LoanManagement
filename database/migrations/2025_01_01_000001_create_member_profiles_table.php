@@ -13,7 +13,7 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             
             // Identity (Form Page 2)
-            $table->string('employee_id')->unique(); // Vital for payroll tracking
+            $table->string('members_id')->unique(); // Vital for payroll tracking
             $table->string('first_name');
             $table->string('middle_name')->nullable();
             $table->string('last_name');

@@ -1,41 +1,18 @@
 import { Head, Link } from '@inertiajs/react';
-import { 
-    Search, 
-    Clock, 
-    DollarSign, 
-    Filter, 
-    Eye, 
-    Edit, 
-    Trash2,
-    Printer
-} from 'lucide-react';
-import AppLayout from '@/layouts/app-layout';
-import { LiveClock } from '@/components/live-clock';
-import { dashboard } from '@/routes';
-import type { BreadcrumbItem, ActiveLoan } from '@/types';
-import { 
-    Card, 
-    CardContent, 
-    CardHeader, 
-    CardTitle 
-} from '@/components/ui/card';
-import { 
-    Table, 
-    TableBody, 
-    TableCell, 
-    TableHead, 
-    TableHeader, 
-    TableRow 
-} from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { useState } from 'react';
+import { Clock, Eye, Filter, Printer, Search } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 
-const breadcrumbs: BreadcrumbItem[] = [
- 
-    { title: 'Active Loans', href: '/dashboards/Gm/GMActiveLoan' },
-];
+import { LoanTablePagination } from '@/components/loan-table-pagination';
+import { LiveClock } from '@/components/live-clock';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import AppLayout from '@/layouts/app-layout';
+import type { ActiveLoan, BreadcrumbItem } from '@/types';
+
+const breadcrumbs: BreadcrumbItem[] = [{ title: 'Active Loans', href: '/dashboards/Gm/GMActiveLoan' }];
 
 interface GMActiveLoanProps {
     active_loans: ActiveLoan[];
@@ -46,276 +23,138 @@ interface GMActiveLoanProps {
     };
 }
 
-export default function GMActiveLoan({ active_loans = [], stats = { total_active: 0, total_principal: 0, total_due: 0 } }: GMActiveLoanProps) {
+export default function GMActiveLoan({
+    active_loans = [],
+    stats = { total_active: 0, total_principal: 0, total_due: 0 },
+}: GMActiveLoanProps) {
     const [search, setSearch] = useState('');
     const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'overdue'>('all');
+    const [currentPage, setCurrentPage] = useState(1);
+    const [rowsPerPage, setRowsPerPage] = useState(10);
+    const displayLoans = Array.isArray(active_loans) ? active_loans : [];
 
-    const mockActiveLoans: ActiveLoan[] = [
-        {
-            id: 1,
-            member_id: 'MEM001',
-            member_name: 'John Doe',
-            loan_type: 'Salary Loan',
-            principal: 50000,
-            terms: 12,
-            total_due: 55200,
-            date: '2024-01-15',
-            status: 'active' as const,
-            remaining_balance: 35200,
-            total_paid: 20000,
-            next_due_date: '2024-03-15'
-        },
-        {
-            id: 2,
-            member_id: 'MEM002',
-            member_name: 'Jane Smith',
-            loan_type: 'Business Loan',
-            principal: 150000,
-            terms: 24,
-            total_due: 180000,
-            date: '2024-02-01',
-            status: 'overdue' as const,
-            remaining_balance: 120000,
-            total_paid: 60000,
-            next_due_date: '2024-04-10'
-        },
-        {
-            id: 3,
-            member_id: 'MEM003',
-            member_name: 'Bob Johnson',
-            loan_type: 'Emergency Loan',
-            principal: 25000,
-            terms: 6,
-            total_due: 27000,
-            date: '2024-03-01',
-            status: 'active' as const,
-            remaining_balance: 13500,
-            total_paid: 13500,
-            next_due_date: '2024-04-01'
-        }
-    ];
-
-    const mockStats = {
-        total_active: 3,
-        total_principal: 225000,
-        total_due: 262200
-    };
-
-    // Backend data ready - no mocks needed
-    const displayLoans = active_loans;
-    const displayStats = stats;
-
-    // Format currency
     function formatCurrency(amount: number): string {
-        return new Intl.NumberFormat('en-PH', {
-            style: 'currency',
-            currency: 'PHP',
-            minimumFractionDigits: 2,
-        }).format(amount);
+        return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', minimumFractionDigits: 2 }).format(amount || 0);
     }
 
-    // Format date
     function formatDate(dateStr: string): string {
-        return new Date(dateStr).toLocaleDateString('en-PH', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-        });
+        if (!dateStr) return '-';
+        return new Date(dateStr).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' });
     }
 
-    // Status badge variant
-    function getStatusVariant(status: string): 'default' | 'secondary' | 'destructive' {
-        switch (status) {
-            case 'active': return 'default';
-            case 'overdue': return 'destructive';
-            case 'completed': return 'secondary';
-            default: return 'secondary';
-        }
-    }
+    const filteredLoans = useMemo(
+        () =>
+            displayLoans.filter((loan) => {
+                const term = search.toLowerCase();
+                const matchesSearch = loan.member_name.toLowerCase().includes(term) || loan.member_id.toLowerCase().includes(term);
+                const matchesStatus = filterStatus === 'all' || loan.status === filterStatus;
 
-    const filteredLoans = active_loans.filter(loan => {
-        const matchesSearch = loan.member_name.toLowerCase().includes(search.toLowerCase()) ||
-                             loan.member_id.includes(search);
-        const matchesStatus = filterStatus === 'all' || loan.status === filterStatus;
-        return matchesSearch && matchesStatus;
-    });
+                return matchesSearch && matchesStatus;
+            }),
+        [displayLoans, filterStatus, search],
+    );
+    const totalPages = Math.max(1, Math.ceil(filteredLoans.length / rowsPerPage));
+    const paginatedLoans = filteredLoans.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
 
-    const printTable = () => {
-        const printWindow = window.open('', '_blank');
-        const title = 'GM Active Loans Report';
-        const statsHtml = `
-            <div style="margin-bottom: 2rem;">
-                <h2 style="color: #059669; font-size: 1.5rem; margin-bottom: 1rem;">${title}</h2>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
-                    <div style="border: 1px solid #d1d5db; padding: 1rem; border-radius: 0.5rem; background: #f9fafb;">
-                        <h3 style="font-size: 0.875rem; font-weight: 600; color: #065f46; margin-bottom: 0.5rem;">Total Active Loans</h3>
-                        <div style="font-size: 1.5rem; font-weight: bold;">${displayStats.total_active}</div>
-                    </div>
-                    <div style="border: 1px solid #d1d5db; padding: 1rem; border-radius: 0.5rem; background: #f9fafb;">
-                        <h3 style="font-size: 0.875rem; font-weight: 600; color: #065f46; margin-bottom: 0.5rem;">Total Principal</h3>
-                        <div style="font-size: 1.5rem; font-weight: bold;">${formatCurrency(displayStats.total_principal)}</div>
-                    </div>
-                    <div style="border: 1px solid #d1d5db; padding: 1rem; border-radius: 0.5rem; background: #f9fafb;">
-                        <h3 style="font-size: 0.875rem; font-weight: 600; color: #065f46; margin-bottom: 0.5rem;">Total Due</h3>
-                        <div style="font-size: 1.5rem; font-weight: bold;">${formatCurrency(displayStats.total_due)}</div>
-                    </div>
-                </div>
-            </div>
-        `;
+    useEffect(() => setCurrentPage(1), [search, filterStatus, rowsPerPage]);
+    useEffect(() => setCurrentPage((page) => Math.min(page, totalPages)), [totalPages]);
 
-        let tableHtml = '<table style="width: 100%; border-collapse: collapse; margin-top: 1rem;"><thead><tr style="background: #f3f4f6; border-bottom: 2px solid #d1d5db;">';
-        const headers = ['ID', 'Member', 'Type', 'Principal', 'Terms', 'Total Due', 'Date', 'Status', 'Next Due'];
-        headers.forEach(header => {
-            tableHtml += `<th style="padding: 12px 8px; text-align: left; font-weight: 600; border: 1px solid #d1d5db; font-size: 0.875rem;">${header}</th>`;
-        });
-        tableHtml += '</tr></thead><tbody>';
-
-        filteredLoans.forEach(loan => {
-            tableHtml += '<tr style="border-bottom: 1px solid #e5e7eb;">';
-            tableHtml += `<td style="padding: 12px 8px; font-family: monospace; font-size: 0.875rem; font-weight: 500;">${loan.member_id}</td>`;
-            tableHtml += `<td style="padding: 12px 8px; font-weight: 500;">${loan.member_name}</td>`;
-            tableHtml += `<td style="padding: 12px 8px;">${loan.loan_type}</td>`;
-            tableHtml += `<td style="padding: 12px 8px; text-align: right; font-family: monospace;">${formatCurrency(loan.principal)}</td>`;
-            tableHtml += `<td style="padding: 12px 8px; text-align: right;">${loan.terms} mo</td>`;
-            tableHtml += `<td style="padding: 12px 8px; text-align: right; font-weight: 600; font-family: monospace;">${formatCurrency(loan.total_due)}</td>`;
-            tableHtml += `<td style="padding: 12px 8px;">${formatDate(loan.date)}</td>`;
-            tableHtml += `<td style="padding: 12px 8px;"><span style="padding: 4px 8px; border-radius: 4px; background: ${loan.status === 'overdue' ? '#fee2e2' : '#ecfdf5'}; color: ${loan.status === 'overdue' ? '#dc2626' : '#059669'}; font-size: 0.75rem; font-weight: 500;">${loan.status}</span></td>`;
-            tableHtml += `<td style="padding: 12px 8px;">${formatDate(loan.next_due_date || '')}</td>`;
-            tableHtml += '</tr>';
-        });
-
-        tableHtml += '</tbody></table>';
-
-        const printContent = `
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <title>${title}</title>
-                <style>
-                    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 40px; color: #111827; line-height: 1.5; }
-                    @media print { body { margin: 0; } }
-                    table th { background: #f3f4f6 !important; }
-                    table td, table th { border: 1px solid #d1d5db !important; }
-                    h2 { color: #059669 !important; }
-                </style>
-            </head>
-            <body>
-                ${statsHtml}
-                ${tableHtml}
-                <div style="margin-top: 2rem; font-size: 0.875rem; color: #6b7280; text-align: center;">
-                    Printed on ${new Date().toLocaleString('en-PH')}<br/>
-                    Filtered results: ${filteredLoans.length} shown
-                </div>
-            </body>
-            </html>
-        `;
-
-        printWindow?.document.write(printContent);
-        printWindow?.document.close();
-        printWindow?.focus();
-        printWindow?.print();
-    };
+    const statusClass = (status: string) =>
+        status === 'overdue'
+            ? 'rounded-full border-red-200 bg-red-50 px-2.5 text-red-700'
+            : 'rounded-full border-emerald-200 bg-emerald-50 px-2.5 text-emerald-700';
 
     return (
         <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
             <Head title="GM Active Loans" />
-            
-            <div className="flex flex-1 flex-col gap-6 p-6">
-                {/* Stats Header */}
-                <div className="grid gap-4 md:grid-cols-3">
-                    <Card className="border-emerald-100 bg-white/50 shadow-sm">
-                        <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-sm font-medium text-emerald-800">Total Active Loans</CardTitle>
-                            <Clock className="h-4 w-4 text-emerald-600" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{displayStats.total_active}</div>
-                        </CardContent>
-                    </Card>
+            <style>{`
+                @media print {
+                    body { background: white !important; }
+                    .no-print, nav, aside, header { display: none !important; }
+                    .print-only { display: block !important; }
+                    .print-area { padding: 0 !important; }
+                    .print-card { border: 0 !important; box-shadow: none !important; }
+                    .print-table { overflow: visible !important; border-color: #94a3b8 !important; }
+                    .print-table table { width: 100% !important; border-collapse: collapse !important; font-size: 11px !important; }
+                    .print-table th { background: #e2e8f0 !important; color: #0f172a !important; text-transform: uppercase !important; }
+                    .print-table th, .print-table td { border: 1px solid #94a3b8 !important; padding: 6px !important; }
+                }
+            `}</style>
 
-                    <Card className="border-emerald-100 bg-white/50 shadow-sm">
-                        <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-sm font-medium text-emerald-800">Total Principal</CardTitle>
-                             <div  className="h-4 w-4 text-green-600">₱</div>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{formatCurrency(displayStats.total_principal)}</div>
-                        </CardContent>
-                    </Card>
-
-                    <Card className="border-emerald-100 bg-white/50 shadow-sm">
-                        <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-sm font-medium text-emerald-800">Total Due</CardTitle>
-                            <div  className="h-4 w-4 text-green-600">₱</div>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{formatCurrency(displayStats.total_due)}</div>
-                        </CardContent>
-                    </Card>
+            <div className="print-area flex flex-1 flex-col gap-6 p-6">
+                <div className="print-only hidden border-b border-slate-300 pb-4">
+                    <h1 className="text-xl font-bold text-slate-950">CAPS Loan Management</h1>
+                    <p className="text-sm text-slate-600">GM Active Loans Report</p>
+                    <p className="text-xs text-slate-500">Date generated: {new Date().toLocaleString('en-PH')}</p>
                 </div>
 
-                {/* Controls */}
-                <Card className="border-emerald-100">
-                    <CardHeader className="flex flex-row items-center justify-between pb-4">
-                        <CardTitle className="text-lg font-bold text-emerald-900">Active Loans</CardTitle>
-                        <div className="flex items-center gap-2">
-                            <div className="flex gap-2">
-                                <Input
-                                    placeholder="Search member ID or name..."
-                                    value={search}
-                                    onChange={(e) => setSearch(e.target.value)}
-                                    className="w-64 max-w-sm"
-                                />
-                                <Button variant="outline" size="sm" onClick={() => setSearch('')}>
-                                    <Search className="h-4 w-4" />
-                                </Button>
-                            </div>
+                <div className="grid gap-4 md:grid-cols-3">
+                    {[
+                        ['Total Active Loans', stats.total_active, <Clock key="clock" className="h-4 w-4 text-slate-500" />],
+                        ['Total Principal', formatCurrency(stats.total_principal), <span key="php" className="text-xs font-semibold text-slate-500">PHP</span>],
+                        ['Total Due', formatCurrency(stats.total_due), <span key="php2" className="text-xs font-semibold text-slate-500">PHP</span>],
+                    ].map(([label, value, icon]) => (
+                        <Card key={String(label)} className="border-slate-200 bg-white shadow-sm">
+                            <CardHeader className="flex flex-row items-center justify-between pb-2">
+                                <CardTitle className="text-sm font-medium text-slate-700">{label}</CardTitle>
+                                {icon}
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold text-slate-950">{value}</div>
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
+
+                <Card className="print-card border-slate-200 shadow-sm">
+                    <CardHeader className="no-print flex flex-col gap-4 pb-4 lg:flex-row lg:items-center lg:justify-between">
+                        <CardTitle className="text-lg font-bold text-slate-900">Active Loans</CardTitle>
+                        <div className="flex flex-wrap items-center gap-2">
+                            <Input placeholder="Search member ID or name..." value={search} onChange={(event) => setSearch(event.target.value)} className="w-64 max-w-sm border-slate-300" />
+                            <Button variant="outline" size="sm" onClick={() => setSearch('')}>
+                                <Search className="h-4 w-4" />
+                            </Button>
                             <Button variant="outline" size="sm" onClick={() => setFilterStatus('all')}>
-                                <Filter className="h-4 w-4 mr-1" />
+                                <Filter className="mr-1 h-4 w-4" />
                                 All ({displayLoans.length})
                             </Button>
-                            <Button variant="outline" size="sm" onClick={printTable}>
-                                <Printer className="h-4 w-4 mr-1" />
+                            <Button size="sm" onClick={() => window.print()}>
+                                <Printer className="mr-1 h-4 w-4" />
                                 Print
                             </Button>
                         </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="rounded-md border border-emerald-100 overflow-hidden">
+                        <div className="print-table overflow-hidden rounded-md border border-slate-200">
                             <Table>
                                 <TableHeader>
-                                    <TableRow className="hover:bg-transparent border-b border-emerald-200">
-                                        <TableHead className="w-16 font-semibold text-emerald-800">ID</TableHead>
-                                        <TableHead className="font-semibold text-emerald-800">Member</TableHead>
-                                        <TableHead className="font-semibold text-emerald-800">Type</TableHead>
-                                        <TableHead className="font-semibold text-emerald-800 text-right">Principal</TableHead>
-                                        <TableHead className="w-20 font-semibold text-emerald-800 text-right">Terms</TableHead>
-                                        <TableHead className="font-semibold text-emerald-800 text-right">Total Due</TableHead>
-                                        <TableHead className="w-28 font-semibold text-emerald-800">Date</TableHead>
-                                        <TableHead className="w-24 font-semibold text-emerald-800">Status</TableHead>
-                                        <TableHead className="w-32 font-semibold text-emerald-800">Action</TableHead>
+                                    <TableRow className="border-b border-slate-200 bg-slate-100 hover:bg-slate-100">
+                                        {['ID', 'Member', 'Type', 'Principal', 'Terms', 'Total Due', 'Date', 'Status', 'Action'].map((head) => (
+                                            <TableHead key={head} className={`${['Principal', 'Terms', 'Total Due'].includes(head) ? 'text-right ' : ''}${head === 'Action' ? 'no-print ' : ''}font-bold uppercase tracking-wide text-slate-700`}>
+                                                {head}
+                                            </TableHead>
+                                        ))}
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {filteredLoans.length > 0 ? (
-                                        filteredLoans.map((loan) => (
-                                            <TableRow key={loan.id} className="hover:bg-emerald-50/50 border-b border-emerald-50 transition-colors">
+                                    {paginatedLoans.length > 0 ? (
+                                        paginatedLoans.map((loan) => (
+                                            <TableRow key={loan.id} className="border-b border-slate-100 transition-colors hover:bg-slate-50">
                                                 <TableCell className="font-mono text-sm font-medium">{loan.member_id}</TableCell>
-                                                <TableCell className="font-medium">{loan.member_name}</TableCell>
+                                                <TableCell className="font-medium text-slate-900">{loan.member_name}</TableCell>
                                                 <TableCell>{loan.loan_type}</TableCell>
                                                 <TableCell className="text-right font-mono">{formatCurrency(loan.principal)}</TableCell>
                                                 <TableCell className="text-right">{loan.terms} mo</TableCell>
                                                 <TableCell className="text-right font-mono font-semibold">{formatCurrency(loan.total_due)}</TableCell>
                                                 <TableCell>{formatDate(loan.date)}</TableCell>
                                                 <TableCell>
-                                                    <Badge variant={getStatusVariant(loan.status)} className="capitalize">
+                                                    <Badge variant="outline" className={statusClass(loan.status)}>
                                                         {loan.status}
                                                     </Badge>
                                                 </TableCell>
-                                                <TableCell>
+                                                <TableCell className="no-print">
                                                     <Button variant="outline" size="sm" asChild>
-<Link href={`/dashboards/Gm/active-loans/${loan.id}/view`}>
-
+                                                        <Link href={`/dashboards/Gm/active-loans/${loan.id}/view`}>
                                                             <Eye className="h-4 w-4" />
                                                             View
                                                         </Link>
@@ -325,8 +164,12 @@ export default function GMActiveLoan({ active_loans = [], stats = { total_active
                                         ))
                                     ) : (
                                         <TableRow>
-                                            <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
-                                                No active loans found matching your search/filter.
+                                            <TableCell colSpan={9} className="h-32 text-center">
+                                                <div className="flex flex-col items-center gap-2 text-slate-500">
+                                                    <Clock className="h-8 w-8 text-slate-300" />
+                                                    <span className="font-medium">No active loans found</span>
+                                                    <span className="text-sm">Try adjusting the search or filter.</span>
+                                                </div>
                                             </TableCell>
                                         </TableRow>
                                     )}
@@ -334,23 +177,9 @@ export default function GMActiveLoan({ active_loans = [], stats = { total_active
                             </Table>
                         </div>
 
-                        {/* Pagination Stub */}
-                        {filteredLoans.length > 10 && (
-                            <div className="flex items-center justify-between mt-4">
-                                <span className="text-sm text-muted-foreground">
-                                    Showing {filteredLoans.length} of {displayLoans.length} loans
-                                </span>
-                                <div className="flex gap-1">
-                                    <Button variant="outline" size="sm">Previous</Button>
-                                    <Button size="sm">Next</Button>
-                                </div>
-                            </div>
-                        )}
+                        <LoanTablePagination currentPage={currentPage} rowsPerPage={rowsPerPage} totalItems={filteredLoans.length} onPageChange={setCurrentPage} onRowsPerPageChange={setRowsPerPage} />
                     </CardContent>
                 </Card>
-
-                {/* Note */}
-               
             </div>
         </AppLayout>
     );

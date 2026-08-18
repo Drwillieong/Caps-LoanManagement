@@ -189,7 +189,7 @@ export default function LoanApplication({ pendingLoans }: GmLoanApplicationProps
                   size="lg"
                   className="mt-6 min-w-[300px] h-12 text-base font-semibold"
                 >
-                  <Link href="/dashboards/Gm">
+                  <Link href="/dashboard">
                     Return to Dashboard
                   </Link>
                 </Button>

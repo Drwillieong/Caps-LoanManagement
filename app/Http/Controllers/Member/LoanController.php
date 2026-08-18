@@ -14,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
+use App\Service\ApplyLoan\LoanComputationService;
 use App\Service\ApplyLoan\LoanEligibilityService;
 use App\Services\LoanService;
 
@@ -118,7 +119,7 @@ class LoanController extends Controller
             'eligibleCoMakers' => User::where('role', 'member')
                 ->where('id', '!=', $user->id)
                 ->whereDoesntHave('coMakerLoans', function ($q) {
-                    $q->where('status', 'accepted')
+                    $q->whereIn('status', ['accepted', 'pending'])
                       ->whereHas('loan', function ($q2) {
                           $q2->whereNotIn('status', ['rejected', 'paid_off']);
                       });
@@ -197,7 +198,7 @@ class LoanController extends Controller
 
         $loanType = LoanType::findOrFail($validated['loan_type_id']); // Needed for create
 
-        $computationService = new \App\Service\ApplyLoan\LoanComputationService();
+        $computationService = new LoanComputationService();
         $computed = $computationService->compute(
             $validated['principal_amount'],
             $validated['terms_months'],
@@ -301,36 +302,32 @@ class LoanController extends Controller
 
         $profile = $user->memberProfile;
 
-        // Share capital rule (x2)
-        $maxLoan = $profile->share_capital_balance * 2;
-        if ($validated['principal_amount'] > $maxLoan) {
-            return back()->withErrors([
-                'principal_amount' => 'Loan amount exceeds allowed share capital limit.'
-            ]);
-        }
-
-        // Monthly payment must not exceed 50% of basic salary
         $loanType = LoanType::findOrFail($validated['loan_type_id']);
-        $interest = ($validated['principal_amount'] * ($loanType->interest_rate_per_annum / 100))
-            * ($validated['terms_months'] / 12);
-        $total = $validated['principal_amount'] + $interest;
-        $monthly = $total / $validated['terms_months'];
-        
-        $maxMonthlyPayment = $profile->basic_salary / 2;
-        if ($monthly > $maxMonthlyPayment) {
-            return back()->withErrors([
-                'principal_amount' => 'Monthly payment exceeds 50% of your basic salary. Please increase the loan term or reduce the amount.'
-            ]);
-        }
+
+        $eligibilityService = new LoanEligibilityService();
+        $eligibilityService->check(
+            $user,
+            $validated['principal_amount'],
+            $validated['co_maker_user_id'],
+            $validated['loan_type_id'],
+            $validated['terms_months'],
+            $loan->id
+        );
+
+        $computed = app(LoanComputationService::class)->compute(
+            $validated['principal_amount'],
+            $validated['terms_months'],
+            $loanType->interest_rate_per_annum
+        );
 
  // Update loan
         $loan->update([
             'loan_type_id' => $loanType->id,
             'principal_amount' => $validated['principal_amount'],
             'terms_months' => $validated['terms_months'],
-            'interest_amount' => round($interest, 2),
-            'total_amount_due' => round($total, 2),
-            'monthly_amortization' => round($monthly, 2),
+            'interest_amount' => $computed['interest'],
+            'total_amount_due' => $computed['total'],
+            'monthly_amortization' => $computed['monthly'],
             'disbursement_method' => $validated['disbursement_method'],
             'status' => $loanType->requires_comaker
                 ? 'awaiting_comaker'
@@ -369,6 +366,33 @@ class LoanController extends Controller
         return redirect()
             ->route('member.pending-application')
             ->with('success', 'Loan application updated successfully.');
+    }
+
+    public function preview(Request $request)
+    {
+        $validated = $request->validate([
+            'loan_type_id' => 'required|exists:loan_types,id',
+            'principal_amount' => 'required|numeric|min:1',
+            'terms_months' => 'required|integer|min:1',
+        ]);
+
+        $loanType = LoanType::findOrFail($validated['loan_type_id']);
+        $computed = app(LoanComputationService::class)->compute(
+            (float) $validated['principal_amount'],
+            (int) $validated['terms_months'],
+            (float) $loanType->interest_rate_per_annum
+        );
+
+        return response()->json([
+            'principal' => round((float) $validated['principal_amount'], 2),
+            'annual_interest_rate' => (float) $loanType->interest_rate_per_annum,
+            'interest' => $computed['interest'],
+            'total' => $computed['total'],
+            'monthly' => $computed['monthly'],
+            'payment_per_schedule' => $computed['payment_per_schedule'],
+            'payments_per_year' => $computed['payments_per_year'],
+            'number_of_payments' => $computed['number_of_payments'],
+        ]);
     }
 
     public function pendingApplication()
@@ -500,7 +524,7 @@ class LoanController extends Controller
         $eligibleCoMakers = User::where('role', 'member')
             ->where('id', '!=', $user->id)
             ->whereDoesntHave('coMakerLoans', function ($q) {
-                $q->where('status', 'accepted')
+                $q->whereIn('status', ['accepted', 'pending'])
                   ->whereHas('loan', function ($q2) {
                       $q2->whereNotIn('status', ['rejected', 'paid_off']);
                   });
@@ -581,7 +605,7 @@ class LoanController extends Controller
                         'id' => $loanUser->id,
                         'name' => trim($loanUser->first_name . ($loanUser->middle_name ? ' ' . $loanUser->middle_name : '') . ' ' . $loanUser->last_name),
                         'email' => $loanUser->email,
-                        'employee_id' => $loanUser->memberProfile?->employee_id ?? 'N/A',
+                        'members_id' => $loanUser->memberProfile?->members_id ?? 'N/A',
                         'position' => $loanUser->memberProfile?->position ?? 'N/A',
                         'mobile_number' => $loanUser->memberProfile?->mobile_number ?? 'N/A',
                     ],
@@ -655,7 +679,7 @@ class LoanController extends Controller
             );
             // If accepted, check if loan can proceed (if co-maker was required)
             $requiredCoMakers = $loanType->requires_comaker ? 1 : 0;
-            $acceptedCoMakers = $loan->coMakers()->where('status', 'accepted')->count();
+            $acceptedCoMakers = $loan->coMakers()->whereIn('status', ['accepted', 'pending'])->count();
             
             // If co-maker is accepted and no more co-makers needed, update loan status
             if ($acceptedCoMakers >= $requiredCoMakers) {
@@ -754,7 +778,7 @@ class LoanController extends Controller
                 // - released: loan is active and being paid
                 $isBoundToLoan = Loan::whereHas('coMakers', function ($q) use ($member) {
                     $q->where('user_id', $member->id)
-                      ->where('status', 'accepted');
+                      ->whereIn('status', ['accepted', 'pending']);
                 })
                 ->whereNotIn('status', ['rejected', 'paid_off'])
                 ->exists();

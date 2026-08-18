@@ -4,9 +4,9 @@ namespace App\Http\Controllers\GmController;
 
 use App\Http\Controllers\Controller;
 use App\Models\Loan;
-use App\Models\LoanAmortization;
 use App\Models\LoanPayment;
 use App\Models\User;
+use App\Service\ApplyLoan\LoanComputationService;
 use App\Service\ApplyLoan\LoanEligibilityService;
 use App\Services\ActivityLogService;
 use App\Mail\SendMembersPass;
@@ -85,7 +85,7 @@ class GmController extends Controller
                         'id' => $user->id,
                         'name' => trim($user->first_name.($user->middle_name ? ' '.$user->middle_name : '').' '.$user->last_name),
                         'email' => $user->email,
-                        'member_id' => 'MEM-'.str_pad($user->id, 4, '0', STR_PAD_LEFT),
+                        'member_id' => ''.str_pad($user->id, 3, '0', STR_PAD_LEFT),
                         'basic_salary' => $memberProfile?->basic_salary ?? 0,
                         'share_capital_balance' => $memberProfile?->share_capital_balance ?? 0,
                     ],
@@ -245,45 +245,6 @@ class GmController extends Controller
     }
 
     /**
-     * Generate amortization schedule for approved loan
-     * Creates two payments per month (10th and 25th)
-     */
-    private function generateAmortizationSchedule(Loan $loan)
-    {
-        $monthlyPayment = $loan->monthly_amortization;
-        $terms = $loan->terms_months;
-        $startDate = now()->addMonth();
-
-        // Calculate bi-monthly payment (half of monthly payment)
-        $biMonthlyPayment = $monthlyPayment / 2;
-
-        // Generate two installments per month (10th and 25th)
-        $installmentNumber = 1;
-
-        for ($month = 0; $month < $terms; $month++) {
-            // First payment: 10th of each month
-            $dueDate10 = $startDate->copy()->addMonths($month)->day(10);
-            LoanAmortization::create([
-                'loan_id' => $loan->id,
-                'installment_number' => $installmentNumber++,
-                'amount_due' => $biMonthlyPayment,
-                'due_date' => $dueDate10,
-                'status' => 'pending',
-            ]);
-
-            // Second payment: 25th of each month
-            $dueDate25 = $startDate->copy()->addMonths($month)->day(25);
-            LoanAmortization::create([
-                'loan_id' => $loan->id,
-                'installment_number' => $installmentNumber++,
-                'amount_due' => $biMonthlyPayment,
-                'due_date' => $dueDate25,
-                'status' => 'pending',
-            ]);
-        }
-    }
-
-    /**
      * Get count of pending GM validations for dashboard
      */
     public function pendingCount()
@@ -325,7 +286,7 @@ class GmController extends Controller
                         'id' => $user->id,
                         'name' => trim($user->first_name.($user->middle_name ? ' '.$user->middle_name : '').' '.$user->last_name),
                         'email' => $user->email,
-                        'member_id' => 'MEM-'.str_pad($user->id, 4, '0', STR_PAD_LEFT),
+                        'member_id' => ''.str_pad($user->id, 3, '0', STR_PAD_LEFT),
                         'basic_salary' => $memberProfile?->basic_salary ?? 0,
                         'share_capital_balance' => $memberProfile?->share_capital_balance ?? 0,
                     ],
@@ -410,7 +371,7 @@ class GmController extends Controller
                 'id' => $user->id,
                 'name' => trim($user->first_name.($user->middle_name ? ' '.$user->middle_name : '').' '.$user->last_name),
                 'email' => $user->email,
-                'member_id' => 'MEM-'.str_pad($user->id, 4, '0', STR_PAD_LEFT),
+                'member_id' => ''.str_pad($user->id, 3, '0', STR_PAD_LEFT),
                 'basic_salary' => $memberProfile?->basic_salary ?? 0,
                 'share_capital_balance' => $memberProfile?->share_capital_balance ?? 0,
             ],
@@ -510,10 +471,12 @@ class GmController extends Controller
             (int) $validated['terms_months']
         );
 
-        // Compute loan values
-        $interest = ($validated['principal_amount'] * ($loanType->interest_rate_per_annum / 100)) * ($validated['terms_months'] / 12);
-        $totalAmount = $validated['principal_amount'] + $interest;
-        $monthlyAmort = $totalAmount / $validated['terms_months'];
+        // Compute loan values using the same amortized PMT logic as member applications.
+        $computed = app(LoanComputationService::class)->compute(
+            (float) $validated['principal_amount'],
+            (int) $validated['terms_months'],
+            (float) $loanType->interest_rate_per_annum
+        );
 
         // Create loan
         $loan = \App\Models\Loan::create([
@@ -521,9 +484,9 @@ class GmController extends Controller
             'loan_type_id' => $loanType->id,
             'principal_amount' => $validated['principal_amount'],
             'terms_months' => $validated['terms_months'],
-            'interest_amount' => $interest,
-            'total_amount_due' => $totalAmount,
-            'monthly_amortization' => $monthlyAmort,
+            'interest_amount' => $computed['interest'],
+            'total_amount_due' => $computed['total'],
+            'monthly_amortization' => $computed['monthly'],
             'status' => 'pending_gm_review',
             'created_by_admin' => true,
             'created_by' => $request->user()->id,
@@ -596,18 +559,20 @@ class GmController extends Controller
             return response()->json(['error' => $e->getMessage()], 422);
         }
 
-        $interest = ($validated['principal_amount'] * ($loanType->interest_rate_per_annum / 100)) * ($validated['terms_months'] / 12);
-        $totalAmount = $validated['principal_amount'] + $interest;
-        $monthlyAmort = $totalAmount / $validated['terms_months'];
+        $computed = app(LoanComputationService::class)->compute(
+            (float) $validated['principal_amount'],
+            (int) $validated['terms_months'],
+            (float) $loanType->interest_rate_per_annum
+        );
 
         $loan = \App\Models\Loan::create([
             'user_id' => $member->id,
             'loan_type_id' => $loanType->id,
             'principal_amount' => $validated['principal_amount'],
             'terms_months' => $validated['terms_months'],
-            'interest_amount' => $interest,
-            'total_amount_due' => $totalAmount,
-            'monthly_amortization' => $monthlyAmort,
+            'interest_amount' => $computed['interest'],
+            'total_amount_due' => $computed['total'],
+            'monthly_amortization' => $computed['monthly'],
             'status' => 'pending_gm_review',
             'created_by_admin' => true,
             'created_by' => $request->user()->id,
@@ -670,7 +635,7 @@ class GmController extends Controller
                     'status' => $user->status,
                     'created_at' => $user->created_at->format('Y-m-d H:i:s'),
                     'member_profile' => $profile ? [
-                        'employee_id' => $profile->employee_id,
+                        'members_id' => $profile->members_id,
                         'payroll_id' => $profile->payroll_id,
                         'first_name' => $profile->first_name,
                         'middle_name' => $profile->middle_name,
@@ -780,7 +745,7 @@ class GmController extends Controller
             'ABCDEFGHJKLMNPQRSTUVWXYZ',
             'abcdefghijkmnopqrstuvwxyz',
             '23456789',
-            '!@#$%^&*',
+           
         ];
 
         $characters = implode('', $groups);

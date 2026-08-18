@@ -28,6 +28,7 @@ import { LiveClock } from '@/components/live-clock';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import {
@@ -143,7 +144,7 @@ interface Beneficiary {
 
 interface MemberProfileData {
     user_id: number;
-    employee_id: string;
+    members_id: string;
     first_name: string;
     middle_name?: string;
     last_name: string;
@@ -193,16 +194,18 @@ interface Props {
     isAdmin: boolean;
     isNewUser: boolean;
     profileCompleted: boolean;
-    targetEmployeeId: string;
+    targetMembersId: string;
     targetUserName: string;
     hasPendingUpdateRequest?: boolean;
 }
 
-export default function MembersProfile({ user, memberProfile, beneficiaries, isAdmin, isNewUser, profileCompleted, targetEmployeeId, targetUserName, hasPendingUpdateRequest = false }: Props) {
+export default function MembersProfile({ user, memberProfile, beneficiaries, isAdmin, isNewUser, profileCompleted, targetMembersId, targetUserName, hasPendingUpdateRequest = false }: Props) {
     const isRejected = user.status === 'rejected'
     const isPending = user.status === 'pending'
     const [isEditing, setIsEditing] = useState(false);
     const [isStatusConfirmOpen, setIsStatusConfirmOpen] = useState(false);
+    const [deactivationReason, setDeactivationReason] = useState('');
+    const [reasonError, setReasonError] = useState('');
     
     const [previewUrl, setPreviewUrl] = useState('');
     
@@ -261,7 +264,7 @@ export default function MembersProfile({ user, memberProfile, beneficiaries, isA
     // Initialize form data from existing profile or defaults
     const [formData, setFormData] = useState<any>({
         email: user.email || '',
-        employee_id: memberProfile?.employee_id || '',
+        members_id: memberProfile?.members_id || '',
         first_name: memberProfile?.first_name || '',
         middle_name: memberProfile?.middle_name || '',
         last_name: memberProfile?.last_name || '',
@@ -324,14 +327,23 @@ export default function MembersProfile({ user, memberProfile, beneficiaries, isA
 
     const requestAccountStatusChange = () => {
         if (!memberProfile) return;
+        setDeactivationReason('');
+        setReasonError('');
         setIsStatusConfirmOpen(true);
     };
 
     const handleConfirmStatusChange = () => {
         if (!memberProfile) return;
 
-        router.post(`/dashboards/HR/Members/${targetEmployeeId}/status-change-request`, {
+        // Deactivation requires a reason; reactivation does not.
+        if (proposedStatus === 'inactive' && !deactivationReason.trim()) {
+            setReasonError('A reason for deactivation is required.');
+            return;
+        }
+
+        router.post(`/dashboards/HR/Members/${targetMembersId}/status-change-request`, {
             proposed_status: proposedStatus,
+            reason: proposedStatus === 'inactive' ? deactivationReason.trim() : null,
         }, {
             preserveScroll: true,
             onSuccess: () => setIsStatusConfirmOpen(false),
@@ -383,7 +395,7 @@ export default function MembersProfile({ user, memberProfile, beneficiaries, isA
 
         // Personal Information
         const personalInfo: string[][] = [
-            ['Employee ID:', memberProfile.employee_id],
+            ['Members ID:', memberProfile.members_id],
             ['First Name:', memberProfile.first_name],
             ['Middle Name:', memberProfile.middle_name || 'N/A'],
             ['Last Name:', memberProfile.last_name],
@@ -478,7 +490,7 @@ export default function MembersProfile({ user, memberProfile, beneficiaries, isA
 
     const formActionUrl = hasPendingUpdateRequest 
         ? '#' 
-        : `/dashboards/HR/EditMember/${targetEmployeeId}/update-request`;
+        : `/dashboards/HR/EditMember/${targetMembersId}/update-request`;
     const formMethod = 'post';
 
     return (
@@ -612,7 +624,7 @@ export default function MembersProfile({ user, memberProfile, beneficiaries, isA
                     method={formMethod}
                     action={formActionUrl}
                     transform={() => {
-                        const { employee_id, ...pendingData } = formData as any;
+                        const { members_id, ...pendingData } = formData as any;
                         const cleanedPhone = parsePhone(
                             pendingData.permanent_mobile_number || pendingData.mobile_number || '',
                         );
@@ -629,7 +641,7 @@ export default function MembersProfile({ user, memberProfile, beneficiaries, isA
                         pendingData.beneficiaries = normalizeBeneficiariesForSubmit(pendingData.beneficiaries || []);
 
                         return {
-                            member_id: targetEmployeeId,
+                            member_id: targetMembersId,
                             pending_data: pendingData,
                         };
                     }}
@@ -736,18 +748,18 @@ export default function MembersProfile({ user, memberProfile, beneficiaries, isA
                                        
 
                                         <div className="grid gap-2">
-                                            <Label htmlFor="employee_id">
+                                            <Label htmlFor="members_id">
                                                 Member ID <span className="text-red-500">*</span>
                                             </Label>
                                             <Input
-                                                id="employee_id"
-                                                name="employee_id"
-                                                value={formData.employee_id}
+                                                id="members_id"
+                                                name="members_id"
+                                                value={formData.members_id}
                                                 placeholder="e.g., EMP-001"
                                                 readOnly
                                                 disabled
                                             />
-                                            <InputError message={errors.employee_id} />
+                                            <InputError message={errors.members_id} />
                                         </div>
 
                                         <div className="grid gap-2">
@@ -1543,6 +1555,29 @@ export default function MembersProfile({ user, memberProfile, beneficiaries, isA
                                             {memberProfile?.first_name} {memberProfile?.last_name}&apos;s account?
                                         </DialogDescription>
                                     </DialogHeader>
+
+                                    {proposedStatus === 'inactive' && (
+                                        <div className="space-y-2 py-2">
+                                            <Label htmlFor="deactivation_reason" className="text-red-700">
+                                                Reason for Deactivation <span className="text-red-500">*</span>
+                                            </Label>
+                                            <Textarea
+                                                id="deactivation_reason"
+                                                placeholder="Explain why this account should be deactivated..."
+                                                value={deactivationReason}
+                                                onChange={(e) => {
+                                                    setDeactivationReason(e.target.value);
+                                                    if (e.target.value.trim()) setReasonError('');
+                                                }}
+                                                className="min-h-[120px] resize-y border-red-200 focus-visible:ring-red-500/30"
+                                                aria-invalid={!!reasonError}
+                                            />
+                                            {reasonError && (
+                                                <p className="text-sm text-red-600">{reasonError}</p>
+                                            )}
+                                        </div>
+                                    )}
+
                                     <DialogFooter>
                                         <Button
                                             type="button"

@@ -27,11 +27,14 @@ export interface NavItem {
 
 export interface NotificationBadges {
     unreadMemberValidationCount?: number;
+    pendingMemberSignupsCount?: number;
+    pendingProfileEditsCount?: number;
     pendingComakerRequestsCount?: number;
     pendingGmLoanValidationCount?: number;
     pendingCreditCommitteeCount?: number;
     gmApprovedLoanActionCount?: number;
     hasMemberStatusChanged?: number | boolean;
+    unreadNotificationsCount?: number;
 }
 
 export interface SharedData {
@@ -68,7 +71,7 @@ export interface LoanType {
 
 export interface MemberProfile {
     user_id: number;
-    employee_id: string;
+    members_id: string;
     payroll_id?: string | null;
     first_name: string;
     middle_name?: string;
@@ -187,7 +190,7 @@ export interface CoMakerRequest {
         id: number;
         name: string;
         email: string;
-        employee_id: string;
+        members_id: string;
         position: string;
         mobile_number: string;
         facebook_account_name?: string | null;
@@ -302,6 +305,10 @@ export interface MemberActiveLoanAmortization {
     installment_number: number;
     due_date: string | null;
     amount_due: number;
+    principal_amount?: number | null;
+    interest_amount?: number | null;
+    beginning_balance?: number | null;
+    ending_balance?: number | null;
     amount_paid: number;
     status: string;
 }

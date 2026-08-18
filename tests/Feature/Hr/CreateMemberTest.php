@@ -59,7 +59,7 @@ test('hr can create a member with a generated temporary password and welcome ema
 
     expect($member->role)->toBe('member');
     expect($member->memberProfile)
-        ->employee_id->toBe('001')
+        ->members_id->toBe('001')
         ->basic_salary->toBe('25000.00')
         ->share_capital_balance->toBe('15000.00')
         ->place_of_birth->toBe('Calamba City, Laguna')

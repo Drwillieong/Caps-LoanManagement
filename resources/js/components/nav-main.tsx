@@ -26,11 +26,14 @@ import { ChevronDown } from 'lucide-react';
 
 const sidebarBadgeKeys: Record<keyof NotificationBadges, string> = {
     unreadMemberValidationCount: 'member_validation',
+    pendingMemberSignupsCount: 'member_validation',
+    pendingProfileEditsCount: 'profile_edits',
     pendingComakerRequestsCount: 'comaker_requests',
     pendingGmLoanValidationCount: 'gm_loan_validation',
     pendingCreditCommitteeCount: 'credit_committee',
     gmApprovedLoanActionCount: 'gm_approved_loan_action',
     hasMemberStatusChanged: 'member_status_changed',
+    unreadNotificationsCount: 'unread_notifications',
 };
 
 function getBadgeValue(

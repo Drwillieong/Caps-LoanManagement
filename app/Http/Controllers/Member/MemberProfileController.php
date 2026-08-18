@@ -16,11 +16,11 @@ class MemberProfileController extends Controller
 {
     use \App\Traits\HasNotificationCount;
 
-    private function profileRules(?string $employeeId = null, ?int $userId = null): array
+    private function profileRules(?string $membersId = null, ?int $userId = null): array
     {
         return [
-            'employee_id' => ['required', 'string', 'max:255', Rule::unique('member_profiles', 'employee_id')->ignore($employeeId, 'employee_id')],
-            'payroll_id' => ['nullable', 'string', 'max:255', Rule::unique('member_profiles', 'payroll_id')->ignore($employeeId, 'employee_id')],
+            'members_id' => ['required', 'string', 'max:255', Rule::unique('member_profiles', 'members_id')->ignore($membersId, 'members_id')],
+            'payroll_id' => ['nullable', 'string', 'max:255', Rule::unique('member_profiles', 'payroll_id')->ignore($membersId, 'members_id')],
             'profile_picture' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'first_name' => 'required|string|max:255',
             'middle_name' => 'nullable|string|max:255',
@@ -84,9 +84,9 @@ class MemberProfileController extends Controller
     /**
      * Display a specific member's profile form (for HR).
      */
-    public function editMember(Request $request, $employeeId)
+    public function editMember(Request $request, $membersId)
     {
-        $memberProfile = MemberProfile::with(['user', 'beneficiaries'])->findOrFail($employeeId);
+        $memberProfile = MemberProfile::with(['user', 'beneficiaries'])->findOrFail($membersId);
         $targetUser = $memberProfile->user;
 
         // Check if current user is HR
@@ -103,7 +103,7 @@ class MemberProfileController extends Controller
             'isNewUser' => false,
             'isAdmin' => true,
             'profileCompleted' => $targetUser->hasCompletedProfile(),
-            'targetEmployeeId' => $memberProfile->employee_id,
+            'targetMembersId' => $memberProfile->members_id,
             'targetUserName' => $targetUser->first_name.' '.$targetUser->last_name,
             'unread_notifications_count' => $this->getMemberUnreadNotificationCount($request),
         ]);
@@ -115,7 +115,7 @@ class MemberProfileController extends Controller
     public function store(Request $request)
     {
         $user = $request->user();
-        $validated = $request->validate($this->profileRules($user->memberProfile?->employee_id, $user->id));
+        $validated = $request->validate($this->profileRules($user->memberProfile?->members_id, $user->id));
 
         if (! empty($validated['email']) && $validated['email'] !== $user->email) {
             $user->email = $validated['email'];
@@ -160,9 +160,9 @@ class MemberProfileController extends Controller
     /**
      * Update a specific member's profile (for HR).
      */
-    public function updateMember(Request $request, $employeeId)
+    public function updateMember(Request $request, $membersId)
     {
-        $memberProfile = MemberProfile::with('user')->findOrFail($employeeId);
+        $memberProfile = MemberProfile::with('user')->findOrFail($membersId);
         $targetUser = $memberProfile->user;
 
         // Check if current user is HR
@@ -173,7 +173,7 @@ class MemberProfileController extends Controller
             abort(403, 'Unauthorized');
         }
 
-        $validated = $request->validate($this->profileRules($employeeId, $targetUser->id));
+        $validated = $request->validate($this->profileRules($membersId, $targetUser->id));
 
         if (! empty($validated['email']) && $validated['email'] !== $targetUser->email) {
             $targetUser->email = $validated['email'];
@@ -181,18 +181,18 @@ class MemberProfileController extends Controller
         }
 
         if ($request->hasFile('profile_picture')) {
-            $memberProfile = MemberProfile::firstOrNew(['employee_id' => $employeeId]);
+            $memberProfile = MemberProfile::firstOrNew(['members_id' => $membersId]);
             if ($memberProfile->profile_picture) {
                 Storage::disk('public')->delete('profiles/'.$memberProfile->profile_picture);
             }
-            $filename = $employeeId.'_'.time().'.'.$request->file('profile_picture')->getClientOriginalExtension();
+            $filename = $membersId.'_'.time().'.'.$request->file('profile_picture')->getClientOriginalExtension();
             $request->file('profile_picture')->storeAs('profiles', $filename, 'public');
             $validated['profile_picture'] = $filename;
         }
 
         // Update member profile
         $memberProfile = MemberProfile::updateOrCreate(
-            ['employee_id' => $employeeId],
+            ['members_id' => $membersId],
             $validated
         );
 

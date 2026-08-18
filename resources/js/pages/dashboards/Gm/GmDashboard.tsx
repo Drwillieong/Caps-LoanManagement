@@ -262,10 +262,10 @@ export default function GmDashboard({
                 {/* Page Header */}
                 <div className="flex flex-col gap-1">
                     <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
-                        Executive Dashboard
+                       
                     </h1>
                     <p className="text-muted-foreground">
-                        Cooperative operational overview and management hub
+                        
                     </p>
                 </div>
 

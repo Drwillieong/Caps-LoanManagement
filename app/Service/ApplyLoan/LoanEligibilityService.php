@@ -9,7 +9,7 @@ use App\Services\LoanService;
 
 class LoanEligibilityService
 {
-    public function check(User $borrower, float $amount, ?int $coMakerId, int $loanTypeId, int $termsMonths): void
+    public function check(User $borrower, float $amount, ?int $coMakerId, int $loanTypeId, int $termsMonths, ?int $ignoreLoanId = null): void
     {
         $profile = $borrower->memberProfile;
 
@@ -19,6 +19,7 @@ class LoanEligibilityService
 
         $hasPendingLoan = Loan::where('user_id', $borrower->id)
             ->whereIn('status', ['awaiting_comaker', 'pending_gm_review', 'pending_cc_review'])
+            ->when($ignoreLoanId, fn ($query) => $query->where('id', '!=', $ignoreLoanId))
             ->exists();
 
         if ($hasPendingLoan) {
@@ -33,20 +34,18 @@ class LoanEligibilityService
         }
 
         // Monthly payment must not exceed 50% of basic salary
-        $loanType = LoanType::find($loanTypeId);
-        if ($loanType) {
-            $computationService = new LoanComputationService();
-            $computed = $computationService->compute(
-                $amount,
-                $termsMonths,
-                $loanType->interest_rate_per_annum
-            );
-            
-            $maxMonthlyPayment = $profile->basic_salary / 2;
-            
-            if ($computed['monthly'] > $maxMonthlyPayment) {
-                abort(422, 'Monthly payment exceeds 50% of your basic salary. Please increase the loan term or reduce the amount.');
-            }
+        $loanType = LoanType::findOrFail($loanTypeId);
+        $computationService = new LoanComputationService();
+        $computed = $computationService->compute(
+            $amount,
+            $termsMonths,
+            $loanType->interest_rate_per_annum
+        );
+
+        $maxMonthlyPayment = $profile->basic_salary / 2;
+
+        if ($computed['monthly'] > $maxMonthlyPayment) {
+            abort(422, 'Monthly payment exceeds 50% of your basic salary. Please increase the loan term or reduce the amount.');
         }
 
         // Check existing loans are all >=75% paid
@@ -66,13 +65,14 @@ class LoanEligibilityService
 
         // Co-maker validation
         if ($coMakerId) {
-            $this->validateCoMaker($coMakerId);
+            $this->validateCoMaker($coMakerId, $ignoreLoanId);
         }
     }
 
-    protected function validateCoMaker(int $coMakerId): void
+    protected function validateCoMaker(int $coMakerId, ?int $ignoreLoanId = null): void
     {
         $isAlreadyCoMaker = Loan::whereIn('status', ['approved', 'released'])
+            ->when($ignoreLoanId, fn ($query) => $query->where('id', '!=', $ignoreLoanId))
             ->whereHas('coMakers', function ($q) use ($coMakerId) {
                 $q->where('user_id', $coMakerId);
             })

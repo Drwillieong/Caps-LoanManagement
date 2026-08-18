@@ -62,6 +62,10 @@ export default function ApplyLoan({
     
     const isEditing = !!editingLoan;
 
+    // NOTE: No client-side timestamp is included in this payload. The loan's
+    // application timestamp (created_at) is generated server-side in Asia/Manila
+    // (see config/app.php 'timezone'), so relying on the client clock would risk
+    // timezone-shifted / inaccurate timestamps. Only user-entered fields are sent.
     const { data, setData, post, processing, errors, put } = useForm({
         loan_type_id: editingLoan?.loan_type_id?.toString() || '',
         principal_amount: editingLoan?.principal_amount?.toString() || '',
@@ -81,6 +85,14 @@ export default function ApplyLoan({
     const [isComakerPopoverOpen, setIsComakerPopoverOpen] = useState(false);
     const [isAgreementModalOpen, setIsAgreementModalOpen] = useState(false);
     const [lockoutRemaining, setLockoutRemaining] = useState<number | null>(null);
+    const [serverComputed, setServerComputed] = useState<{
+        interest: string;
+        total: string;
+        monthly: string;
+        payment_per_schedule: string;
+        payments_per_year: number;
+        number_of_payments: number;
+    } | null>(null);
 
     // Handle co_maker_id from ChooseComaker page
     useEffect(() => {
@@ -393,27 +405,64 @@ export default function ApplyLoan({
         (type) => type.id === Number(data.loan_type_id)
     );
 
-const computed = useMemo(() => {
+    useEffect(() => {
         if (!selectedLoanType || !data.principal_amount || !data.terms_months) {
-            return null;
+            setServerComputed(null);
+            return;
         }
 
         const principal = parseNumber(data.principal_amount);
         const terms = parseNumber(data.terms_months);
-        const rate = selectedLoanType.interest_rate_per_annum ?? 0;
 
-        if (principal <= 0 || terms <= 0) return null;
+        if (principal <= 0 || terms <= 0) {
+            setServerComputed(null);
+            return;
+        }
 
-        const interest = (principal * (rate / 100)) * (terms / 12);
-        const total = principal + interest;
-        const monthly = total / terms;
+        const controller = new AbortController();
+        const csrf = document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content ?? '';
 
-        return {
-            interest: interest.toFixed(2),
-            total: total.toFixed(2),
-            monthly: monthly.toFixed(2),
-        };
-    }, [data.principal_amount, data.terms_months, data.loan_type_id, loanTypes]);
+        fetch('/dashboards/Member/ApplyLoan/preview', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                ...(csrf ? { 'X-CSRF-TOKEN': csrf } : {}),
+            },
+            body: JSON.stringify({
+                loan_type_id: Number(data.loan_type_id),
+                principal_amount: principal,
+                terms_months: terms,
+            }),
+            signal: controller.signal,
+        })
+            .then((response) => {
+                if (!response.ok) {
+                    throw new Error('Unable to preview loan computation.');
+                }
+
+                return response.json();
+            })
+            .then((preview) => {
+                setServerComputed({
+                    interest: Number(preview.interest || 0).toFixed(2),
+                    total: Number(preview.total || 0).toFixed(2),
+                    monthly: Number(preview.monthly || 0).toFixed(2),
+                    payment_per_schedule: Number(preview.payment_per_schedule || 0).toFixed(2),
+                    payments_per_year: Number(preview.payments_per_year || 0),
+                    number_of_payments: Number(preview.number_of_payments || 0),
+                });
+            })
+            .catch((previewError) => {
+                if (previewError.name !== 'AbortError') {
+                    setServerComputed(null);
+                }
+            });
+
+        return () => controller.abort();
+    }, [selectedLoanType, data.loan_type_id, data.principal_amount, data.terms_months]);
+
+    const computed = serverComputed;
 
     const maxTerm = useMemo(() => {
         const principal = parseNumber(data.principal_amount);
@@ -701,7 +750,7 @@ const computed = useMemo(() => {
 
                             {/* Computation summary */}
                             {computed && (
-                                <div className="grid grid-cols-3 gap-4 rounded-lg bg-emerald-50 border border-emerald-100 p-4">
+                                <div className="grid gap-4 rounded-lg border border-emerald-100 bg-emerald-50 p-4 sm:grid-cols-2 lg:grid-cols-4">
                                     <div className="text-center">
                                         <p className="text-xs text-emerald-600">Interest</p>
                                         <p className="font-semibold text-emerald-700">
@@ -712,6 +761,12 @@ const computed = useMemo(() => {
                                         <p className="text-xs text-emerald-600">Monthly</p>
                                         <p className="font-semibold text-emerald-700">
 {formatCurrency(computed.monthly)}
+                                        </p>
+                                    </div>
+                                    <div className="text-center">
+                                        <p className="text-xs text-emerald-600">Per Cutoff</p>
+                                        <p className="font-semibold text-emerald-700">
+                                            {formatCurrency(computed.payment_per_schedule)}
                                         </p>
                                     </div>
                                     <div className="text-center">

@@ -40,7 +40,7 @@ class SalaryDeductionReportExport implements FromCollection, ShouldAutoSize, Wit
     {
         // Ensure strict column order.
         return [
-            $row['employee_id'],
+            $row['members_id'],
             $row['payroll_id'],
             $row['employee_name'],
             $row['cutoff_date'],

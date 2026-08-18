@@ -1,4 +1,5 @@
-import { Link, usePage } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
+import { useEffect } from 'react';
 import {
     BadgeDollarSign,
     Banknote,
@@ -12,6 +13,7 @@ import {
     History,
     LayoutGrid,
     Logs,
+    Bell,
     ShieldCheck,
     UserCircle2,
     Users,
@@ -47,8 +49,9 @@ const mainNavItems: NavItem[] = [
 const hrNavItems: NavItem[] = [
     {
         title: 'Members',
-        href: '/dashboards/HR/SeeUsers',
+        href: '/dashboards/HR/SeeUsers?status=pending_gm_approval',
         icon: UsersRound,
+        badgeKey: 'pendingMemberSignupsCount',
     },
     {
         title: 'Active Loan',
@@ -113,6 +116,7 @@ const memberNavItems: NavItem[] = [
         href: '/dashboards/Member/UserProfile',
         icon: UserCircle2,
     },
+ 
    
 ];
 
@@ -125,7 +129,7 @@ const gmNavItems: NavItem[] = [
                 title: 'Member Application',
                 href: '/dashboards/Gm/MemberValidate',
                 icon: Users,
-                badgeKey: 'unreadMemberValidationCount',
+                badgeKey: 'pendingMemberSignupsCount',
             },
             {
                 title: 'Bulk Upload Members',
@@ -136,6 +140,7 @@ const gmNavItems: NavItem[] = [
                 title: 'Profile Updates',
                 href: '/dashboards/Gm/PendingEdits',
                 icon: FileEdit,
+                badgeKey: 'pendingProfileEditsCount',
             },
         ],
     },
@@ -211,6 +216,7 @@ const footerNavItems: NavItem[] = [
         href: '/dashboards/HR/SecActivityLog',
         icon: Logs,
         role: 'hr',
+        badgeKey: 'unreadNotificationsCount',
     },
     {
         title: 'Activity Log',
@@ -223,6 +229,16 @@ const footerNavItems: NavItem[] = [
 export function AppSidebar() {
     const { auth } = usePage<SharedData>().props;
     const userRole = auth.user.role;
+
+    useEffect(() => {
+        const interval = window.setInterval(() => {
+            router.reload({
+                only: ['notificationBadges'],
+            });
+        }, 15000);
+
+        return () => window.clearInterval(interval);
+    }, []);
 
     let roleNavItems: NavItem[] = [];
 

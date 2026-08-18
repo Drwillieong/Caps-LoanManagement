@@ -265,7 +265,7 @@ export default function MemberDashboard({
     const canApply =
         Boolean(loan_eligibility) &&
         profileCompleted &&
-        loan_eligibility?.has_active_loan &&
+        !loan_eligibility?.has_active_loan &&
         (loan_eligibility?.max_loan_allowed ?? 0) > 0;
 
     return (

@@ -44,7 +44,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // HR
     Route::get('dashboards/HR/SeeUsers', [CreateMemberController::class, 'index'])->middleware('role:hr')->name('users');
 
-    Route::get('dashboards/HR/MembersProfile/{employeeId}', [MemberProfileViewController::class, 'show'])->middleware('role:hr')->name('users.profile');
+    Route::get('dashboards/HR/MembersProfile/{membersId}', [MemberProfileViewController::class, 'show'])->middleware('role:hr')->name('users.profile');
 
     Route::get('dashboards/HR/create', [CreateMemberController::class, 'create'])->middleware('role:hr')->name('users.create');
     Route::post('dashboards/HR/SeeUsers', [CreateMemberController::class, 'store'])->middleware('role:hr')->name('users.store');
@@ -86,6 +86,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware(['role:member', 'ensure.profile.completed', 'throttle:loan-application'])
         ->name('member.loan.store');
 
+    Route::post('dashboards/Member/ApplyLoan/preview', [LoanController::class, 'preview'])
+        ->middleware(['role:member', 'ensure.profile.completed'])
+        ->name('member.loan.preview');
+
     Route::put('dashboards/Member/Loan/{loan}', [LoanController::class, 'update'])
         ->middleware(['role:member', 'ensure.profile.completed'])
         ->name('member.loan.update');
@@ -98,11 +102,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('dashboards/Member/UserProfile', [MemberProfileController::class, 'store'])->middleware('role:member')->name('member.user-profile.store');
 
     // HR - Edit Member Profile
-    Route::get('dashboards/HR/EditMember/{employeeId}', [MemberProfileController::class, 'editMember'])
+    Route::get('dashboards/HR/EditMember/{membersId}', [MemberProfileController::class, 'editMember'])
         ->middleware('role:hr,gm,creditcom')
         ->name('hr.edit-member');
 
-    Route::put('dashboards/HR/EditMember/{employeeId}', [MemberProfileController::class, 'updateMember'])
+    Route::put('dashboards/HR/EditMember/{membersId}', [MemberProfileController::class, 'updateMember'])
         ->middleware('role:hr,gm,creditcom')
         ->name('hr.update-member');
 
@@ -249,11 +253,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('gm.pending-edits');
 
     // HR - Submit Profile Update Request
-    Route::post('dashboards/HR/EditMember/{employeeId}/update-request', [\App\Http\Controllers\GmController\ProfileUpdateRequestController::class, 'store'])
+    Route::post('dashboards/HR/EditMember/{membersId}/update-request', [\App\Http\Controllers\GmController\ProfileUpdateRequestController::class, 'store'])
         ->middleware('role:hr')
         ->name('hr.profile-update-request.store');
 
-    Route::post('dashboards/HR/Members/{employeeId}/status-change-request', [\App\Http\Controllers\GmController\ProfileUpdateRequestController::class, 'requestStatusChange'])
+    Route::post('dashboards/HR/Members/{membersId}/status-change-request', [\App\Http\Controllers\GmController\ProfileUpdateRequestController::class, 'requestStatusChange'])
         ->middleware('role:hr')
         ->name('hr.member-status-change-request.store');
 

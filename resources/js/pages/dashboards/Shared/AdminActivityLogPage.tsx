@@ -593,7 +593,7 @@ export default function AdminActivityLogPage({
                                         </div>
                                     </TableHead>
                                     <TableHead className="hidden font-semibold text-emerald-800 sm:table-cell">
-                                        Actor Email
+                                        Email
                                     </TableHead>
                                     <TableHead className="w-[90px] font-semibold text-emerald-800">
                                         Role

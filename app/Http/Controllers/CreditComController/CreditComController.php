@@ -4,9 +4,9 @@ namespace App\Http\Controllers\CreditComController;
 
 use App\Http\Controllers\Controller;
 use App\Models\Loan;
-use App\Models\LoanAmortization;
 use App\Models\LoanPayment;
 use App\Models\LoanTransaction;
+use App\Service\ApplyLoan\LoanAmortizationScheduleService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -135,7 +135,7 @@ class CreditComController extends Controller
         ]);
 
         // Generate amortization schedule now that CC has approved
-        $this->generateAmortizationSchedule($loan);
+        app(LoanAmortizationScheduleService::class)->generate($loan, now());
 
         LoanTransaction::firstOrCreate(
             [
@@ -199,45 +199,6 @@ class CreditComController extends Controller
         return redirect()
             ->route('creditcom.validate-loan')
             ->with('success', 'Loan application rejected.');
-    }
-
-    /**
-     * Generate amortization schedule for approved loan
-     * Creates two payments per month (10th and 25th)
-     */
-    private function generateAmortizationSchedule(Loan $loan)
-    {
-        $monthlyPayment = $loan->monthly_amortization;
-        $terms = $loan->terms_months;
-        $startDate = now()->addMonth();
-
-        // Calculate bi-monthly payment (half of monthly payment)
-        $biMonthlyPayment = $monthlyPayment / 2;
-
-        // Generate two installments per month (10th and 25th)
-        $installmentNumber = 1;
-
-        for ($month = 0; $month < $terms; $month++) {
-            // First payment: 10th of each month
-            $dueDate10 = $startDate->copy()->addMonths($month)->day(10);
-            LoanAmortization::create([
-                'loan_id' => $loan->id,
-                'installment_number' => $installmentNumber++,
-                'amount_due' => $biMonthlyPayment,
-                'due_date' => $dueDate10,
-                'status' => 'pending',
-            ]);
-
-            // Second payment: 25th of each month
-            $dueDate25 = $startDate->copy()->addMonths($month)->day(25);
-            LoanAmortization::create([
-                'loan_id' => $loan->id,
-                'installment_number' => $installmentNumber++,
-                'amount_due' => $biMonthlyPayment,
-                'due_date' => $dueDate25,
-                'status' => 'pending',
-            ]);
-        }
     }
 
     /**

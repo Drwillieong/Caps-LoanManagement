@@ -1,6 +1,6 @@
 FROM dunglas/frankenphp:php8.4-bookworm
 
-# Install system dependencies
+# System dependencies
 RUN apt-get update && apt-get install -y \
     curl \
     git \
@@ -9,13 +9,13 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Node.js 22 LTS and npm
+# Node.js 22 + npm
 RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
     && apt-get update \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
-# Install PHP extensions required by Laravel and PhpSpreadsheet
+# PHP extensions
 RUN install-php-extensions \
     pdo_mysql \
     gd \
@@ -23,12 +23,12 @@ RUN install-php-extensions \
     intl \
     zip
 
-# Install Composer
+# Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 WORKDIR /app
 
-# Install PHP dependencies first
+# Composer dependencies
 COPY composer.json composer.lock ./
 
 RUN composer install \
@@ -37,15 +37,15 @@ RUN composer install \
     --no-interaction \
     --no-scripts
 
-# Install JavaScript dependencies
+# Node dependencies
 COPY package.json package-lock.json ./
 
 RUN npm install
 
-# Copy application
+# Application
 COPY . .
 
-# Build React/Vite frontend
+# Build React/Vite
 RUN npm run build
 
 # Laravel directories
@@ -58,11 +58,11 @@ RUN mkdir -p \
 
 RUN chmod -R 775 storage bootstrap/cache
 
-# Generate optimized autoload files
+# Composer autoload
 RUN composer dump-autoload --optimize
 
 # Laravel package discovery
 RUN php artisan package:discover --ansi
 
-# Railway uses the PORT environment variable
-CMD ["sh", "-c", "php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=${PORT:-8080}"]
+# Start application
+CMD ["sh", "-c", "php artisan migrate --force && frankenphp php-server --listen 0.0.0.0:${PORT:-8080} --root /app/public"]

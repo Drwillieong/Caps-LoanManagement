@@ -1,8 +1,8 @@
 <?php
 
+use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Database\Migrations\Migration;
 
 return new class extends Migration
 {
@@ -10,13 +10,16 @@ return new class extends Migration
     {
         Schema::create('beneficiaries', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('member_profile_id')->constrained()->cascadeOnDelete();
-            
+            $table->string('member_profile_id');
             $table->string('full_name');
-            $table->string('relationship'); // e.g., "Daughter", "Husband"
+            $table->string('relationship');
             $table->date('date_of_birth')->nullable();
-            
             $table->timestamps();
+
+            $table->foreign('member_profile_id')
+                ->references('members_id')
+                ->on('member_profiles')
+                ->cascadeOnDelete();
         });
     }
 

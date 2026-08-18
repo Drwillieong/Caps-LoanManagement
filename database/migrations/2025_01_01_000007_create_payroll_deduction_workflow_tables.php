@@ -2,23 +2,12 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('member_profiles', function (Blueprint $table) {
-            if (! Schema::hasColumn('member_profiles', 'payroll_id')) {
-                $table->string('payroll_id')->nullable()->unique()->after('members_id');
-            }
-        });
-
-        if (Schema::getConnection()->getDriverName() === 'mysql') {
-            DB::statement("ALTER TABLE loan_amortizations MODIFY status ENUM('pending', 'paid', 'partial', 'overdue', 'missed', 'deferred', 'manual_payment') DEFAULT 'pending'");
-        }
-
         Schema::create('system_settings', function (Blueprint $table) {
             $table->id();
             $table->string('key')->unique();
@@ -59,7 +48,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('payroll_upload_id')->constrained()->cascadeOnDelete();
             $table->foreignId('matched_user_id')->nullable()->constrained('users')->nullOnDelete();
-            $table->foreignId('matched_member_profile_id')->nullable()->constrained('member_profiles')->nullOnDelete();
+            $table->string('matched_member_profile_id')->nullable();
             $table->unsignedInteger('row_number');
             $table->string('members_id')->nullable();
             $table->string('payroll_id')->nullable();
@@ -79,36 +68,10 @@ return new class extends Migration
 
             $table->index(['members_id', 'payroll_id', 'member_id']);
             $table->index(['status', 'deduction_status']);
-        });
-
-        $isSqlite = Schema::getConnection()->getDriverName() === 'sqlite';
-
-        Schema::table('loan_payments', function (Blueprint $table) use ($isSqlite) {
-            if (! Schema::hasColumn('loan_payments', 'loan_amortization_id')) {
-                $isSqlite
-                    ? $table->unsignedBigInteger('loan_amortization_id')->nullable()
-                    : $table->foreignId('loan_amortization_id')->nullable()->after('loan_id')->constrained('loan_amortizations')->nullOnDelete();
-            }
-
-            if (! Schema::hasColumn('loan_payments', 'payroll_upload_id')) {
-                $isSqlite
-                    ? $table->unsignedBigInteger('payroll_upload_id')->nullable()
-                    : $table->foreignId('payroll_upload_id')->nullable()->after('loan_amortization_id')->constrained('payroll_uploads')->nullOnDelete();
-            }
-
-            if (! Schema::hasColumn('loan_payments', 'payment_method')) {
-                $table->string('payment_method')->default('salary_deduction')->after('amount');
-            }
-
-            if (! Schema::hasColumn('loan_payments', 'processed_by')) {
-                $isSqlite
-                    ? $table->unsignedBigInteger('processed_by')->nullable()
-                    : $table->foreignId('processed_by')->nullable()->after('paid_by')->constrained('users')->nullOnDelete();
-            }
-
-            if (! Schema::hasColumn('loan_payments', 'remarks')) {
-                $table->text('remarks')->nullable()->after('processed_by');
-            }
+            $table->foreign('matched_member_profile_id')
+                ->references('members_id')
+                ->on('member_profiles')
+                ->nullOnDelete();
         });
 
         Schema::create('deduction_records', function (Blueprint $table) {
@@ -117,7 +80,7 @@ return new class extends Migration
             $table->foreignId('loan_amortization_id')->nullable()->constrained('loan_amortizations')->nullOnDelete();
             $table->foreignId('payroll_upload_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('payroll_upload_row_id')->nullable()->constrained()->nullOnDelete();
-            $table->foreignId('member_profile_id')->nullable()->constrained()->nullOnDelete();
+            $table->string('member_profile_id')->nullable();
             $table->foreignId('processed_by')->nullable()->constrained('users')->nullOnDelete();
             $table->date('cutoff_date');
             $table->decimal('expected_amount', 12, 2)->default(0);
@@ -132,6 +95,10 @@ return new class extends Migration
 
             $table->index(['cutoff_date', 'status']);
             $table->index(['loan_id', 'loan_amortization_id']);
+            $table->foreign('member_profile_id')
+                ->references('members_id')
+                ->on('member_profiles')
+                ->nullOnDelete();
         });
 
         Schema::create('loan_transactions', function (Blueprint $table) {
@@ -159,47 +126,8 @@ return new class extends Migration
     {
         Schema::dropIfExists('loan_transactions');
         Schema::dropIfExists('deduction_records');
-
-        $isSqlite = Schema::getConnection()->getDriverName() === 'sqlite';
-
-        Schema::table('loan_payments', function (Blueprint $table) use ($isSqlite) {
-            $columns = ['loan_amortization_id', 'payroll_upload_id', 'payment_method', 'processed_by', 'remarks'];
-
-            if (Schema::hasColumn('loan_payments', 'loan_amortization_id')) {
-                $isSqlite ? $table->dropColumn('loan_amortization_id') : $table->dropConstrainedForeignId('loan_amortization_id');
-            }
-
-            if (Schema::hasColumn('loan_payments', 'payroll_upload_id')) {
-                $isSqlite ? $table->dropColumn('payroll_upload_id') : $table->dropConstrainedForeignId('payroll_upload_id');
-            }
-
-            if (Schema::hasColumn('loan_payments', 'processed_by')) {
-                $isSqlite ? $table->dropColumn('processed_by') : $table->dropConstrainedForeignId('processed_by');
-            }
-
-            foreach (array_diff($columns, ['loan_amortization_id', 'payroll_upload_id', 'processed_by']) as $column) {
-                if (Schema::hasColumn('loan_payments', $column)) {
-                    $table->dropColumn($column);
-                }
-            }
-        });
-
         Schema::dropIfExists('payroll_upload_rows');
         Schema::dropIfExists('payroll_uploads');
         Schema::dropIfExists('system_settings');
-
-        DB::table('loan_amortizations')
-            ->whereIn('status', ['missed', 'deferred', 'manual_payment'])
-            ->update(['status' => 'overdue']);
-
-        if (Schema::getConnection()->getDriverName() === 'mysql') {
-            DB::statement("ALTER TABLE loan_amortizations MODIFY status ENUM('pending', 'paid', 'partial', 'overdue') DEFAULT 'pending'");
-        }
-
-        Schema::table('member_profiles', function (Blueprint $table) {
-            if (Schema::hasColumn('member_profiles', 'payroll_id')) {
-                $table->dropColumn('payroll_id');
-            }
-        });
     }
 };

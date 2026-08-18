@@ -13,7 +13,10 @@ return new class extends Migration
     {
         Schema::create('profile_update_requests', function (Blueprint $table) {
             $table->id();
-            $table->string('member_id'); // FK to member_profiles.members_id
+            $table->string('member_id');
+            $table->string('request_type')->default('profile_update');
+            $table->string('proposed_status')->nullable();
+            $table->text('reason')->nullable();
             $table->foreignId('requested_by')->constrained('users')->onDelete('cascade');
             $table->json('original_data');
             $table->json('pending_data');
@@ -22,13 +25,11 @@ return new class extends Migration
             $table->foreignId('reviewed_by')->nullable()->constrained('users')->onDelete('set null');
             $table->timestamps();
 
-            // Foreign key for member_id referencing member_profiles
             $table->foreign('member_id')
                   ->references('members_id')
                   ->on('member_profiles')
                   ->onDelete('cascade');
 
-            // Index for faster lookups
             $table->index('status');
             $table->index('member_id');
         });
@@ -42,4 +43,3 @@ return new class extends Migration
         Schema::dropIfExists('profile_update_requests');
     }
 };
-

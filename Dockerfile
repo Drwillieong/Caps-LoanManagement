@@ -64,5 +64,5 @@ RUN composer dump-autoload --optimize
 # Laravel package discovery
 RUN php artisan package:discover --ansi
 
-# Start application (Runs migrations & seeders before launching FrankenPHP)
-CMD ["sh", "-c", "php artisan migrate --force --seed && frankenphp php-server --listen 0.0.0.0:${PORT:-8080} --root /app/public"]
+# Start application
+CMD ["sh", "-c", "php artisan migrate --force && frankenphp php-server --listen 0.0.0.0:${PORT:-8080} --root /app/public"]

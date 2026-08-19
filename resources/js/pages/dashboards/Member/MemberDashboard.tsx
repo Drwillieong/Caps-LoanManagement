@@ -15,6 +15,9 @@ import {
     EyeOff,
     FileText,
     HandCoins,
+    Loader2,
+    Users,
+    UserCheck,
     Wallet,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -81,6 +84,22 @@ interface LoanNotification {
     status: string;
 }
 
+interface CoMakerLoan {
+    loan_id: number;
+    loan_type: string;
+    borrower: {
+        name: string;
+        member_id: string;
+    };
+    principal_amount: number;
+    total_amount_due: number;
+    remaining_balance: number;
+    status: string;
+    monthly_payment: number;
+    next_due_date: string | null;
+    next_due_amount: number;
+}
+
 interface DashboardProps {
     comakerRequestCount?: number;
     share_capital_balance?: number;
@@ -119,6 +138,8 @@ export default function MemberDashboard({
     loan_notifications = [],
 }: DashboardProps) {
     const [coMakerCount, setCoMakerCount] = useState(comakerRequestCount);
+    const [coMakerLoans, setCoMakerLoans] = useState<CoMakerLoan[]>([]);
+    const [coMakerLoading, setCoMakerLoading] = useState(true);
     const [showValues, setShowValues] = useState(true);
     const [showMaxLoanAllowed, setShowMaxLoanAllowed] = useState(true);
     const [showBasicSalary, setShowBasicSalary] = useState(true);
@@ -151,6 +172,21 @@ export default function MemberDashboard({
             .catch((err) =>
                 console.error('Error fetching co-maker count:', err),
             );
+    }, []);
+
+    useEffect(() => {
+        setCoMakerLoading(true);
+        fetch('/api/loans/co-maker')
+            .then((res) => res.json())
+            .then((data) => {
+                if (Array.isArray(data.comaker_loans)) {
+                    setCoMakerLoans(data.comaker_loans);
+                }
+            })
+            .catch((err) =>
+                console.error('Error fetching co-maker loans:', err),
+            )
+            .finally(() => setCoMakerLoading(false));
     }, []);
 
     function toggleAllVisibility() {
@@ -266,6 +302,52 @@ export default function MemberDashboard({
         }
 
         return <Badge variant="outline">{status.replaceAll('_', ' ')}</Badge>;
+    }
+
+    function getCoMakerLoanStatusBadge(status: string) {
+        if (status === 'paid_off') {
+            return (
+                <Badge
+                    variant="outline"
+                    className="border-blue-200 bg-blue-50 text-blue-700"
+                >
+                    <CheckCircle2 className="size-3" />
+                    Paid off
+                </Badge>
+            );
+        }
+
+        if (status === 'released' || status === 'approved') {
+            return (
+                <Badge
+                    variant="outline"
+                    className="border-emerald-200 bg-emerald-50 text-emerald-700"
+                >
+                    <CheckCircle2 className="size-3" />
+                    Active
+                </Badge>
+            );
+        }
+
+        if (rejectedStatuses.includes(status)) {
+            return <Badge variant="destructive">Rejected</Badge>;
+        }
+
+        if (pendingStatuses.includes(status) || status === 'awaiting_comaker') {
+            return (
+                <Badge
+                    variant="secondary"
+                    className="gap-1 text-amber-700"
+                >
+                    <Clock className="size-3" />
+                    Pending
+                </Badge>
+            );
+        }
+
+        return (
+            <Badge variant="outline">{status.replaceAll('_', ' ')}</Badge>
+        );
     }
 
     const progressPercentage =
@@ -689,6 +771,126 @@ export default function MemberDashboard({
                             </CardContent>
                         </Card>
                     </section>
+
+                    <Card className="rounded-2xl border-emerald-100 bg-white/80 shadow-sm dark:bg-emerald-950/10">
+                        <CardHeader className="gap-3 pb-4 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="space-y-1">
+                                <CardTitle className="text-lg font-semibold text-emerald-950 dark:text-emerald-100">
+                                    Co-Maker Loans
+                                </CardTitle>
+                                <CardDescription>
+                                    Loans you have co-signed, with borrower
+                                    details and current status.
+                                </CardDescription>
+                            </div>
+                            {!coMakerLoading && (
+                                <Badge variant="secondary">
+                                    {coMakerLoans.length} total
+                                </Badge>
+                            )}
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            {coMakerLoading ? (
+                                <div className="flex items-center justify-center gap-3 rounded-2xl bg-muted/30 px-4 py-10 text-muted-foreground">
+                                    <Loader2 className="size-5 animate-spin" />
+                                    <span>Loading co-maker loans…</span>
+                                </div>
+                            ) : coMakerLoans.length > 0 ? (
+                                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                    {coMakerLoans.map((loan) => (
+                                        <div
+                                            key={loan.loan_id}
+                                            className="rounded-2xl border border-emerald-100 bg-emerald-50/40 p-4"
+                                        >
+                                            <div className="flex items-start justify-between gap-4">
+                                                <div className="flex min-w-0 items-center gap-3">
+                                                    <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-emerald-100">
+                                                        <UserCheck className="size-4 text-emerald-700" />
+                                                    </span>
+                                                    <div className="min-w-0">
+                                                        <p className="truncate text-sm font-semibold text-emerald-950 dark:text-emerald-100">
+                                                            {loan.borrower.name}
+                                                        </p>
+                                                        <p className="truncate text-xs text-muted-foreground">
+                                                            Member ID:{' '}
+                                                            {loan.borrower.member_id}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                {getCoMakerLoanStatusBadge(
+                                                    loan.status,
+                                                )}
+                                            </div>
+
+                                            <Separator className="my-4" />
+
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <InfoBlock
+                                                    label="Loan Type"
+                                                    value={loan.loan_type}
+                                                    tone="emerald"
+                                                />
+                                                <InfoBlock
+                                                    label="Loan ID"
+                                                    value={`#${loan.loan_id}`}
+                                                    tone="slate"
+                                                    align="right"
+                                                />
+                                                <InfoBlock
+                                                    label="Principal"
+                                                    value={maskCurrency(
+                                                        loan.principal_amount,
+                                                        showValues,
+                                                    )}
+                                                    tone="blue"
+                                                />
+                                                <InfoBlock
+                                                    label="Remaining"
+                                                    value={maskCurrency(
+                                                        loan.remaining_balance,
+                                                        showValues,
+                                                    )}
+                                                    tone="red"
+                                                    align="right"
+                                                />
+                                                <InfoBlock
+                                                    label="Monthly Payment"
+                                                    value={maskCurrency(
+                                                        loan.monthly_payment,
+                                                        showValues,
+                                                    )}
+                                                    tone="green"
+                                                />
+                                                <InfoBlock
+                                                    label="Next Due"
+                                                    value={formatDate(
+                                                        loan.next_due_date,
+                                                    )}
+                                                    description={maskCurrency(
+                                                        loan.next_due_amount,
+                                                        showValues,
+                                                    )}
+                                                    tone="amber"
+                                                    align="right"
+                                                />
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="flex flex-col items-center justify-center rounded-2xl bg-muted/30 px-4 py-10 text-center">
+                                    <Users className="mb-3 size-10 text-muted-foreground/60" />
+                                    <p className="text-base font-medium">
+                                        No co-maker loans
+                                    </p>
+                                    <p className="mt-1 max-w-md text-sm text-muted-foreground">
+                                        You are not currently listed as a
+                                        co-maker for any active loans.
+                                    </p>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
 
                     <Card className="rounded-2xl border-emerald-100 bg-white/80 shadow-sm dark:bg-emerald-950/10">
                         <CardHeader className="gap-3 pb-4 sm:flex-row sm:items-center sm:justify-between">

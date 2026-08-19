@@ -14,6 +14,7 @@ import {
     ArrowLeft,
     Download,
     Mail,
+    ZoomIn,
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -26,6 +27,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
+import ImageModal from '@/components/ImageModal';
 import { type BreadcrumbItem, type SharedData } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -182,7 +184,8 @@ const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
 
    
     const [previewUrl, setPreviewUrl] = useState('');
-    
+    const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+
     useEffect(() => {
       if (memberProfile?.profile_picture) {
         setPreviewUrl(`/storage/profiles/${memberProfile.profile_picture}`);
@@ -539,26 +542,38 @@ const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
                                 <div className="mb-6 p-6 bg-emerald-50 rounded-2xl border-2 border-dashed border-emerald-200">
                                   <div className="flex flex-col md:flex-row items-center gap-6">
                                     <div className="flex-shrink-0">
-                                      <div className="relative w-32 h-32 rounded-full overflow-hidden border-4 border-emerald-200 shadow-lg bg-gradient-to-br from-emerald-50 to-emerald-100">
+                                      <div className="relative w-32 h-32">
                                         {previewUrl ? (
-                                          <img 
-                                            src={previewUrl} 
-                                            alt="Profile Picture" 
-                                            className="w-full h-full object-cover"
-                                            onError={(e) => {
-                                              e.currentTarget.style.display = 'none';
-                                            }}
-                                          />
+                                          <button
+                                            type="button"
+                                            onClick={() => setIsImageModalOpen(true)}
+                                            aria-label="Expand profile picture"
+                                            className="group relative block w-32 h-32 cursor-pointer overflow-hidden rounded-full border-4 border-emerald-200 bg-gradient-to-br from-emerald-50 to-emerald-100 shadow-lg outline-none transition-transform duration-200 hover:scale-105 focus-visible:ring-4 focus-visible:ring-emerald-300"
+                                          >
+                                            <img 
+                                              src={previewUrl} 
+                                              alt="Profile Picture" 
+                                              className="h-full w-full object-cover"
+                                              onError={(e) => {
+                                                e.currentTarget.style.display = 'none';
+                                              }}
+                                            />
+                                            <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition-all duration-200 group-hover:bg-black/30 group-hover:opacity-100">
+                                              <ZoomIn className="h-8 w-8 text-white" />
+                                            </span>
+                                          </button>
                                         ) : (
-                                          <div className="w-full h-full flex items-center justify-center text-emerald-600 font-bold text-xl bg-gradient-to-br from-emerald-400/20 to-emerald-500/20 backdrop-blur-sm">
-                                            {formData.first_name?.charAt(0)?.toUpperCase()}
-                                            {formData.last_name?.charAt(0)?.toUpperCase()}
+                                          <div className="relative w-32 h-32 overflow-hidden rounded-full border-4 border-emerald-200 bg-gradient-to-br from-emerald-50 to-emerald-100 shadow-lg">
+                                            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-emerald-400/20 to-emerald-500/20 text-xl font-bold text-emerald-600 backdrop-blur-sm">
+                                              {formData.first_name?.charAt(0)?.toUpperCase()}
+                                              {formData.last_name?.charAt(0)?.toUpperCase()}
+                                            </div>
                                           </div>
                                         )}
                                         {isEditing && (
                                           <label
                                             htmlFor="profile_picture"
-                                            className="absolute -bottom-2 -right-2 bg-emerald-500 hover:bg-emerald-600 p-3 rounded-full shadow-2xl border-4 border-white cursor-pointer transition-all duration-200"
+                                            className="absolute -bottom-2 -right-2 cursor-pointer rounded-full border-4 border-white bg-emerald-500 p-3 shadow-2xl transition-all duration-200 hover:bg-emerald-600"
                                           >
                                             <Camera className="h-6 w-6 text-white" />
                                           </label>
@@ -1355,7 +1370,14 @@ const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
                     </>
                 )}
             </Form>
-        </div>
+            </div>
+
+            <ImageModal
+                isOpen={isImageModalOpen}
+                onClose={() => setIsImageModalOpen(false)}
+                src={previewUrl}
+                alt={`${formData.first_name} ${formData.last_name}'s Profile Picture`}
+            />
     </AppLayout>
     );
 }

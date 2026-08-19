@@ -169,6 +169,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware('auth')
         ->name('api.members.eligible');
 
+    Route::get('/api/loans/co-maker', [LoanController::class, 'comakerLoans'])
+        ->middleware(['auth', 'role:member'])
+        ->name('api.loans.co-maker');
+
     Route::get('/api/admin/activity-logs', [AdminActivityLogController::class, 'index'])
         ->middleware('role:gm,hr,creditcom')
         ->name('api.admin.activity-logs.index');

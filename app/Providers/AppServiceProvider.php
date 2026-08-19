@@ -54,9 +54,14 @@ class AppServiceProvider extends ServiceProvider
             URL::forceScheme('https');
         }
 
-        // Force the root URL for asset generation
-        // This ensures emails use the correct domain instead of localhost
-        $url = config('app.url', 'http://localhost');
-        URL::forceRootUrl($url);
+        // Force the root URL for asset/url generation (emails, signed URLs, etc.)
+        // This ensures emails use the correct domain instead of localhost.
+        // It is skipped while running in the console (e.g. wayfinder route
+        // generation during `npm run build`): otherwise the generated client
+        // routes would embed an absolute domain that does not exist on the
+        // deployment host, breaking every client-side request there.
+        if (! app()->runningInConsole()) {
+            URL::forceRootUrl(config('app.url', 'http://localhost'));
+        }
     }
 }

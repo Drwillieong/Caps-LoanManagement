@@ -10,6 +10,7 @@ use App\Services\ActivityLogService;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
@@ -73,6 +74,31 @@ class ProfileUpdateRequestController extends Controller
         }
 
         return trim((string) $value);
+    }
+
+    /**
+     * Normalize a phone number to a canonical digit string (63 + 10 digits).
+     * This lets "09181234567" and "639181234567" (and "+63 918 ...") compare as
+     * equal so formatting differences never produce a false profile diff.
+     */
+    private function normalizePhone(mixed $value): ?string
+    {
+        if (is_null($value) || $value === '' || $value === '—' || $value === '–' || $value === '-') {
+            return null;
+        }
+
+        $digits = preg_replace('/\D/', '', (string) $value);
+        if ($digits === '') {
+            return null;
+        }
+
+        if (str_starts_with($digits, '0')) {
+            $digits = '63' . substr($digits, 1);
+        } elseif (! str_starts_with($digits, '63')) {
+            $digits = '63' . $digits;
+        }
+
+        return $digits;
     }
 
     private function normalizeBeneficiaries(mixed $value): array
@@ -140,6 +166,7 @@ class ProfileUpdateRequestController extends Controller
             'spouse_income_type' => 'required_with:spouse_occupation|nullable|in:monthly,daily,yearly',
             'spouse_net_income' => 'required_with:spouse_occupation|nullable|numeric|min:0',
             'real_properties_owned' => 'nullable|string|max:2000',
+            'profile_picture_file' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'beneficiaries' => 'nullable|array',
             'beneficiaries.*.full_name' => 'nullable|string|max:255',
             'beneficiaries.*.relationship' => 'nullable|string|max:255',
@@ -169,6 +196,18 @@ class ProfileUpdateRequestController extends Controller
             unset($pendingData[$field]);
         }
 
+        // Handle a requested profile picture change. The upload is stored under a
+        // `pending_` prefix so the member's currently-active picture is only replaced
+        // once the General Manager approves the request.
+        if ($request->hasFile('profile_picture_file')) {
+            $pictureFile = $request->file('profile_picture_file');
+            $pictureFilename = 'pending_'.$memberProfile->members_id.'_'.time().'.'.$pictureFile->getClientOriginalExtension();
+            $pictureFile->storeAs('profiles', $pictureFilename, 'public');
+            $pendingData['profile_picture'] = $pictureFilename;
+        }
+        // Never persist the raw upload key inside the pending payload.
+        unset($pendingData['profile_picture_file']);
+
         $originalUser = $memberProfile->user?->toArray() ?? [];
 
         if (!array_key_exists('mobile_number', $pendingData)) {
@@ -182,9 +221,24 @@ class ProfileUpdateRequestController extends Controller
         // This prevents unchanged fields (with formatting differences) from appearing as diffs
         $filteredPending = [];
         foreach (array_merge(self::COMPARABLE_FIELDS, self::USER_FIELDS) as $field) {
+            // A field that was not part of the submitted changes (e.g. omitted when
+            // only a profile picture was changed) was not edited, so never treat its
+            // absence as a spurious change from a value to null/empty.
+            if (! array_key_exists($field, $pendingData)) {
+                continue;
+            }
+
             $source = in_array($field, self::USER_FIELDS, true) ? $originalUser : $originalData;
-            $origVal = $this->normalizeDiffValue($field, $source[$field] ?? null);
-            $pendVal = $this->normalizeDiffValue($field, $pendingData[$field] ?? null);
+
+            // Phone fields are compared canonically so that "0918..." vs "63918..."
+            // formatting differences never register as a spurious change.
+            if (in_array($field, ['mobile_number', 'permanent_mobile_number'], true)) {
+                $origVal = $this->normalizePhone($source[$field] ?? null);
+                $pendVal = $this->normalizePhone($pendingData[$field] ?? null);
+            } else {
+                $origVal = $this->normalizeDiffValue($field, $source[$field] ?? null);
+                $pendVal = $this->normalizeDiffValue($field, $pendingData[$field] ?? null);
+            }
 
             // If both are null/empty after normalization — skip
             if (is_null($origVal) && is_null($pendVal)) {
@@ -515,6 +569,16 @@ class ProfileUpdateRequestController extends Controller
         // from Laravel 12's strict decimal casting on formatted currency strings.
         $pendingData = $this->sanitizeForModelUpdate($pendingData, $memberProfile);
 
+        // If a new profile picture was requested, remove the previously active image
+        // from storage before the member profile is updated with the new filename.
+        if (
+            isset($rawPendingData['profile_picture'])
+            && $rawPendingData['profile_picture'] !== $memberProfile->profile_picture
+            && $memberProfile->profile_picture
+        ) {
+            Storage::disk('public')->delete('profiles/'.$memberProfile->profile_picture);
+        }
+
         // Update the member profile with the sanitized changes
         $memberProfile->update($pendingData);
 
@@ -588,6 +652,19 @@ class ProfileUpdateRequestController extends Controller
             'rejection_reason' => $validated['rejection_reason'],
             'reviewed_by' => Auth::id(),
         ]);
+
+        // Remove the uploaded (but unapproved) profile picture to avoid orphaned files.
+        $rejectedPending = $updateRequest->pending_data ?? [];
+        if (is_string($rejectedPending)) {
+            $rejectedPending = json_decode($rejectedPending, true) ?: [];
+        }
+        if (
+            ! empty($rejectedPending['profile_picture'])
+            && is_string($rejectedPending['profile_picture'])
+            && str_starts_with($rejectedPending['profile_picture'], 'pending_')
+        ) {
+            Storage::disk('public')->delete('profiles/'.$rejectedPending['profile_picture']);
+        }
 
         app(ActivityLogService::class)->logActivity(
             'profile_update_rejected',

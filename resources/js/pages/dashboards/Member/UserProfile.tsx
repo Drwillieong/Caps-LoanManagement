@@ -7,7 +7,7 @@ import {
     MapPin, 
     Briefcase, 
     Heart, 
-    Camera, 
+    Camera,
     Building,
     Phone,
     Users,
@@ -15,6 +15,7 @@ import {
     Download,
     Mail,
     ZoomIn,
+    Shield,
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -288,8 +289,10 @@ const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
         'basic_salary'
     ] : [];
 
-    // Admins can always edit employment fields; members can edit them while editing their profile.
-    const canEditEmployment = isAdmin || isEditing;
+    // Employment & Financial Assessment fields are locked for members and may
+    // only be edited by HR (admins). Members can still edit personal/contact
+    // details and their profile picture.
+    const canEditEmployment = isAdmin;
 
     const exportPDF = () => {
         if (!memberProfile) return;
@@ -974,6 +977,14 @@ const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
                                 </div>
                             </CardHeader>
                             <CardContent>
+                                {!canEditEmployment && (
+                                    <div className="mb-4 flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                                       
+                                        <span>
+                                            Job details and income information can only be updated by HR.
+                                        </span>
+                                    </div>
+                                )}
                                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                                     <div className="grid gap-2">
                                         <Label htmlFor="position">

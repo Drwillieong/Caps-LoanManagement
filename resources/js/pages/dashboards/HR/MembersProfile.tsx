@@ -627,10 +627,21 @@ export default function MembersProfile({ user, memberProfile, beneficiaries, isA
                     method={formMethod}
                     action={formActionUrl}
                     transform={() => {
-                        const { members_id, ...pendingData } = formData as any;
-                        const cleanedPhone = parsePhone(
-                            pendingData.permanent_mobile_number || pendingData.mobile_number || '',
-                        );
+                        const { members_id, profile_picture, ...pendingData } = formData as any;
+
+                        // Only flag the contact number as changed if the user actually
+                        // edited it. Otherwise omit it so a spurious mobile-number diff
+                        // (e.g. 0918... -> 63918...) is not created in PendingEdits.
+                        const originalPhone =
+                            memberProfile?.permanent_mobile_number ||
+                            memberProfile?.mobile_number ||
+                            '';
+                        const formPhone =
+                            pendingData.permanent_mobile_number ||
+                            pendingData.mobile_number ||
+                            '';
+                        const phoneChanged = originalPhone !== formPhone;
+                        const cleanedPhone = phoneChanged ? parsePhone(formPhone) : null;
 
                         CURRENCY_FIELDS.forEach((field) => {
                             if (pendingData[field] !== undefined && pendingData[field] !== '') {
@@ -639,14 +650,24 @@ export default function MembersProfile({ user, memberProfile, beneficiaries, isA
                         });
 
                         pendingData.email = String(pendingData.email || '').trim().toLowerCase();
-                        pendingData.mobile_number = cleanedPhone;
-                        pendingData.permanent_mobile_number = cleanedPhone;
+                        if (phoneChanged) {
+                            pendingData.mobile_number = cleanedPhone;
+                            pendingData.permanent_mobile_number = cleanedPhone;
+                        }
                         pendingData.beneficiaries = normalizeBeneficiariesForSubmit(pendingData.beneficiaries || []);
 
-                        return {
+                        const payload: any = {
                             member_id: targetMembersId,
                             pending_data: pendingData,
                         };
+
+                        // Include the selected profile picture as a multipart file so the
+                        // backend pending-edits service can store it and surface the change.
+                        if (profile_picture instanceof File) {
+                            payload.profile_picture_file = profile_picture;
+                        }
+
+                        return payload;
                     }}
                     className="space-y-6"
                     onSuccess={() => {

@@ -110,12 +110,39 @@ class MemberProfileController extends Controller
     }
 
     /**
+     * Employment & Financial Assessment fields that members are not allowed to
+     * modify once their profile exists. Only HR (admins) may change these, and
+     * members may still set them on initial profile creation.
+     */
+    private const LOCKED_EMPLOYMENT_FIELDS = [
+        'position',
+        'basic_salary',
+        'income_type',
+        'net_income',
+        'share_capital_balance',
+        'other_source_of_income',
+    ];
+
+    /**
      * Store or update the user's profile.
      */
     public function store(Request $request)
     {
         $user = $request->user();
         $validated = $request->validate($this->profileRules($user->memberProfile?->members_id, $user->id));
+
+        // Members may not modify Employment & Financial Assessment fields on an
+        // existing profile. Strip them so a direct POST cannot change them; they
+        // are still allowed during the initial profile creation.
+        $adminRoles = ['hr', 'gm', 'creditcom'];
+        if (! in_array($user->role, $adminRoles, true)) {
+            $existingProfile = MemberProfile::where('user_id', $user->id)->first();
+            if ($existingProfile) {
+                foreach (self::LOCKED_EMPLOYMENT_FIELDS as $lockedField) {
+                    unset($validated[$lockedField]);
+                }
+            }
+        }
 
         if (! empty($validated['email']) && $validated['email'] !== $user->email) {
             $user->email = $validated['email'];
@@ -132,29 +159,58 @@ class MemberProfileController extends Controller
             $validated['profile_picture'] = $filename;
         }
 
+        // Beneficiaries are synced separately; keep them out of updateOrCreate.
+        $beneficiaries = $validated['beneficiaries'] ?? null;
+        unset($validated['beneficiaries']);
+
         // Create or update member profile
         $memberProfile = MemberProfile::updateOrCreate(
             ['user_id' => $user->id],
             $validated
         );
 
-        // Handle beneficiaries - only save if they have at least a full_name
-        if (isset($validated['beneficiaries']) && is_array($validated['beneficiaries'])) {
-            // Delete existing beneficiaries
-            $memberProfile->beneficiaries()->delete();
-
-            // Filter out empty beneficiaries (no full_name)
-            $validBeneficiaries = array_filter($validated['beneficiaries'], function ($beneficiary) {
-                return ! empty($beneficiary['full_name']);
-            });
-
-            // Create only valid beneficiaries
-            foreach ($validBeneficiaries as $beneficiaryData) {
-                $memberProfile->beneficiaries()->create($beneficiaryData);
-            }
-        }
+        $this->syncBeneficiaries($memberProfile, $beneficiaries);
 
         return Redirect::route('dashboard')->with('success', 'Profile updated successfully!');
+    }
+
+    /**
+     * Validate and (re)create beneficiary records.
+     *
+     * The beneficiaries.relationship column is NOT NULL. Any item that is missing
+     * a full_name is skipped, and relationship/date_of_birth are coerced to safe
+     * non-null values so a profile-picture-only update can never trigger a
+     * "NOT NULL constraint failed" SQL error.
+     */
+    private function syncBeneficiaries(MemberProfile $memberProfile, ?array $beneficiaries): void
+    {
+        // Always replace the whole set so deletes/re-inserts stay consistent.
+        $memberProfile->beneficiaries()->delete();
+
+        if (! is_array($beneficiaries)) {
+            return;
+        }
+
+        foreach ($beneficiaries as $beneficiary) {
+            if (! is_array($beneficiary)) {
+                continue;
+            }
+
+            $fullName = trim((string) ($beneficiary['full_name'] ?? ''));
+            // A beneficiary must have at least a full name to be stored.
+            if ($fullName === '') {
+                continue;
+            }
+
+            $memberProfile->beneficiaries()->create([
+                'full_name' => $fullName,
+                // relationship is NOT NULL — guarantee a non-null string.
+                'relationship' => trim((string) ($beneficiary['relationship'] ?? '')),
+                'date_of_birth' => ! empty($beneficiary['date_of_birth'])
+                    ? $beneficiary['date_of_birth']
+                    : null,
+            ]);
+        }
     }
 
     /**
@@ -190,27 +246,17 @@ class MemberProfileController extends Controller
             $validated['profile_picture'] = $filename;
         }
 
+        // Beneficiaries are synced separately; keep them out of updateOrCreate.
+        $beneficiaries = $validated['beneficiaries'] ?? null;
+        unset($validated['beneficiaries']);
+
         // Update member profile
         $memberProfile = MemberProfile::updateOrCreate(
             ['members_id' => $membersId],
             $validated
         );
 
-        // Handle beneficiaries - only save if they have at least a full_name
-        if (isset($validated['beneficiaries']) && is_array($validated['beneficiaries'])) {
-            // Delete existing beneficiaries
-            $memberProfile->beneficiaries()->delete();
-
-            // Filter out empty beneficiaries (no full_name)
-            $validBeneficiaries = array_filter($validated['beneficiaries'], function ($beneficiary) {
-                return ! empty($beneficiary['full_name']);
-            });
-
-            // Create only valid beneficiaries
-            foreach ($validBeneficiaries as $beneficiaryData) {
-                $memberProfile->beneficiaries()->create($beneficiaryData);
-            }
-        }
+        $this->syncBeneficiaries($memberProfile, $beneficiaries);
 
         if (in_array($request->user()->role, ['gm', 'hr'], true)) {
             app(ActivityLogService::class)->logActivity(

@@ -188,7 +188,7 @@ export default function ApplyLoan({
                             Active Loan Eligibility Failed
                         </h3>
                         <p className="mb-4 text-sm text-red-600">
-                            You can apply for a new loan if all active loans are at least 75% paid and combined monthly payments (existing + new) do not exceed 50% of salary. Check your loan status below.
+                            You can apply for a new loan if all active loans are at least 50% paid and combined monthly payments (existing + new) do not exceed 50% of salary. Check your loan status below.
                         </p>
                         <Link
                             href="/dashboards/Member/MemberActiveLoan"
@@ -485,10 +485,10 @@ export default function ApplyLoan({
         ?.reduce((sum, loan) => sum + Number(loan.monthly_amortization || 0), 0) || 0
 , [previousLoans]);
 
-    const allActive75Percent = useMemo(() => 
+    const allActive50Percent = useMemo(() => 
     (previousLoans || [])
         ?.filter((loan) => ['approved', 'released'].includes(loan.status as string))
-        ?.every((loan) => (loan.percent_paid || 0) >= 75) || true
+        ?.every((loan) => (loan.percent_paid || 0) >= 50) || true
 , [previousLoans]);
 
     /* ===============================
@@ -503,7 +503,7 @@ export default function ApplyLoan({
     const maxMonthlyPayment = memberProfile.basic_salary / 2;
     const newMonthlyExceedsLimit = computed && Number(computed.monthly) > maxMonthlyPayment;
     const combinedMonthlyExceedsLimit = computed && (Number(computed.monthly) + activeMonthlyTotal) > maxMonthlyPayment;
-    const eligibleForActiveLoans = allActive75Percent;
+    const eligibleForActiveLoans = allActive50Percent;
 
     // Calculate loan usage percentage
     const loanUsagePercentage = data.principal_amount 
@@ -706,7 +706,7 @@ export default function ApplyLoan({
                                             )}
                                             {!eligibleForActiveLoans && (
                                                 <div className="mb-1">
-                                                    <p className="font-semibold text-red-700">Active loan(s) not 75% paid</p>
+                                                    <p className="font-semibold text-red-700">Active loan(s) not 50% paid</p>
                                                 </div>
                                             )}
                                         </div>
@@ -809,7 +809,7 @@ export default function ApplyLoan({
                                                 </span>
                                                 {getStatusBadge(loan.status)}
                                                 {loan.percent_paid !== undefined && (
-                                                    <Badge variant={loan.percent_paid >= 75 ? "default" : "destructive"} className="ml-1 text-xs">
+                                                    <Badge variant={loan.percent_paid >= 50 ? "default" : "destructive"} className="ml-1 text-xs">
                                                         {loan.percent_paid}%
                                                     </Badge>
                                                 )}
@@ -1080,7 +1080,7 @@ export default function ApplyLoan({
                         <Button
                             size="lg"
                             disabled={processing || isFormLocked || exceedsShareCapital || newMonthlyExceedsLimit || combinedMonthlyExceedsLimit || !eligibleForActiveLoans}
-                            title={processing ? 'Processing...' : isFormLocked ? 'Reapplication locked' : exceedsShareCapital ? 'Exceeds share capital limit' : newMonthlyExceedsLimit ? 'Monthly exceeds salary limit' : combinedMonthlyExceedsLimit ? 'Combined monthly exceeds limit' : !eligibleForActiveLoans ? 'Active loans not 75% paid' : ''}
+                            title={processing ? 'Processing...' : isFormLocked ? 'Reapplication locked' : exceedsShareCapital ? 'Exceeds share capital limit' : newMonthlyExceedsLimit ? 'Monthly exceeds salary limit' : combinedMonthlyExceedsLimit ? 'Combined monthly exceeds limit' : !eligibleForActiveLoans ? 'Active loans not 50% paid' : ''}
                             className="min-w-[200px]"
                         >
                             {processing 

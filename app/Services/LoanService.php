@@ -50,7 +50,7 @@ class LoanService
     }
 
     /**
-     * Check if user can apply for new loan: all active loans must be >=75% paid
+     * Check if user can apply for new loan: all active loans must be >=50% paid
      */
     public function canApplyForNewLoan(User $user): bool
     {
@@ -68,7 +68,7 @@ class LoanService
             $percentPaid = $loan->total_amortizations > 0
                 ? $loan->paid_amortizations / $loan->total_amortizations
                 : 0;
-            if ($percentPaid < 0.75) {
+            if ($percentPaid < 0.50) {
                 return false;
             }
         }

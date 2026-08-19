@@ -322,7 +322,7 @@ class MemberController extends Controller
                 ->count(),
             'reason' => $hasPendingLoan
                 ? 'Member already has a pending loan application.'
-                : (! $eligible ? 'Member has active loans that must be at least 75% paid.' : null),
+                : (! $eligible ? 'Member has active loans that must be at least 50% paid.' : null),
         ]);
     }
 }

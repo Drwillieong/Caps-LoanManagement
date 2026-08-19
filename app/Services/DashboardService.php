@@ -312,6 +312,7 @@ class DashboardService
             'basic_salary' => $profile?->basic_salary ?? 0,
             'max_monthly_payment' => ($profile?->basic_salary ?? 0) / 2,
             'has_active_loan' => Loan::where('user_id', $user->id)->active()->exists(),
+            'active_loans_at_least_half_paid' => $this->loanService->canApplyForNewLoan($user),
         ];
     }
 }

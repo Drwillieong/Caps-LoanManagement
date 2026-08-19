@@ -68,6 +68,7 @@ interface LoanEligibility {
     basic_salary: number;
     max_monthly_payment: number;
     has_active_loan: boolean;
+    active_loans_at_least_half_paid: boolean;
 }
 
 interface LoanNotification {
@@ -210,6 +211,18 @@ export default function MemberDashboard({
         }
 
         if (loan_eligibility?.has_active_loan) {
+            if (loan_eligibility?.active_loans_at_least_half_paid) {
+                return (
+                    <Badge
+                        variant="outline"
+                        className="gap-1 border-emerald-200 bg-emerald-50 text-emerald-700"
+                    >
+                        <CheckCircle2 className="size-3" />
+                        Eligible to Apply
+                    </Badge>
+                );
+            }
+
             return (
                 <Badge
                     variant="secondary"
@@ -265,8 +278,9 @@ export default function MemberDashboard({
     const canApply =
         Boolean(loan_eligibility) &&
         profileCompleted &&
-        !loan_eligibility?.has_active_loan &&
-        (loan_eligibility?.max_loan_allowed ?? 0) > 0;
+        (loan_eligibility?.max_loan_allowed ?? 0) > 0 &&
+        (!loan_eligibility?.has_active_loan ||
+            loan_eligibility?.active_loans_at_least_half_paid);
 
     return (
         <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
@@ -445,7 +459,10 @@ export default function MemberDashboard({
                                                 ? 'You can start a loan application.'
                                                 : !profileCompleted
                                                   ? 'Your profile must be completed first.'
-                                                  : 'Loan application is currently unavailable.'}
+                                                  : loan_eligibility?.has_active_loan &&
+                                                      !loan_eligibility?.active_loans_at_least_half_paid
+                                                    ? 'Active loans must be at least 50% paid before applying.'
+                                                    : 'Loan application is currently unavailable.'}
                                         </p>
                                     </div>
                                     {canApply ? (

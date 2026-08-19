@@ -752,6 +752,63 @@ class LoanController extends Controller
     }
 
     /**
+     * Get loans where the current member is an accepted co-maker.
+     *
+     * Returns borrower details, loan figures, current status, and the
+     * next scheduled payment so the member can monitor liabilities they
+     * have co-signed.
+     */
+    public function comakerLoans()
+    {
+        $user = Auth::user();
+
+        $loanService = new LoanService();
+
+        $coMakerLoans = LoanCoMaker::where('user_id', $user->id)
+            ->where('status', 'accepted')
+            ->whereHas('loan', function ($query) {
+                $query->whereIn('status', [
+                    'awaiting_comaker',
+                    'pending_gm_review',
+                    'pending_cc_review',
+                    'approved',
+                    'released',
+                    'paid_off',
+                ]);
+            })
+            ->with([
+                'loan.user.memberProfile',
+                'loan.loanType',
+                'loan.amortizations',
+                'loan.payments',
+            ])
+            ->get()
+            ->map(function ($coMaker) use ($loanService) {
+                $loan = $coMaker->loan;
+                $borrower = $loan->user;
+                $progress = $loanService->getLoanProgress($loan);
+
+                return [
+                    'loan_id' => $loan->id,
+                    'loan_type' => $loan->loanType->name ?? 'N/A',
+                    'borrower' => [
+                        'name' => trim($borrower->first_name . ($borrower->middle_name ? ' ' . $borrower->middle_name : '') . ' ' . $borrower->last_name),
+                        'member_id' => $borrower->memberProfile?->members_id ?? 'N/A',
+                    ],
+                    'principal_amount' => $loan->principal_amount,
+                    'total_amount_due' => $loan->total_amount_due,
+                    'remaining_balance' => $progress['remaining_balance'],
+                    'status' => $loan->status,
+                    'monthly_payment' => $loan->monthly_amortization,
+                    'next_due_date' => $progress['next_due_date'],
+                    'next_due_amount' => $progress['next_due_amount'],
+                ];
+            });
+
+        return response()->json(['comaker_loans' => $coMakerLoans]);
+    }
+
+    /**
      * Show Choose Comaker page with eligible members
      * A member is available as co-maker only if they are NOT bound to any loan
      * (i.e., no loan with status: awaiting_comaker, pending_gm_review, pending_cc_review, approved, released)

@@ -134,6 +134,28 @@ function cleanNumericValue(val: string | number) {
 }
 
 /**
+ * Normalize a phone number to a canonical digit string ("63" + 10 digits) so that
+ * "09181234567" and "639181234567" (and "+63 918 ...") compare as equal and never
+ * produce a spurious profile diff alongside a profile-picture change.
+ */
+function normalizePhone(value: any): string | null {
+    if (value === null || value === undefined || value === '' || value === '—' || value === '–' || value === '-') {
+        return null;
+    }
+
+    let digits = String(value).replace(/\D/g, '');
+    if (digits === '') return null;
+
+    if (digits.startsWith('0')) {
+        digits = '63' + digits.slice(1);
+    } else if (!digits.startsWith('63')) {
+        digits = '63' + digits;
+    }
+
+    return digits;
+}
+
+/**
  * Normalize a single value for diff comparison:
  * - null / undefined / '' / '—' / '–' / '-' → null
  * - currency fields → parse to float with 2 decimals (strip ₱, commas)
@@ -142,6 +164,11 @@ function cleanNumericValue(val: string | number) {
 function normalizeCompareValue(key: string, value: any): string | number | null {
     if (value === null || value === undefined || value === '' || value === '—' || value === '–' || value === '-') {
         return null;
+    }
+
+    // Phone fields: compare canonically so formatting differences are ignored.
+    if (key === 'mobile_number' || key === 'permanent_mobile_number') {
+        return normalizePhone(value);
     }
 
     // Currency fields: strip formatting and parse as float
@@ -246,11 +273,83 @@ function hasChanged(key: string, original: any, pending: any): boolean {
     return normalizedOrig !== normalizedPend;
 }
 
+function ProfilePicturePreview({ filename, label, onClick }: { filename: string | null; label: string; onClick?: () => void }) {
+    const [errored, setErrored] = useState(false);
+    const src = filename ? `/storage/profiles/${filename}` : '';
+
+    const content = src && !errored ? (
+        <img
+            src={src}
+            alt={label}
+            className="h-full w-full object-cover"
+            onError={() => setErrored(true)}
+        />
+    ) : (
+        <div className="flex h-full w-full items-center justify-center text-lg font-bold text-emerald-600">
+            N/A
+        </div>
+    );
+
+    return (
+        <div className="flex flex-col items-center gap-2">
+            <div
+                role={onClick ? 'button' : undefined}
+                tabIndex={onClick ? 0 : undefined}
+                onClick={onClick}
+                onKeyDown={(e) => {
+                    if (onClick && (e.key === 'Enter' || e.key === ' ')) {
+                        e.preventDefault();
+                        onClick();
+                    }
+                }}
+                className={`relative h-40 w-40 overflow-hidden rounded-full border-4 border-emerald-200 bg-gradient-to-br from-emerald-50 to-emerald-100 shadow-lg ${
+                    onClick ? 'cursor-pointer transition-transform hover:scale-105 focus-visible:ring-4 focus-visible:ring-emerald-300' : ''
+                }`}
+            >
+                {content}
+                {onClick && src && !errored && (
+                    <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition-all duration-200 hover:bg-black/30 hover:opacity-100">
+                        <Eye className="h-8 w-8 text-white" />
+                    </span>
+                )}
+            </div>
+            <span className="text-xs font-medium text-muted-foreground">{label}</span>
+        </div>
+    );
+}
+
+function ProfilePictureComparison({ original, pending, onPreview }: { original: string | null; pending: string; onPreview: (src: string) => void }) {
+    return (
+        <div className="border-b">
+            <div className="px-6 py-2 bg-emerald-50/50 text-xs font-bold text-emerald-800 uppercase tracking-wider">
+                Profile Picture Change
+            </div>
+            <div className="grid grid-cols-2 gap-4 px-6 py-4">
+                <div className="flex flex-col items-center">
+                    <ProfilePicturePreview
+                        filename={original}
+                        label="Current Profile Picture"
+                        onClick={original ? () => onPreview(`/storage/profiles/${original}`) : undefined}
+                    />
+                </div>
+                <div className="flex flex-col items-center">
+                    <ProfilePicturePreview
+                        filename={pending}
+                        label="Proposed Profile Picture"
+                        onClick={() => onPreview(`/storage/profiles/${pending}`)}
+                    />
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export default function PendingEdits({ pendingEdits }: Props) {
     const [selectedRequest, setSelectedRequest] = useState<ProfileUpdateRequest | null>(null);
     const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
     const [processingId, setProcessingId] = useState<number | null>(null);
     const [showAllFields, setShowAllFields] = useState(false);
+    const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
 
     const rejectForm = useForm({
         rejection_reason: '',
@@ -375,6 +474,18 @@ export default function PendingEdits({ pendingEdits }: Props) {
                 category: 'Family / Beneficiaries',
                 original: original_data?.beneficiaries,
                 pending: pending_data?.beneficiaries ?? pending_data?.legal_beneficiary ?? pending_data?.legal_beneficiary_1_name,
+            });
+        }
+
+        // Profile picture changes are rendered as a visual side-by-side comparison
+        // rather than as a raw text/url diff.
+        if (pending_data?.profile_picture) {
+            changedFields.push({
+                key: 'profile_picture',
+                label: 'Profile Picture',
+                category: 'Profile',
+                original: original_data?.profile_picture ?? null,
+                pending: pending_data.profile_picture,
             });
         }
 
@@ -610,7 +721,15 @@ export default function PendingEdits({ pendingEdits }: Props) {
                                             <div className="px-6 py-2 bg-amber-50/50 border-b text-xs font-bold text-amber-800 uppercase tracking-wider">
                                                 {category} — Changes Detected
                                             </div>
-                                            {fields.map((field) => (
+                                            {fields.map((field) =>
+                                                field.key === 'profile_picture' ? (
+                                                    <ProfilePictureComparison
+                                                        key={field.key}
+                                                        original={field.original}
+                                                        pending={field.pending}
+                                                        onPreview={(src) => setLightboxSrc(src)}
+                                                    />
+                                                ) : (
                                                 <div key={field.key} className="grid grid-cols-2 border-b hover:bg-emerald-50/30 transition-colors">
                                                     <div className="px-6 py-3 border-r">
                                                         <div className="text-xs text-muted-foreground mb-1">{field.label}</div>
@@ -625,7 +744,8 @@ export default function PendingEdits({ pendingEdits }: Props) {
                                                         </div>
                                                     </div>
                                                 </div>
-                                            ))}
+                                                )
+                                            )}
                                         </div>
                                     ))}
 
@@ -775,6 +895,25 @@ export default function PendingEdits({ pendingEdits }: Props) {
                                 {processingId === selectedRequest?.id ? 'Rejecting...' : 'Confirm Rejection'}
                             </Button>
                         </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                {/* Profile Picture Lightbox */}
+                <Dialog open={lightboxSrc !== null} onOpenChange={(open) => { if (!open) setLightboxSrc(null); }}>
+                    <DialogContent className="max-w-2xl p-2 sm:p-4">
+                        <DialogHeader className="sr-only">
+                            <DialogTitle>Profile Picture Preview</DialogTitle>
+                        </DialogHeader>
+                        {lightboxSrc && (
+                            <img
+                                src={lightboxSrc}
+                                alt="Profile picture full preview"
+                                className="max-h-[70vh] w-full rounded-lg object-contain"
+                                onError={(e) => {
+                                    (e.currentTarget as HTMLImageElement).style.display = 'none';
+                                }}
+                            />
+                        )}
                     </DialogContent>
                 </Dialog>
             </div>

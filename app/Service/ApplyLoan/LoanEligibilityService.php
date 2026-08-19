@@ -48,10 +48,10 @@ class LoanEligibilityService
             abort(422, 'Monthly payment exceeds 50% of your basic salary. Please increase the loan term or reduce the amount.');
         }
 
-        // Check existing loans are all >=75% paid
+        // Check existing loans are all >=50% paid
         $loanService = new LoanService();
         if (!$loanService->canApplyForNewLoan($borrower)) {
-            abort(422, 'Cannot apply: One or more active loans must be at least 75% paid.');
+            abort(422, 'Cannot apply: One or more active loans must be at least 50% paid.');
         }
 
         // Combined monthly payment (existing + new) must not exceed 50% salary

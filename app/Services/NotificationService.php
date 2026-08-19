@@ -90,6 +90,7 @@ class NotificationService
             'comaker_request' => 'Co-Maker System',
             'loan_status' => 'Loan System',
             'payment_due' => 'Payment Reminder',
+            'gm_profile_decision' => 'GM Decision',
             'system' => 'System',
             default => 'LEIMCO System',
         };

@@ -1,7 +1,6 @@
 <?php
 
 use App\Http\Middleware\EnsureProfileCompleted;
-use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\RoleMiddleware;
 use Illuminate\Foundation\Application;
@@ -19,10 +18,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // Trust Railway's edge reverse proxy to correctly detect HTTPS
         $middleware->trustProxies(at: '*');
 
-        $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
+        $middleware->encryptCookies(except: ['sidebar_state']);
 
         $middleware->web(append: [
-            HandleAppearance::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
         ]);

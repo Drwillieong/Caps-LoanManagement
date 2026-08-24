@@ -48,7 +48,7 @@ export default function LogoutConfirmationModal({
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
           <AlertDialogAction 
-            className="bg-destructive hover:bg-destructive/90" 
+            className="mt-4 w-full border-0 bg-gradient-to-r from-green-600 to-green-500 font-semibold text-white shadow-lg shadow-green-600/25 transition-all duration-300 hover:scale-[1.02] hover:from-green-700 hover:to-green-600 hover:shadow-xl hover:shadow-green-600/30"
             onClick={handleConfirm}
           >
             Log out

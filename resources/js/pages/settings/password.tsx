@@ -120,6 +120,7 @@ export default function Password() {
 
                                 <div className="flex items-center gap-4">
                                     <Button
+                                    
                                         disabled={processing}
                                         data-test="update-password-button"
                                     >

@@ -40,7 +40,7 @@ import { type BreadcrumbItem } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Dashboard', href: '/dashboard' },
-    { title: 'Member Validation', href: '/dashboards/Gm/MemberValidate' },
+    
     { title: 'Bulk Upload', href: '/dashboards/Gm/BulkUploadMembers' },
 ];
 

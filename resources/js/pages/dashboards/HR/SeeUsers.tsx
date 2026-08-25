@@ -302,11 +302,11 @@ export default function SeeUsers({ users, filters }: Props) {
                         </div>
 
                         {/* Filter */}
-                        <select
-                            value={filter}
-                            onChange={(e) => setFilter(e.target.value)}
-                            className="rounded-lg border px-3 py-2 text-sm bg-background"
-                        >
+                            <select
+                                value={filter}
+                                onChange={(e) => setFilter(e.target.value)}
+                                className="w-full rounded-lg border px-3 py-2 text-sm bg-background sm:w-auto"
+                            >
                             <option value="all">All Members</option>
                             <option value="new">New (30 days)</option>
                             <option value="old">Old</option>
@@ -314,7 +314,7 @@ export default function SeeUsers({ users, filters }: Props) {
 
                         {/* Status Filter */}
                         <Select value={status} onValueChange={setStatus}>
-                            <SelectTrigger className="w-[260px]">
+                            <SelectTrigger className="w-full sm:w-[260px]">
                                 <SelectValue placeholder="active" />
                             </SelectTrigger>
                             <SelectContent>
@@ -330,8 +330,115 @@ export default function SeeUsers({ users, filters }: Props) {
                     </div>
                 </div>
 
-                {/* Table */}
-                <div className="overflow-hidden rounded-xl border bg-background">
+                {/* Mobile card list (visible below md) */}
+                <div className="space-y-4 md:hidden">
+                    {filteredMembers.length ? (
+                        filteredMembers.map((user) => (
+                            <div
+                                key={user.member_profile?.members_id || user.id}
+                                className="rounded-xl border bg-background p-4"
+                            >
+                                <div className="flex items-start justify-between gap-3">
+                                    <div className="min-w-0">
+                                        <Link
+                                            href={`/dashboards/HR/MembersProfile/${user.member_profile?.members_id}`}
+                                            className="block truncate text-sm font-semibold text-primary hover:underline"
+                                        >
+                                            {getFullName(user)}
+                                        </Link>
+                                        <p className="mt-0.5 text-xs text-muted-foreground">
+                                            {user.member_profile?.members_id}
+                                        </p>
+                                    </div>
+                                    <div className="flex shrink-0 flex-col items-end gap-2">
+                                        <div className="flex flex-wrap justify-end gap-2">
+                                            <span
+                                                className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusBadgeClass(getDisplayStatus(user))}`}
+                                            >
+                                                {getStatusLabel(getDisplayStatus(user))}
+                                            </span>
+                                            {user.has_pending_update_request && (
+                                                <span className="inline-flex items-center rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 px-2.5 py-0.5 text-xs font-medium">
+                                                    Pending Edit
+                                                </span>
+                                            )}
+                                            {user.has_rejected_update_request && (
+                                                <TooltipProvider>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <span>
+                                                                <span className="inline-flex items-center rounded-full bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 px-2.5 py-0.5 text-xs font-medium cursor-help">
+                                                                    Edit Rejected
+                                                                </span>
+                                                            </span>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>
+                                                            <p className="max-w-xs">{user.update_request_rejection_reason || 'Profile edit request was rejected.'}</p>
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <dl className="mt-3 space-y-1.5 text-sm">
+                                    <div className="flex justify-between gap-4">
+                                        <dt className="text-muted-foreground">Email</dt>
+                                        <dd className="truncate text-right">{user.email}</dd>
+                                    </div>
+                                    <div className="flex justify-between gap-4">
+                                        <dt className="text-muted-foreground">Joined</dt>
+                                        <dd className="text-right">{formatDate(user.created_at)}</dd>
+                                    </div>
+                                </dl>
+
+                                <div className="mt-4">
+                                    {user.status === 'rejected' ? (
+                                        <Button variant="outline" size="sm" asChild className="w-full">
+                                            <Link
+                                                href={`/dashboards/HR/RejectedMembers/${user.id}/edit`}
+                                                className="flex items-center justify-center gap-1.5"
+                                            >
+                                                <Pencil className="mr-1.5 h-3.5 w-3.5" />
+                                                Edit &amp; Resubmit
+                                            </Link>
+                                        </Button>
+                                    ) : user.status === 'pending' || user.status === 'pending_approval' || user.has_pending_update_request ? (
+                                        <TooltipProvider>
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <span className="block">
+                                                        <Button variant="ghost" size="sm" disabled className="w-full">
+                                                            Edit
+                                                        </Button>
+                                                    </span>
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                    <p>Editing disabled while account/edit is pending GM approval</p>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        </TooltipProvider>
+                                    ) : (
+                                        <Button variant="ghost" size="sm" asChild className="w-full">
+                                            <Link href={`/dashboards/HR/MembersProfile/${user.member_profile?.members_id}`}>
+                                                Edit
+                                            </Link>
+                                        </Button>
+                                    )}
+                                </div>
+                            </div>
+                        ))
+                    ) : (
+                        <div className="rounded-xl border bg-background py-12 text-center text-muted-foreground">
+                            <p className="text-sm font-medium">No members found</p>
+                            <p className="text-xs">Try adjusting your search or filters.</p>
+                        </div>
+                    )}
+                </div>
+
+                {/* Table (visible at md and above) */}
+                <div className="hidden overflow-hidden rounded-xl border bg-background md:block">
                     <table className="min-w-full text-sm">
                         <thead className="border-b bg-muted/40 text-muted-foreground">
                             <tr>

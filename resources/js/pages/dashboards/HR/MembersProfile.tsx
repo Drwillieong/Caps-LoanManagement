@@ -500,10 +500,10 @@ export default function MembersProfile({ user, memberProfile, beneficiaries, isA
         <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
             <Head title={`${memberProfile?.first_name || user.name}'s Profile`} />
 
-            <div className="flex flex-1 flex-col gap-6 p-6">
+            <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
                 {/* Header Section */}
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-center gap-3">
                         <Button variant="outline" size="icon" asChild>
                             <Link href="/dashboards/HR/SeeUsers">
                                 <ArrowLeft className="h-4 w-4" />
@@ -521,7 +521,7 @@ export default function MembersProfile({ user, memberProfile, beneficiaries, isA
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2 sm:justify-end">
                         <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${
                             user.status === 'active'
                                 ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
@@ -534,18 +534,19 @@ export default function MembersProfile({ user, memberProfile, beneficiaries, isA
                         <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary capitalize">
                             {user.role}
                         </span>
-                        <Button variant="outline" size="sm" onClick={() => exportPDF()}>
+                        <Button variant="outline" size="sm" onClick={() => exportPDF()} className="w-full justify-center sm:w-auto">
                             <Download className="mr-2 h-4 w-4" />
                             Export PDF
                         </Button>
                         {isPending ? null : !isEditing ? (
-                            <Button onClick={() => setIsEditing(true)} disabled={isRejected}>
+                            <Button onClick={() => setIsEditing(true)} disabled={isRejected} className="w-full justify-center sm:w-auto">
                                 Edit Profile
                             </Button>
                         ) : (
                             <Button
                                 variant="outline"
                                 onClick={() => setIsEditing(false)}
+                                className="w-full justify-center sm:w-auto"
                             >
                                 Cancel
                             </Button>
@@ -1426,7 +1427,7 @@ export default function MembersProfile({ user, memberProfile, beneficiaries, isA
 
                                     {/* ── Beneficiaries ── */}
                                     <div>
-                                        <div className="mb-3 flex items-center justify-between">
+                                        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                                             <h4 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
                                                 <Users className="h-4 w-4" />
                                                 Beneficiaries
@@ -1437,6 +1438,7 @@ export default function MembersProfile({ user, memberProfile, beneficiaries, isA
                                                     variant="outline"
                                                     size="sm"
                                                     onClick={addBeneficiary}
+                                                    className="w-full sm:w-auto"
                                                 >
                                                     Add Beneficiary
                                                 </Button>
@@ -1500,9 +1502,9 @@ export default function MembersProfile({ user, memberProfile, beneficiaries, isA
                             </Card>
 
                             {/* Submit Button */}
-                            <div className="flex items-center gap-4 pb-8">
+                            <div className="flex flex-wrap items-center gap-4 pb-8">
                                 {isEditing && (
-                                    <div className="flex items-center gap-4">
+                                    <div className="flex flex-wrap items-center gap-4">
                                         <Button disabled={processing} type="submit">
                                             Save Changes
                                         </Button>

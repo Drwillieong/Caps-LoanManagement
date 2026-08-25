@@ -849,7 +849,7 @@ export default function Create({ roles }: Props) {
                                             {/* Net Income */}
                                             {renderCurrency('net_income', 'Net Income', err, {
                                                 required: true,
-                                                  helperText: 'Minimum ₱10,000.00',
+                                                  helperText: 'Minimum ₱8,000.00',
                                             })}
 
                                             {/* Income Type */}

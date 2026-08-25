@@ -164,7 +164,7 @@ class GmController extends Controller
         }
 
         app(ActivityLogService::class)->logActivity(
-            'loan_approved',
+            'gm_loan_approved',
             $loan->id,
             'Approved loan #'.$loan->id.' for '.$borrower->name.' and forwarded it to Credit Coordinator.'
         );
@@ -233,7 +233,7 @@ class GmController extends Controller
         }
 
         app(ActivityLogService::class)->logActivity(
-            'loan_rejected',
+            'gm_loan_rejected',
             $loan->id,
             'Rejected loan #'.$loan->id.' for '.$borrower->name.'.',
             $validated['remarks']

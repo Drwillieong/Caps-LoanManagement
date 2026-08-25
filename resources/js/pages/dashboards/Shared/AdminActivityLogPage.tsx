@@ -7,17 +7,17 @@ import {
     Download,
     RefreshCw,
 } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { DateRange } from 'react-day-picker';
 
 import { LiveClock } from '@/components/live-clock';
+import { LoanTablePagination } from '@/components/loan-table-pagination';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import {
     Card,
     CardContent,
-    CardFooter,
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
@@ -57,12 +57,12 @@ interface AdminActivityLogPageProps {
     title: string;
 }
 
-const itemsPerPage = 10;
+const DEFAULT_PER_PAGE = 10;
 
 const emptyMeta: ActivityLogApiResponse['meta'] = {
     current_page: 1,
     last_page: 1,
-    per_page: itemsPerPage,
+    per_page: DEFAULT_PER_PAGE,
     total: 0,
     from: null,
     to: null,
@@ -150,12 +150,13 @@ export default function AdminActivityLogPage({
         initialDateRange,
     );
     const [currentPage, setCurrentPage] = useState(1);
+    const [rowsPerPage, setRowsPerPage] = useState(DEFAULT_PER_PAGE);
     const [selected, setSelected] = useState<Set<string>>(new Set());
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     const buildParams = useCallback(
-        (page = currentPage, perPage = itemsPerPage) => {
+        (page = currentPage, perPage = rowsPerPage) => {
             const params = new URLSearchParams({
                 page: page.toString(),
                 per_page: perPage.toString(),
@@ -183,7 +184,7 @@ export default function AdminActivityLogPage({
 
             return params;
         },
-        [currentPage, dateRange, filterAction, filterActor, searchTerm],
+        [currentPage, dateRange, filterAction, filterActor, searchTerm, rowsPerPage],
     );
 
     const syncDateFilterToUrl = (range?: DateRange) => {
@@ -259,18 +260,6 @@ export default function AdminActivityLogPage({
         return () => window.clearTimeout(timeout);
     }, [fetchActivities, searchTerm]);
 
-    const totalPages = Math.max(meta.last_page, 1);
-
-    const paginationPages = useMemo(() => {
-        const windowSize = Math.min(5, totalPages);
-        const start = Math.min(
-            Math.max(currentPage - 2, 1),
-            Math.max(totalPages - windowSize + 1, 1),
-        );
-
-        return Array.from({ length: windowSize }, (_, index) => start + index);
-    }, [currentPage, totalPages]);
-
     const clearFilters = () => {
         setSearchTerm('');
         setFilterAction('all');
@@ -291,7 +280,7 @@ export default function AdminActivityLogPage({
 
     const exportCSV = async () => {
         const exportLimit = Math.min(
-            Math.max(stats.filtered, itemsPerPage),
+            Math.max(stats.filtered, DEFAULT_PER_PAGE),
             500,
         );
         const response = await fetch(
@@ -538,6 +527,7 @@ export default function AdminActivityLogPage({
                                     <SelectItem value="creditcom">
                                         CreditCom
                                     </SelectItem>
+                                   
                                 </SelectContent>
                             </Select>
                             <Select
@@ -581,8 +571,8 @@ export default function AdminActivityLogPage({
                         </div>
                     </CardHeader>
 
-                    <div className="overflow-hidden">
-                        <Table>
+                    <div className="overflow-x-auto">
+                        <Table className="min-w-[720px]">
                             <TableHeader>
                                 <TableRow className="border-b border-emerald-200 hover:bg-transparent">
                                     <TableHead className="w-[50px] font-semibold text-emerald-800"></TableHead>
@@ -756,73 +746,18 @@ export default function AdminActivityLogPage({
                         </Table>
                     </div>
 
-                    {totalPages > 1 && (
-                        <CardFooter className="flex-col-reverse gap-4 border-t bg-muted/30 p-6 pt-0 sm:flex-row sm:items-center sm:justify-between">
-                            <div className="order-2 text-sm text-muted-foreground sm:order-1">
-                                Showing {meta.from ?? 0} to {meta.to ?? 0} of{' '}
-                                <span className="font-semibold">
-                                    {meta.total}
-                                </span>{' '}
-                                results
-                            </div>
-                            <div className="order-1 flex w-full items-center justify-center gap-1 sm:order-2 sm:w-auto sm:justify-end">
-                                <Button
-                                    variant={
-                                        currentPage === 1
-                                            ? 'outline'
-                                            : 'default'
-                                    }
-                                    size="sm"
-                                    onClick={() =>
-                                        setCurrentPage((page) =>
-                                            Math.max(page - 1, 1),
-                                        )
-                                    }
-                                    disabled={currentPage === 1 || isLoading}
-                                    className="h-9 min-w-[80px] px-3"
-                                >
-                                    Previous
-                                </Button>
-                                <div className="flex items-center gap-0.5">
-                                    {paginationPages.map((page) => (
-                                        <Button
-                                            key={page}
-                                            variant={
-                                                currentPage === page
-                                                    ? 'default'
-                                                    : 'outline'
-                                            }
-                                            size="sm"
-                                            className="h-9 w-9"
-                                            onClick={() => setCurrentPage(page)}
-                                            disabled={isLoading}
-                                        >
-                                            {page}
-                                        </Button>
-                                    ))}
-                                </div>
-                                <Button
-                                    variant={
-                                        currentPage === totalPages
-                                            ? 'outline'
-                                            : 'default'
-                                    }
-                                    size="sm"
-                                    onClick={() =>
-                                        setCurrentPage((page) =>
-                                            Math.min(page + 1, totalPages),
-                                        )
-                                    }
-                                    disabled={
-                                        currentPage === totalPages || isLoading
-                                    }
-                                    className="h-9 min-w-[80px] px-3"
-                                >
-                                    Next
-                                </Button>
-                            </div>
-                        </CardFooter>
-                    )}
+                    <div className="border-t bg-muted/30 p-4 sm:p-6">
+                        <LoanTablePagination
+                            currentPage={currentPage}
+                            rowsPerPage={rowsPerPage}
+                            totalItems={meta.total}
+                            onPageChange={setCurrentPage}
+                            onRowsPerPageChange={(rows) => {
+                                setRowsPerPage(rows);
+                                setCurrentPage(1);
+                            }}
+                        />
+                    </div>
                 </Card>
 
                 {!isLoading && activities.length === 0 && (

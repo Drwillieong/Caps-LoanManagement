@@ -7,6 +7,7 @@ use App\Models\Loan;
 use App\Models\LoanPayment;
 use App\Models\LoanTransaction;
 use App\Service\ApplyLoan\LoanAmortizationScheduleService;
+use App\Services\ActivityLogService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -137,6 +138,12 @@ class CreditComController extends Controller
         // Generate amortization schedule now that CC has approved
         app(LoanAmortizationScheduleService::class)->generate($loan, now());
 
+        app(ActivityLogService::class)->logActivity(
+            'credit_com_approved',
+            $loan->id,
+            'Credit Committee approved loan application #'.$loan->id.' for '.$borrower->name.'.'
+        );
+
         LoanTransaction::firstOrCreate(
             [
                 'loan_id' => $loan->id,
@@ -195,6 +202,13 @@ class CreditComController extends Controller
             'rejected_by' => 'credit_com',
             'rejected_at' => now(),
         ]);
+
+        app(ActivityLogService::class)->logActivity(
+            'credit_com_rejected',
+            $loan->id,
+            'Credit Committee rejected loan application #'.$loan->id.' for '.$borrower->name.'. Reason: '.$validated['remarks'],
+            $validated['remarks']
+        );
 
         return redirect()
             ->route('creditcom.validate-loan')

@@ -428,9 +428,9 @@ const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
     <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
         <Head title="User Profile" />
 
-        <div className="flex flex-1 flex-col gap-6 p-6">
+        <div className="flex flex-1 flex-col gap-6 p-4 sm:p-6">
             {/* Header Section */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-4">
                    
                     <div>
@@ -445,21 +445,22 @@ const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
                     </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={() => exportPDF()}>
+                <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                    <Button variant="outline" size="sm" onClick={() => exportPDF()} className="w-full justify-center sm:w-auto">
                         <Download className="mr-2 h-4 w-4" />
                         Export PDF
                     </Button>
                     {!isNewUser && (
                         <>
                             {!isEditing ? (
-                                <Button onClick={() => setIsEditing(true)}>
+                                <Button onClick={() => setIsEditing(true)} className="w-full justify-center sm:w-auto">
                                     Edit Profile
                                 </Button>
                             ) : (
                                 <Button
                                     variant="outline"
                                     onClick={() => setIsEditing(false)}
+                                    className="w-full justify-center sm:w-auto"
                                 >
                                     Cancel
                                 </Button>
@@ -1289,22 +1290,23 @@ const [isEditing, setIsEditing] = useState(isNewUser || isHREditingMember);
 
                                 {/* ── Beneficiaries ── */}
                                 <div>
-                                    <div className="mb-3 flex items-center justify-between">
-                                        <h4 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-                                            <Users className="h-4 w-4" />
-                                            Beneficiaries
-                                        </h4>
-                                        {isEditing && (
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={addBeneficiary}
-                                            >
-                                                Add Beneficiary
-                                            </Button>
-                                        )}
-                                    </div>
+                                        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                                            <h4 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+                                                <Users className="h-4 w-4" />
+                                                Beneficiaries
+                                            </h4>
+                                            {isEditing && (
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={addBeneficiary}
+                                                    className="w-full sm:w-auto"
+                                                >
+                                                    Add Beneficiary
+                                                </Button>
+                                            )}
+                                        </div>
                                     <div className="space-y-3">
                                     {(formData.beneficiaries as Beneficiary[]).map((beneficiary: Beneficiary, index: number) => (
                                             <div

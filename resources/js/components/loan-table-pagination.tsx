@@ -53,6 +53,7 @@ export function LoanTablePagination({
                     size="sm"
                     disabled={currentPage === 1}
                     onClick={() => onPageChange(currentPage - 1)}
+                    className="min-h-[44px] md:min-h-9"
                 >
                     Previous
                 </Button>
@@ -63,11 +64,11 @@ export function LoanTablePagination({
                     return (
                         <div key={page} className="flex items-center gap-1">
                             {showGap && <span className="px-2 text-slate-400">...</span>}
-                            <Button
+                                <Button
                                 type="button"
                                 variant={page === currentPage ? 'default' : 'outline'}
                                 size="sm"
-                                className="min-w-9"
+                                className="min-h-[44px] min-w-9 md:min-h-9"
                                 onClick={() => onPageChange(page)}
                             >
                                 {page}
@@ -81,6 +82,7 @@ export function LoanTablePagination({
                     size="sm"
                     disabled={currentPage === totalPages}
                     onClick={() => onPageChange(currentPage + 1)}
+                    className="min-h-[44px] md:min-h-9"
                 >
                     Next
                 </Button>

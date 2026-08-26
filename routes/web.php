@@ -122,6 +122,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware(['role:member', 'ensure.profile.completed'])
         ->name('member.completed-loan');
 
+    Route::get('dashboards/Member/active-loans/{loan}/view', [MemberController::class, 'viewActiveLoan'])
+        ->middleware(['role:member', 'ensure.profile.completed'])
+        ->name('member.active-loan.view');
+
     // Member - Completed loan details (reuse ViewActiveLoan UI)
     Route::get('dashboards/Member/completed-loans/{loan}/view', [MemberController::class, 'viewActiveLoan'])
         ->middleware(['role:member', 'ensure.profile.completed'])

@@ -1,4 +1,4 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import {
     AlertCircle,
     ArrowRight,
@@ -82,6 +82,7 @@ interface LoanNotification {
     description: string;
     comment: string;
     status: string;
+    target_url?: string | null;
 }
 
 interface CoMakerLoan {
@@ -937,6 +938,12 @@ export default function MemberDashboard({
                                                 (notification) => (
                                                     <TableRow
                                                         key={notification.id}
+                                                        className={notification.target_url ? 'cursor-pointer hover:bg-muted/50' : undefined}
+                                                        onClick={() => {
+                                                            if (notification.target_url) {
+                                                                router.visit(notification.target_url);
+                                                            }
+                                                        }}
                                                     >
                                                         <TableCell className="font-mono text-xs text-muted-foreground">
                                                             {formatDate(

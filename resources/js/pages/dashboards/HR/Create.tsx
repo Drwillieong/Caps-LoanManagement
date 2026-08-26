@@ -1,5 +1,5 @@
 import { Head, Link, useForm } from '@inertiajs/react';
-import { useState, useCallback, type ReactNode, type FormEvent } from 'react';
+import { useState, useEffect, useCallback, type ReactNode, type FormEvent } from 'react';
 import toast from 'react-hot-toast';
 import {
     ArrowLeft,
@@ -19,6 +19,7 @@ import { LiveClock } from '@/components/live-clock';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
@@ -100,6 +101,23 @@ function parsePhone(formatted: string): string {
     return digits;
 }
 
+function isValidPhone(raw: string): boolean {
+    const digits = raw.replace(/\D/g, '');
+    // Accept national format: 11 digits starting with "09" (e.g. 09171234567)
+    // or international format: 12 digits starting with "63" followed by "9".
+    if (digits.startsWith('63') && digits.length === 12) {
+        return digits[2] === '9';
+    }
+    if (digits.startsWith('0') && digits.length === 11) {
+        return digits[1] === '9';
+    }
+    return false;
+}
+
+function isValidPhZip(zip: string): boolean {
+    return /^\d{4}$/.test(zip.trim());
+}
+
 function titleCase(value: string): string {
     return value
         .toLowerCase()
@@ -143,11 +161,17 @@ interface FieldOpts {
     helperText?: string;
     className?: string;
     onInput?: (e: React.FormEvent<HTMLInputElement>) => void;
+    disabled?: boolean;
+    onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
+    onChange?: (value: string) => void;
 }
 
 interface OptsBasic {
     required?: boolean;
     helperText?: string;
+    disabled?: boolean;
+    onBlur?: (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+    onChange?: (value: string) => void;
 }
 
 const SELECT_CLASS =
@@ -159,6 +183,14 @@ const SELECT_CLASS =
 
 export default function Create({ roles }: Props) {
     const { post, processing, errors, setError, clearErrors, transform } = useForm({});
+
+    const [isSameAddress, setIsSameAddress] = useState(false);
+    // ── "Single / No Spouse" state ──
+    // `noSpouse` is the explicit checkbox; `isSingle` is true when the checkbox is
+    // checked OR when Civil Status is set to "single". This drives ONLY the spouse
+    // information grid visibility — beneficiaries remain editable for single members.
+    const [noSpouse, setNoSpouse] = useState(false);
+    const [inlineErrors, setInlineErrors] = useState<Record<string, string>>({});
 
     const [formData, setFormData] = useState({
         // ── Identity ──
@@ -205,6 +237,31 @@ export default function Create({ roles }: Props) {
         beneficiaries: [{ full_name: '', relationship: '' }] as Beneficiary[],
     });
 
+    // True when the member has no spouse (checkbox) or Civil Status is "single".
+    // Controls ONLY the spouse information grid — beneficiaries stay functional.
+    const isSingle = noSpouse || formData.civil_status === 'single';
+
+    // When the spouse grid is hidden, clear spouse values and their validation errors
+    // so they cannot trigger false validation failures on submit.
+    useEffect(() => {
+        if (!isSingle) return;
+        setFormData((prev) => ({
+            ...prev,
+            spouse_occupation: '',
+            spouse_gross_income: '',
+            spouse_income_type: 'monthly',
+            spouse_net_income: '',
+        }));
+        setInlineErrors((prev) => {
+            const next = { ...prev };
+            delete next.spouse_occupation;
+            delete next.spouse_gross_income;
+            delete next.spouse_income_type;
+            delete next.spouse_net_income;
+            return next;
+        });
+    }, [isSingle]);
+
     const handleChange = useCallback((field: string, value: string) => {
         setFormData((prev) => ({ ...prev, [field]: value }));
     }, []);
@@ -237,6 +294,70 @@ export default function Create({ roles }: Props) {
         });
     }, []);
 
+    // ── "Same as Present Address" sync handlers ──
+    // When the toggle is on, Permanent Address mirrors Present Address.
+    const handleSameAddressToggle = useCallback((checked: boolean) => {
+        setIsSameAddress(checked);
+        if (checked) {
+            setFormData((prev) => ({
+                ...prev,
+                permanent_address: prev.present_address,
+                permanent_zip_code: prev.present_zip_code,
+            }));
+            setInlineErrors((prev) => {
+                const next = { ...prev };
+                delete next.permanent_zip_code;
+                return next;
+            });
+        }
+    }, []);
+
+    const handlePresentAddressChange = useCallback((value: string) => {
+        setFormData((prev) =>
+            isSameAddress
+                ? { ...prev, present_address: value, permanent_address: value }
+                : { ...prev, present_address: value },
+        );
+    }, [isSameAddress]);
+
+    const handlePresentZipChange = useCallback(
+        (raw: string) => {
+            const digits = raw.replace(/\D/g, '').slice(0, 4);
+            setFormData((prev) =>
+                isSameAddress
+                    ? { ...prev, present_zip_code: digits, permanent_zip_code: digits }
+                    : { ...prev, present_zip_code: digits },
+            );
+            if (isSameAddress) {
+                setInlineErrors((prev) => {
+                    const next = { ...prev };
+                    delete next.permanent_zip_code;
+                    return next;
+                });
+            }
+        },
+        [isSameAddress],
+    );
+
+    const handlePermanentZipChange = useCallback((raw: string) => {
+        const digits = raw.replace(/\D/g, '').slice(0, 4);
+        setFormData((prev) => ({ ...prev, permanent_zip_code: digits }));
+    }, []);
+
+    const validateZip = useCallback((field: 'present_zip_code' | 'permanent_zip_code') => {
+        setInlineErrors((prev) => {
+            const next = { ...prev };
+            const val = (formData[field] ?? '').trim();
+            if (val && !isValidPhZip(val)) {
+                next[field] = 'Please enter a valid 4-digit Philippine ZIP code';
+            } else {
+                delete next[field];
+            }
+            return next;
+        });
+    }, [formData]);
+
+    // ── Beneficiary handlers ──
     const addBeneficiary = () => {
         setFormData((prev) => ({
             ...prev,
@@ -286,8 +407,12 @@ export default function Create({ roles }: Props) {
                     pattern={opts.pattern}
                     max={opts.max}
                     placeholder={opts.placeholder}
-                    onChange={(e) => handleChange(field, e.target.value)}
+                    onChange={(e) =>
+                        opts.onChange ? opts.onChange(e.target.value) : handleChange(field, e.target.value)
+                    }
                     onInput={opts.onInput}
+                    onBlur={opts.onBlur}
+                    disabled={opts.disabled}
                     className={cn(
                         opts.className,
                         err[field] && 'border-destructive ring-destructive/20 dark:ring-destructive/40',
@@ -403,7 +528,11 @@ export default function Create({ roles }: Props) {
                     id={field}
                     name={field}
                     value={value}
-                    onChange={(e) => handleChange(field, e.target.value)}
+                    onChange={(e) =>
+                        opts.onChange ? opts.onChange(e.target.value) : handleChange(field, e.target.value)
+                    }
+                    onBlur={opts.onBlur}
+                    disabled={opts.disabled}
                     placeholder={opts.placeholder}
                     rows={3}
                     className={cn(
@@ -428,7 +557,7 @@ export default function Create({ roles }: Props) {
 
     // ── Client-side conditional spouse validation errors ──
     const getSpouseConditionalErrors = (): Record<string, string> => {
-        if (!hasSpouseOccupation) return {};
+        if (!hasSpouseOccupation || isSingle) return {};
         const errors: Record<string, string> = {};
         if (!formData.spouse_gross_income || parseFloat(formData.spouse_gross_income.replace(/,/g, '')) <= 0) {
             errors.spouse_gross_income = 'Spouse Income (Gross) is required when spouse occupation is provided.';
@@ -459,7 +588,15 @@ export default function Create({ roles }: Props) {
 
         const cleanedPhone = parsePhone(formData.permanent_mobile_number);
         const tc = (v: string) => titleCase(v.trim());
+        // Beneficiaries remain relevant even for single members, so always derive one.
         const firstBeneficiary = formData.beneficiaries.find((b) => b.full_name);
+
+        const permanentAddress = isSameAddress
+            ? formData.present_address.trim()
+            : formData.permanent_address.trim();
+        const permanentZip = isSameAddress
+            ? formData.present_zip_code.trim()
+            : formData.permanent_zip_code.trim();
 
         return {
             first_name: tc(formData.first_name),
@@ -479,8 +616,9 @@ export default function Create({ roles }: Props) {
             permanent_mobile_number: cleanedPhone,
             present_address: formData.present_address.trim(),
             present_zip_code: formData.present_zip_code.trim(),
-            permanent_address: formData.permanent_address.trim(),
-            permanent_zip_code: formData.permanent_zip_code.trim(),
+            permanent_address: permanentAddress,
+            permanent_zip_code: permanentZip,
+            has_no_spouse_or_beneficiaries: isSingle,
             position: formData.position.trim(),
             basic_salary: parseNum(formData.basic_salary),
             income_type: formData.income_type,
@@ -488,10 +626,10 @@ export default function Create({ roles }: Props) {
             share_capital_balance: parseNum(formData.share_capital_balance),
             other_source_of_income: formData.other_source_of_income.trim() || null,
             facebook_account_name: formData.facebook_account_name.trim() || null,
-            spouse_occupation: formData.spouse_occupation.trim() || null,
-            spouse_gross_income: parseNullableNum(formData.spouse_gross_income),
+            spouse_occupation: isSingle ? null : formData.spouse_occupation.trim() || null,
+            spouse_gross_income: isSingle ? null : parseNullableNum(formData.spouse_gross_income),
             spouse_income_type: formData.spouse_income_type,
-            spouse_net_income: parseNullableNum(formData.spouse_net_income),
+            spouse_net_income: isSingle ? null : parseNullableNum(formData.spouse_net_income),
             real_properties_owned: formData.real_properties_owned.trim() || null,
             legal_beneficiary_1_name: firstBeneficiary?.full_name
                 ? tc(firstBeneficiary.full_name)
@@ -502,10 +640,33 @@ export default function Create({ roles }: Props) {
     const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         clearErrors();
+        setInlineErrors({});
 
         const validationErrors: Record<string, string> = {
             ...getSpouseConditionalErrors(),
         };
+
+        // ── Philippine ZIP code validation ──
+        const zipMsg = 'Please enter a valid 4-digit Philippine ZIP code';
+        if (!formData.present_zip_code.trim()) {
+            validationErrors.present_zip_code = zipMsg;
+        } else if (!isValidPhZip(formData.present_zip_code)) {
+            validationErrors.present_zip_code = zipMsg;
+        }
+        if (!isSameAddress) {
+            if (!formData.permanent_zip_code.trim()) {
+                validationErrors.permanent_zip_code = zipMsg;
+            } else if (!isValidPhZip(formData.permanent_zip_code)) {
+                validationErrors.permanent_zip_code = zipMsg;
+            }
+        }
+
+        if (!formData.permanent_mobile_number.trim()) {
+            validationErrors.permanent_mobile_number = 'Contact Number is required.';
+        } else if (!isValidPhone(formData.permanent_mobile_number)) {
+            validationErrors.permanent_mobile_number =
+                'Enter a valid PH mobile number (e.g., 0917 123 4567 or +63 917 123 4567).';
+        }
 
         const gross = formData.basic_salary ? parseFloat(formData.basic_salary.replace(/,/g, '')) : 0;
         const net = formData.net_income ? parseFloat(formData.net_income.replace(/,/g, '')) : 0;
@@ -561,7 +722,7 @@ export default function Create({ roles }: Props) {
 
                 <form onSubmit={handleSubmit} className="space-y-6">
                     {(() => {
-                        const err = errors as Record<string, string>;
+                        const err = { ...(errors as Record<string, string>), ...inlineErrors };
 
                         return (
                             <>
@@ -646,9 +807,7 @@ export default function Create({ roles }: Props) {
                                                     )}
                                                     aria-invalid={!!err.date_of_birth}
                                                 />
-                                                <p className="text-xs text-muted-foreground">
-                                                    Must be at least 18 years old.
-                                                </p>
+                                               
                                                 <InputError message={err.date_of_birth} />
                                             </div>
 
@@ -758,15 +917,37 @@ export default function Create({ roles }: Props) {
                                                         aria-invalid={!!err.permanent_mobile_number}
                                                     />
                                                 </div>
-                                               
+
+                                                <p className="text-xs text-muted-foreground">
+                                                    Format: 0917 123 4567 or +63 917 123 4567
+                                                </p>
                                                 <InputError message={err.permanent_mobile_number} />
+                                            </div>
+
+                                            {/* Same as Present Address toggle */}
+                                            <div className="md:col-span-2 lg:col-span-3">
+                                                <label className="flex w-fit cursor-pointer items-center gap-2 text-sm font-medium">
+                                                    <Checkbox
+                                                        id="same_as_present"
+                                                        checked={isSameAddress}
+                                                        onCheckedChange={(v) =>
+                                                            handleSameAddressToggle(v === true)
+                                                        }
+                                                        aria-invalid={!!err.permanent_address}
+                                                    />
+                                                    Same as Present Address
+                                                </label>
+                                                <p className="mt-1 text-xs text-muted-foreground">
+                                                    Copy Present Address &amp; ZIP code into the
+                                                    Permanent Address fields.
+                                                </p>
                                             </div>
 
                                             {/* Present Address */}
                                             {renderTextarea('present_address', 'Present Address', err, {
                                                 required: true,
                                                 placeholder: 'House/Unit No., Street, Barangay, City',
-                                               
+                                                onChange: handlePresentAddressChange,
                                             })}
 
                                             {/* Present Zip Code */}
@@ -776,11 +957,10 @@ export default function Create({ roles }: Props) {
                                                 type: 'text',
                                                 inputMode: 'numeric',
                                                 pattern: '[0-9]*',
-                                                onInput: (e) => {
-                                                    const el = e.target as HTMLInputElement;
-                                                    el.value = el.value.replace(/[^0-9]/g, '');
-                                                    handleChange('present_zip_code', el.value);
-                                                },
+                                                max: '4',
+                                                helperText: '4-digit Philippine ZIP code',
+                                                onChange: handlePresentZipChange,
+                                                onBlur: () => validateZip('present_zip_code'),
                                             })}
 
                                             {/* Permanent Address */}
@@ -792,7 +972,8 @@ export default function Create({ roles }: Props) {
                                                     required: true,
                                                     placeholder:
                                                         'House/Unit No., Street, Barangay, City, Province',
-                                                   
+                                                    disabled: isSameAddress,
+                                                    onChange: handleChange.bind(null, 'permanent_address'),
                                                 },
                                             )}
 
@@ -803,11 +984,11 @@ export default function Create({ roles }: Props) {
                                                 type: 'text',
                                                 inputMode: 'numeric',
                                                 pattern: '[0-9]*',
-                                                onInput: (e) => {
-                                                    const el = e.target as HTMLInputElement;
-                                                    el.value = el.value.replace(/[^0-9]/g, '');
-                                                    handleChange('permanent_zip_code', el.value);
-                                                },
+                                                max: '4',
+                                                helperText: '4-digit Philippine ZIP code',
+                                                disabled: isSameAddress,
+                                                onChange: handlePermanentZipChange,
+                                                onBlur: () => validateZip('permanent_zip_code'),
                                             })}
                                         </div>
                                     </CardContent>
@@ -908,48 +1089,71 @@ export default function Create({ roles }: Props) {
                                                     (if applicable)
                                                 </CardDescription>
                                             </div>
+                                          <label
+    htmlFor="single_no_spouse"
+    className="flex cursor-pointer items-center gap-2 rounded-md border border-border bg-muted/30 px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted/50"
+>
+    <Checkbox
+        id="single_no_spouse"
+        checked={isSingle}
+        disabled={formData.civil_status === 'single'}
+        onCheckedChange={(v) => setNoSpouse(v === true)}
+    />
+    <span>No Spouse</span>
+</label>
+
                                         </div>
                                     </CardHeader>
-                                    <CardContent className="pt-5">
-                                        {/* ── Spouse Sub-section ── */}
-                                        <div className="mb-6">
-                                            <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-                                                <UserCircle className="h-4 w-4" />
-                                                Spouse Information
-                                            </h4>
-                                            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                                                {renderInput('spouse_occupation', 'Occupation of Spouse', err, {
-                                                    placeholder: 'Enter spouse occupation',
-                                                    helperText: 'Optional',
-                                                })}
+                                    <CardContent className="space-y-6 pt-5">
+                                        {/* ── Spouse Sub-section (hidden for single members) ── */}
+                                        {!isSingle && (
+                                            <div className="mb-6">
+                                                <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+                                                    <UserCircle className="h-4 w-4" />
+                                                    Spouse Information
+                                                </h4>
+                                                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                                                    {renderInput('spouse_occupation', 'Occupation of Spouse', err, {
+                                                        placeholder: 'Enter spouse occupation',
+                                                        helperText: 'Optional',
+                                                    })}
 
-                                                {renderCurrency(
-                                                    'spouse_gross_income',
-                                                    'Spouse Income (Gross)',
-                                                    err,
-                                                    { required: hasSpouseOccupation, helperText: hasSpouseOccupation ? 'Required' : 'Optional' },
-                                                )}
+                                                    {renderCurrency(
+                                                        'spouse_gross_income',
+                                                        'Spouse Income (Gross)',
+                                                        err,
+                                                        { required: hasSpouseOccupation, helperText: hasSpouseOccupation ? 'Required' : 'Optional' },
+                                                    )}
 
-                                                {renderSelect(
-                                                    'spouse_income_type',
-                                                    'Spouse Income Type',
-                                                    [
-                                                        { value: 'monthly', label: 'Monthly' },
-                                                        { value: 'daily', label: 'Daily' },
-                                                        { value: 'yearly', label: 'Yearly' },
-                                                    ],
-                                                    err,
-                                                    { required: hasSpouseOccupation, helperText: hasSpouseOccupation ? 'Required' : 'Optional' },
-                                                )}
+                                                    {renderSelect(
+                                                        'spouse_income_type',
+                                                        'Spouse Income Type',
+                                                        [
+                                                            { value: 'monthly', label: 'Monthly' },
+                                                            { value: 'daily', label: 'Daily' },
+                                                            { value: 'yearly', label: 'Yearly' },
+                                                        ],
+                                                        err,
+                                                        { required: hasSpouseOccupation, helperText: hasSpouseOccupation ? 'Required' : 'Optional' },
+                                                    )}
 
-                                                {renderCurrency(
-                                                    'spouse_net_income',
-                                                    'Spouse Income (Net)',
-                                                    err,
-                                                    { required: hasSpouseOccupation, helperText: hasSpouseOccupation ? 'Required' : 'Optional' },
-                                                )}
+                                                    {renderCurrency(
+                                                        'spouse_net_income',
+                                                        'Spouse Income (Net)',
+                                                        err,
+                                                        { required: hasSpouseOccupation, helperText: hasSpouseOccupation ? 'Required' : 'Optional' },
+                                                    )}
+                                                </div>
                                             </div>
-                                        </div>
+                                        )}
+
+                                        {isSingle && (
+                                            <p className="rounded-lg border border-dashed bg-muted/30 p-4 text-sm text-muted-foreground">
+                                                Spouse details are hidden for single members. Beneficiary
+                                                designations below remain available.
+                                            </p>
+                                        )}
+
 
                                         {/* ── Real Properties ── */}
                                         <div className="mb-6">

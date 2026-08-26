@@ -586,10 +586,10 @@ export default function GmDashboard({
 
                 {/* Quick Management Links - Bottom */}
                 <div>
-                    <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-3 tracking-wide uppercase">
+                    <h2 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 mb-3 tracking-wide uppercase truncate">
                         Quick Management Links
                     </h2>
-                    <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8">
+                    <div className="grid grid-cols-4 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8">
                         {quickLinks.map((link) => (
                             <Link
                                 key={link.title}
@@ -599,7 +599,7 @@ export default function GmDashboard({
                                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800 group-hover:bg-slate-200 dark:group-hover:bg-slate-700 transition-colors">
                                     <link.icon className="h-5 w-5 text-slate-600 dark:text-slate-400" />
                                 </div>
-                                <span className="text-xs font-medium text-slate-700 dark:text-slate-300 truncate w-full">{link.title}</span>
+                                <span className="text-[11px] sm:text-xs font-medium text-slate-700 dark:text-slate-300 line-clamp-2 leading-tight break-words">{link.title}</span>
                                 {link.badge && (
                                     <span className="text-[10px] font-bold bg-red-100 text-red-800 rounded-full px-2 py-0.5">
                                         {link.badge}

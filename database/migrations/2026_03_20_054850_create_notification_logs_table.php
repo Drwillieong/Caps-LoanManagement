@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->string('title');
             $table->text('message');
-            $table->enum('type', ['loan_status', 'payment_due', 'comaker_request', 'system', 'general'])->default('general');
+            $table->enum('type', ['loan_status', 'payment_due', 'comaker_request', 'system', 'general', 'gm_profile_decision', 'salary_deduction'])->default('general');
             $table->unsignedBigInteger('related_id')->nullable();
             $table->string('related_type')->nullable();
             $table->boolean('is_read')->default(false);

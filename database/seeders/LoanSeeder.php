@@ -44,30 +44,7 @@ class LoanSeeder extends Seeder
         // ===============================
         // 2. ACTIVE LOAN (Jairus)
         // ===============================
-        $loan2 = Loan::create([
-            'user_id' => 4,
-            'loan_type_id' => 1,
-            'principal_amount' => 15000.00,
-            'terms_months' => 6,
-            'interest_amount' => 1500.00,
-            'total_amount_due' => 16500.00,
-            'monthly_amortization' => 2750.00,
-            'voucher_number' => 'CV-2026-002',
-            'check_number' => 'CHK-002',
-            'release_date' => Carbon::now()->subMonths(2)->day(10),
-            'status' => 'released',
-        ]);
-
-        LoanCoMaker::create([
-            'loan_id' => $loan2->id,
-            'user_id' => 2,
-            'status' => 'accepted',
-            'responded_at' => Carbon::now()->subMonths(2)->day(5),
-        ]);
-
-        $this->createAmortizations($loan2, 6, false);
-        $this->createPayments($loan2, null); // auto only valid past payments
-
+       
 
         // ===============================
         // 3. REJECTED (Jairus)

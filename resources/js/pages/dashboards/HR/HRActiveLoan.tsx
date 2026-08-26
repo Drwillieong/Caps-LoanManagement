@@ -94,6 +94,7 @@ export default function HRActiveLoan({
                     .print-table table { width: 100% !important; border-collapse: collapse !important; font-size: 11px !important; }
                     .print-table th { background: #e2e8f0 !important; color: #0f172a !important; text-transform: uppercase !important; }
                     .print-table th, .print-table td { border: 1px solid #94a3b8 !important; padding: 6px !important; }
+                    .print-table { display: block !important; }
                 }
             `}</style>
 
@@ -139,28 +140,85 @@ export default function HRActiveLoan({
                 <Card className="print-card border-slate-200 shadow-sm">
                     <CardHeader className="no-print flex flex-col gap-4 pb-4 lg:flex-row lg:items-center lg:justify-between">
                         <CardTitle className="text-lg font-bold text-slate-900">Active Loans</CardTitle>
-                        <div className="flex flex-wrap items-center gap-2">
+                        <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
                             <Input
                                 placeholder="Search member ID or name..."
                                 value={search}
                                 onChange={(event) => setSearch(event.target.value)}
-                                className="w-64 max-w-sm border-slate-300"
+                                className="w-full border-slate-300 sm:w-64 sm:max-w-sm"
                             />
-                            <Button variant="outline" size="sm" onClick={() => setSearch('')}>
+                            <Button variant="outline" size="sm" onClick={() => setSearch('')} className="min-h-[44px] sm:min-h-9">
                                 <Search className="h-4 w-4" />
                             </Button>
-                            <Button variant="outline" size="sm" onClick={() => setFilterStatus('all')}>
+                            <Button variant="outline" size="sm" onClick={() => setFilterStatus('all')} className="min-h-[44px] sm:min-h-9">
                                 <Filter className="mr-1 h-4 w-4" />
                                 All ({displayLoans.length})
                             </Button>
-                            <Button size="sm" onClick={() => window.print()}>
+                            <Button size="sm" onClick={() => window.print()} className="min-h-[44px] sm:min-h-9">
                                 <Printer className="mr-1 h-4 w-4" />
                                 Print
                             </Button>
                         </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="print-table overflow-hidden rounded-md border border-slate-200">
+                        {/* Mobile card list (visible below md) */}
+                        <div className="space-y-4 md:hidden">
+                            {paginatedLoans.length > 0 ? (
+                                paginatedLoans.map((loan) => (
+                                    <div key={loan.id} className="no-print rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                                        <div className="flex items-start justify-between gap-3">
+                                            <div className="min-w-0">
+                                                <p className="truncate text-sm font-semibold text-slate-900">{loan.member_name}</p>
+                                                <p className="mt-0.5 text-xs text-slate-500">{loan.member_id}</p>
+                                            </div>
+                                            <Badge variant="outline" className={`${statusClass(loan.status)} shrink-0`}>
+                                                {loan.status}
+                                            </Badge>
+                                        </div>
+
+                                        <dl className="mt-3 space-y-1.5 text-sm">
+                                            <div className="flex justify-between gap-4">
+                                                <dt className="text-slate-500">Type</dt>
+                                                <dd className="text-right text-slate-900">{loan.loan_type}</dd>
+                                            </div>
+                                            <div className="flex justify-between gap-4">
+                                                <dt className="text-slate-500">Principal</dt>
+                                                <dd className="text-right font-mono text-slate-900">{formatCurrency(loan.principal)}</dd>
+                                            </div>
+                                            <div className="flex justify-between gap-4">
+                                                <dt className="text-slate-500">Terms</dt>
+                                                <dd className="text-right text-slate-900">{loan.terms} mo</dd>
+                                            </div>
+                                            <div className="flex justify-between gap-4">
+                                                <dt className="text-slate-500">Total Due</dt>
+                                                <dd className="text-right font-mono font-semibold text-slate-900">{formatCurrency(loan.total_due)}</dd>
+                                            </div>
+                                            <div className="flex justify-between gap-4">
+                                                <dt className="text-slate-500">Date</dt>
+                                                <dd className="text-right text-slate-900">{formatDate(loan.date)}</dd>
+                                            </div>
+                                        </dl>
+
+                                        <div className="mt-4">
+                                            <Button variant="outline" size="sm" asChild className="min-h-[44px] w-full">
+                                                <Link href={`/dashboards/HR/active-loans/${loan.id}/view`}>
+                                                    <Eye className="h-4 w-4" />
+                                                    View Details
+                                                </Link>
+                                            </Button>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="rounded-xl border border-slate-200 bg-white py-12 text-center text-slate-500">
+                                    <p className="text-sm font-medium">No active loans found</p>
+                                    <p className="text-xs">Try adjusting the search or filter.</p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Table (visible at md and above) */}
+                        <div className="print-table hidden overflow-hidden rounded-md border border-slate-200 md:block">
                             <Table>
                                 <TableHeader>
                                     <TableRow className="border-b border-slate-200 bg-slate-100 hover:bg-slate-100">

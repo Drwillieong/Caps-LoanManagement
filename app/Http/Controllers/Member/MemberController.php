@@ -249,6 +249,7 @@ class MemberController extends Controller
 
         return Inertia::render('dashboards/Shared/ViewActiveLoan', [
             'loan' => $detailedLoan,
+            'unread_notifications_count' => $this->getMemberUnreadNotificationCount($request),
         ]);
     }
 

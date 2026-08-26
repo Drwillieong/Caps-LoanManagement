@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\NotificationLog;
+use App\Models\Loan;
 use App\Models\User;
 use Illuminate\Pagination\LengthAwarePaginator;
 
@@ -41,6 +42,7 @@ class NotificationService
                 'comment' => $notif->message,
                 'status' => $notif->type,
                 'is_read' => $notif->is_read,
+                'target_url' => $this->getTargetUrl($notif),
             ]);
             
         return new LengthAwarePaginator($notifications, $notifications->count(), $limit);
@@ -61,6 +63,7 @@ class NotificationService
                 'comment' => $notif->message,
                 'status' => $notif->type,
                 'is_read' => $notif->is_read,
+                'target_url' => $this->getTargetUrl($notif),
             ])
             ->toArray();
     }
@@ -90,6 +93,7 @@ class NotificationService
             'comaker_request' => 'Co-Maker System',
             'loan_status' => 'Loan System',
             'payment_due' => 'Payment Reminder',
+            'salary_deduction' => 'Payroll Deduction',
             'gm_profile_decision' => 'GM Decision',
             'system' => 'System',
             default => 'LEIMCO System',
@@ -102,8 +106,23 @@ class NotificationService
         return match ($notif->type) {
             'loan_status' => 'Loan Update',
             'comaker_request' => 'Co-Maker',
+            'salary_deduction' => 'Salary Deduction',
             default => $notif->type,
         };
     }
-}
 
+    protected function getTargetUrl(NotificationLog $notif): ?string
+    {
+        if ($notif->related_type === Loan::class && $notif->related_id) {
+            return "/dashboards/Member/active-loans/{$notif->related_id}/view";
+        }
+
+        return match ($notif->type) {
+            'salary_deduction', 'payment_due', 'loan_status' => $notif->related_id
+                ? "/dashboards/Member/active-loans/{$notif->related_id}/view"
+                : '/dashboards/Member/ShowActiveLoans',
+            'comaker_request' => '/dashboards/Member/CoMaker',
+            default => null,
+        };
+    }
+}

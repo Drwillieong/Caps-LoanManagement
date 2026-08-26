@@ -36,6 +36,7 @@ interface LoanNotification {
     description: string;
     comment: string;
     status: string;
+    target_url?: string | null;
 }
 
 interface Props {
@@ -159,7 +160,15 @@ export default function Notification({ loan_notifications = [] }: Props) {
                                     </TableHeader>
                                     <TableBody>
                                         {paginatedNotifications.map((notification) => (
-                                            <TableRow key={notification.id}>
+                                            <TableRow
+                                                key={notification.id}
+                                                className={notification.target_url ? 'cursor-pointer hover:bg-muted/50' : undefined}
+                                                onClick={() => {
+                                                    if (notification.target_url) {
+                                                        router.visit(notification.target_url);
+                                                    }
+                                                }}
+                                            >
                                                 <TableCell className="font-mono text-xs text-muted-foreground">
                                                     {formatDate(notification.date)}
                                                 </TableCell>

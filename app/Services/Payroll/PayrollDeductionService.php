@@ -10,6 +10,7 @@ use App\Models\MemberProfile;
 use App\Models\PayrollUpload;
 use App\Models\PayrollUploadRow;
 use App\Models\User;
+use App\Services\NotificationService;
 use Carbon\Carbon;
 use DateTimeInterface;
 use Illuminate\Http\UploadedFile;
@@ -26,6 +27,7 @@ class PayrollDeductionService
     public function __construct(
         protected LoanPaymentPostingService $postingService,
         protected SystemSettingService $systemSettingService,
+        protected NotificationService $notificationService,
     ) {}
 
     public function expectedColumns(): array
@@ -330,6 +332,8 @@ class PayrollDeductionService
                         $stats[$result['status'].'_count'] = ($stats[$result['status'].'_count'] ?? 0) + 1;
                         $stats['total_expected_amount'] += $result['expected_amount'];
                         $stats['total_deducted_amount'] += $result['applied_amount'];
+
+                        $this->notifyMemberOfAppliedDeduction($memberProfile, $result['records'], $cutoffDate);
                     }
                 } catch (Throwable $exception) {
                     $this->failRow($uploadRow, [$exception->getMessage()]);
@@ -339,6 +343,30 @@ class PayrollDeductionService
         }, 3);
 
         return $stats;
+    }
+
+    private function notifyMemberOfAppliedDeduction(MemberProfile $memberProfile, array $records, Carbon $cutoffDate): void
+    {
+        $user = $memberProfile->user;
+
+        if (! $user) {
+            return;
+        }
+
+        collect($records)
+            ->filter(fn (DeductionRecord $record) => (float) $record->deducted_amount > 0)
+            ->each(function (DeductionRecord $record) use ($user, $cutoffDate) {
+                $amount = 'PHP '.number_format((float) $record->deducted_amount, 2);
+
+                $this->notificationService->createNotification(
+                    $user,
+                    'Salary Deduction Applied',
+                    "Salary deduction of {$amount} applied to Loan #{$record->loan_id} on {$cutoffDate->toFormattedDateString()}. Remaining balance: PHP ".number_format((float) $record->balance_after, 2).'.',
+                    'salary_deduction',
+                    $record->loan_id,
+                    Loan::class
+                );
+            });
     }
 
     private function failRow(PayrollUploadRow $row, array $errors, array $extra = []): void

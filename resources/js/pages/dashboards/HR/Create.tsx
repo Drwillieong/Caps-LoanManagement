@@ -100,6 +100,19 @@ function parsePhone(formatted: string): string {
     return digits;
 }
 
+function isValidPhone(raw: string): boolean {
+    const digits = raw.replace(/\D/g, '');
+    // Accept national format: 11 digits starting with "09" (e.g. 09171234567)
+    // or international format: 12 digits starting with "63" followed by "9".
+    if (digits.startsWith('63') && digits.length === 12) {
+        return digits[2] === '9';
+    }
+    if (digits.startsWith('0') && digits.length === 11) {
+        return digits[1] === '9';
+    }
+    return false;
+}
+
 function titleCase(value: string): string {
     return value
         .toLowerCase()
@@ -507,6 +520,13 @@ export default function Create({ roles }: Props) {
             ...getSpouseConditionalErrors(),
         };
 
+        if (!formData.permanent_mobile_number.trim()) {
+            validationErrors.permanent_mobile_number = 'Contact Number is required.';
+        } else if (!isValidPhone(formData.permanent_mobile_number)) {
+            validationErrors.permanent_mobile_number =
+                'Enter a valid PH mobile number (e.g., 0917 123 4567 or +63 917 123 4567).';
+        }
+
         const gross = formData.basic_salary ? parseFloat(formData.basic_salary.replace(/,/g, '')) : 0;
         const net = formData.net_income ? parseFloat(formData.net_income.replace(/,/g, '')) : 0;
         if (gross > 0 && net > gross) {
@@ -758,7 +778,10 @@ export default function Create({ roles }: Props) {
                                                         aria-invalid={!!err.permanent_mobile_number}
                                                     />
                                                 </div>
-                                               
+
+                                                <p className="text-xs text-muted-foreground">
+                                                    Format: 0917 123 4567 or +63 917 123 4567
+                                                </p>
                                                 <InputError message={err.permanent_mobile_number} />
                                             </div>
 

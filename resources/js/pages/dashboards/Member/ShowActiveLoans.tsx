@@ -204,7 +204,7 @@ export default function ShowActiveLoans({
                                                         size="sm"
                                                     >
                                                         <Link
-                                                            href={`/dashboards/Member/MemberActiveLoan?loan=${loan.id}`}
+                                                            href={`/dashboards/Member/active-loans/${loan.id}/view`}
                                                         >
                                                             View Loan
                                                         </Link>

@@ -116,6 +116,7 @@ const memberNavItems: NavItem[] = [
         href: '/dashboards/Member/UserProfile',
         icon: UserCircle2,
     },
+  
  
    
 ];

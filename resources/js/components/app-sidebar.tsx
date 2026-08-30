@@ -178,6 +178,11 @@ const gmNavItems: NavItem[] = [
                 icon: Banknote,
             },
             {
+                title: 'Settlement Requests',
+                href: '/dashboards/Gm/SettlementRequests',
+                icon: FileClock,
+            },
+            {
                 title: 'Completed Loan',
                 href: '/dashboards/Gm/GMCompletedLoan',
                 icon: History,

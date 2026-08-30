@@ -1,4 +1,4 @@
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import React, { useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { LiveClock } from '@/components/live-clock';
@@ -17,6 +17,7 @@ import {
    
     ArrowRight,
     TrendingDown,
+    Wallet,
 } from 'lucide-react';
 
 import {
@@ -29,6 +30,15 @@ import {
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 
@@ -57,6 +67,8 @@ export default function MemberActiveLoan({
     const [expandedLoan, setExpandedLoan] = useState<number | null>(
         defaultExpandedLoan
     );
+    const [settlementLoanId, setSettlementLoanId] = useState<number | null>(null);
+    const settlementForm = useForm({ confirm: true });
 
     function formatDate(dateStr: string | null): string {
         if (!dateStr) return 'N/A';
@@ -123,6 +135,16 @@ export default function MemberActiveLoan({
 
     function toggleExpand(loanId: number) {
         setExpandedLoan(expandedLoan === loanId ? null : loanId);
+    }
+
+    function submitSettlementRequest(loanId: number) {
+        settlementForm.post(`/dashboards/Member/active-loans/${loanId}/settlement-request`, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setSettlementLoanId(null);
+                settlementForm.reset();
+            },
+        });
     }
 
     // Calculate overall progress
@@ -346,6 +368,89 @@ export default function MemberActiveLoan({
                                             </p>
                                         </div>
                                     </div>
+
+                                    {loan.settlement && (
+                                        <div className="mt-4 rounded-md border border-slate-200 bg-background p-4">
+                                            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                                                <div>
+                                                    <p className="text-sm font-semibold">Full Settlement</p>
+                                                    <p className="text-sm text-muted-foreground">
+                                                        Settlement amount: <span className="font-semibold text-slate-900">{formatCurrency(loan.settlement.settlement_amount)}</span>
+                                                    </p>
+                                                    {loan.settlement.latest_request && (
+                                                        <div className="mt-2">
+                                                            <Badge variant="outline">
+                                                                Request {loan.settlement.latest_request.status.replace(/_/g, ' ')}
+                                                            </Badge>
+                                                            {loan.settlement.latest_request.rejection_reason && (
+                                                                <p className="mt-1 text-xs text-red-600">{loan.settlement.latest_request.rejection_reason}</p>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <Dialog open={settlementLoanId === loan.id} onOpenChange={(open) => setSettlementLoanId(open ? loan.id : null)}>
+                                                    <DialogTrigger asChild>
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            className="min-h-[44px]"
+                                                            disabled={!loan.settlement.is_eligible}
+                                                            onClick={(event) => {
+                                                                event.stopPropagation();
+                                                                setSettlementLoanId(loan.id);
+                                                            }}
+                                                        >
+                                                            <Wallet className="h-4 w-4" />
+                                                            Request Full Settlement
+                                                        </Button>
+                                                    </DialogTrigger>
+                                                    <DialogContent>
+                                                        <DialogHeader>
+                                                            <DialogTitle>Request Full Settlement</DialogTitle>
+                                                            <DialogDescription>
+                                                                This sends your request to the General Manager for validation. Your loan remains active until payment is verified.
+                                                            </DialogDescription>
+                                                        </DialogHeader>
+                                                        <div className="space-y-4 py-2">
+                                                            <div className="rounded-md border p-4">
+                                                                <div className="flex items-center justify-between text-sm">
+                                                                    <span className="text-muted-foreground">Current balance</span>
+                                                                    <span className="font-mono font-semibold">{formatCurrency(loan.settlement.outstanding_balance)}</span>
+                                                                </div>
+                                                                <div className="mt-2 flex items-center justify-between text-sm">
+                                                                    <span className="text-muted-foreground">Settlement amount</span>
+                                                                    <span className="font-mono text-base font-bold">{formatCurrency(loan.settlement.settlement_amount)}</span>
+                                                                </div>
+                                                            </div>
+                                                            <div className="space-y-2">
+                                                                {loan.settlement.eligibility_checks.map((check) => (
+                                                                    <div key={check.label} className="flex items-center gap-2 text-sm">
+                                                                        <Badge variant={check.passed ? 'default' : 'destructive'}>{check.passed ? 'Passed' : 'Failed'}</Badge>
+                                                                        <span>{check.label}</span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                            <p className="text-xs text-muted-foreground">{loan.settlement.calculation_basis}</p>
+                                                            {settlementForm.errors.confirm && (
+                                                                <p className="text-sm text-red-600">{settlementForm.errors.confirm}</p>
+                                                            )}
+                                                        </div>
+                                                        <DialogFooter>
+                                                            <Button variant="outline" onClick={() => setSettlementLoanId(null)}>
+                                                                Cancel
+                                                            </Button>
+                                                            <Button
+                                                                onClick={() => submitSettlementRequest(loan.id)}
+                                                                disabled={settlementForm.processing}
+                                                            >
+                                                                Submit Request
+                                                            </Button>
+                                                        </DialogFooter>
+                                                    </DialogContent>
+                                                </Dialog>
+                                            </div>
+                                        </div>
+                                    )}
 
                                     {/* Progress Bar */}
                                     <div className="mt-4">

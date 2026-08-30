@@ -102,6 +102,11 @@ class Loan extends Model
         return $this->hasMany(LoanPayment::class);
     }
 
+    public function settlementRequests(): HasMany
+    {
+        return $this->hasMany(LoanSettlementRequest::class);
+    }
+
     /**
      * Scoped queries for common loan status filters
      */

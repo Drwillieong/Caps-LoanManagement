@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Member;
 
 use App\Http\Controllers\Controller;
 use App\Models\Loan;
+use App\Services\LoanSettlementService;
 use App\Services\LoanService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -13,7 +14,8 @@ class MemberController extends Controller
     use \App\Traits\HasNotificationCount;
 
     public function __construct(
-        protected LoanService $loanService
+        protected LoanService $loanService,
+        protected LoanSettlementService $settlementService,
     ) {}
 
     /**
@@ -38,7 +40,7 @@ class MemberController extends Controller
 
         $activeLoans = Loan::where('user_id', $user->id)
             ->active()
-            ->with(['loanType', 'amortizations', 'payments', 'transactions.processor'])
+            ->with(['loanType', 'amortizations', 'payments', 'transactions.processor', 'settlementRequests' => fn ($query) => $query->latest()])
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($loan) {
@@ -59,6 +61,8 @@ class MemberController extends Controller
                 $paymentStatus = $nextDueAmortization
                     ? (now()->diffInDays($nextDueAmortization->due_date, false) < 0 ? 'overdue' : 'due_soon')
                     : 'paid_off';
+                $settlementCalculation = $this->settlementService->calculate($loan);
+                $latestSettlementRequest = $loan->settlementRequests->first();
 
                 return [
                     'id' => $loan->id,
@@ -80,6 +84,22 @@ class MemberController extends Controller
                     'next_due_date' => $nextDueAmortization?->due_date?->format('Y-m-d'),
                     'next_due_amount' => $nextDueAmortization?->amount_due ?? 0,
                     'payment_status' => $paymentStatus,
+                    'settlement' => [
+                        'outstanding_balance' => $settlementCalculation['outstanding_balance'],
+                        'settlement_amount' => $settlementCalculation['settlement_amount'],
+                        'calculation_basis' => $settlementCalculation['breakdown']['calculation_basis'],
+                        'is_eligible' => $settlementCalculation['is_eligible'],
+                        'eligibility_checks' => $settlementCalculation['eligibility_checks'],
+                        'latest_request' => $latestSettlementRequest ? [
+                            'id' => $latestSettlementRequest->id,
+                            'status' => $latestSettlementRequest->status,
+                            'settlement_amount' => $latestSettlementRequest->settlement_amount,
+                            'rejection_reason' => $latestSettlementRequest->rejection_reason,
+                            'created_at' => $latestSettlementRequest->created_at?->format('Y-m-d H:i:s'),
+                            'approved_at' => $latestSettlementRequest->approved_at?->format('Y-m-d H:i:s'),
+                            'verified_at' => $latestSettlementRequest->verified_at?->format('Y-m-d H:i:s'),
+                        ] : null,
+                    ],
                     'amortizations' => $loan->amortizations->map(fn ($a) => [
                         'id' => $a->id,
                         'installment_number' => $a->installment_number,

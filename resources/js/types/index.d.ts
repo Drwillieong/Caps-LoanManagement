@@ -352,6 +352,22 @@ export interface MemberActiveLoan {
     next_due_date: string | null;
     next_due_amount: number;
     payment_status: string;
+    settlement?: {
+        outstanding_balance: number;
+        settlement_amount: number;
+        calculation_basis: string;
+        is_eligible: boolean;
+        eligibility_checks: Array<{ label: string; passed: boolean }>;
+        latest_request: {
+            id: number;
+            status: string;
+            settlement_amount: number;
+            rejection_reason: string | null;
+            created_at: string | null;
+            approved_at: string | null;
+            verified_at: string | null;
+        } | null;
+    };
     amortizations: MemberActiveLoanAmortization[];
     payments: MemberActiveLoanPayment[];
     transactions?: MemberActiveLoanTransaction[];

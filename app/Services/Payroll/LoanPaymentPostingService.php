@@ -161,8 +161,8 @@ class LoanPaymentPostingService
                 [
                     ...$context,
                     'payment_method' => $context['payment_method'] ?? 'cash',
-                    'transaction_type' => 'manual_payment',
-                    'deduction_status' => 'manual_payment',
+                    'transaction_type' => $context['transaction_type'] ?? 'manual_payment',
+                    'deduction_status' => $context['deduction_status'] ?? 'manual_payment',
                 ],
             );
 

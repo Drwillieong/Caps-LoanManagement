@@ -10,6 +10,8 @@ use App\Http\Controllers\GmController\GmDashboardController;
 use App\Http\Controllers\HrController\CreateMemberController;
 use App\Http\Controllers\HrController\HrDashboardController;
 use App\Http\Controllers\HrController\MemberProfileViewController;
+use App\Http\Controllers\LoanAdvancePaymentRequestController;
+use App\Http\Controllers\LoanSettlementRequestController;
 use App\Http\Controllers\Member\LoanController;
 use App\Http\Controllers\Member\MemberController;
 use App\Http\Controllers\Member\MemberProfileController;
@@ -118,6 +120,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware(['role:member', 'ensure.profile.completed'])
         ->name('member.active-loan');
 
+    Route::post('dashboards/Member/active-loans/{loan}/settlement-request', [LoanSettlementRequestController::class, 'store'])
+        ->middleware(['role:member', 'ensure.profile.completed'])
+        ->name('member.loan-settlement-requests.store');
+
+    Route::post('dashboards/Member/active-loans/{loan}/advance-payment-request', [LoanAdvancePaymentRequestController::class, 'store'])
+        ->middleware(['role:member', 'ensure.profile.completed'])
+        ->name('member.loan-advance-payment-requests.store');
+
+    Route::post('dashboards/Member/advance-payment-requests/{advancePaymentRequest}/submit-payment', [LoanAdvancePaymentRequestController::class, 'submitPayment'])
+        ->middleware(['role:member', 'ensure.profile.completed'])
+        ->name('member.loan-advance-payment-requests.submit-payment');
+
     Route::get('dashboards/Member/MemberCompletedLoan', [MemberController::class, 'completedLoans'])
         ->middleware(['role:member', 'ensure.profile.completed'])
         ->name('member.completed-loan');
@@ -208,6 +222,38 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboards/Gm/GMActiveLoan', [GmDashboardController::class, 'activeLoans'])
         ->middleware('role:gm')
         ->name('gm.active-loan');
+
+    Route::get('dashboards/Gm/SettlementRequests', [LoanSettlementRequestController::class, 'index'])
+        ->middleware('role:gm')
+        ->name('gm.loan-settlement-requests.index');
+
+    Route::get('dashboards/Gm/AdvancePaymentRequests', [LoanAdvancePaymentRequestController::class, 'index'])
+        ->middleware('role:gm')
+        ->name('gm.loan-advance-payment-requests.index');
+
+    Route::post('dashboards/Gm/AdvancePaymentRequests/{advancePaymentRequest}/approve', [LoanAdvancePaymentRequestController::class, 'approve'])
+        ->middleware('role:gm')
+        ->name('gm.loan-advance-payment-requests.approve');
+
+    Route::post('dashboards/Gm/AdvancePaymentRequests/{advancePaymentRequest}/reject', [LoanAdvancePaymentRequestController::class, 'reject'])
+        ->middleware('role:gm')
+        ->name('gm.loan-advance-payment-requests.reject');
+
+    Route::post('dashboards/Gm/AdvancePaymentRequests/{advancePaymentRequest}/verify-payment', [LoanAdvancePaymentRequestController::class, 'verifyPayment'])
+        ->middleware('role:gm')
+        ->name('gm.loan-advance-payment-requests.verify-payment');
+
+    Route::post('dashboards/Gm/SettlementRequests/{settlementRequest}/approve', [LoanSettlementRequestController::class, 'approve'])
+        ->middleware('role:gm')
+        ->name('gm.loan-settlement-requests.approve');
+
+    Route::post('dashboards/Gm/SettlementRequests/{settlementRequest}/reject', [LoanSettlementRequestController::class, 'reject'])
+        ->middleware('role:gm')
+        ->name('gm.loan-settlement-requests.reject');
+
+    Route::post('dashboards/Gm/SettlementRequests/{settlementRequest}/verify-payment', [LoanSettlementRequestController::class, 'verifyPayment'])
+        ->middleware('role:gm')
+        ->name('gm.loan-settlement-requests.verify-payment');
 
     Route::get('dashboards/Gm/GMCompletedLoan', [GmDashboardController::class, 'completedLoans'])
         ->middleware('role:gm')

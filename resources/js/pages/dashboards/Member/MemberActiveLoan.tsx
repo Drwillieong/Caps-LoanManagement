@@ -1,4 +1,4 @@
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import React, { useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { LiveClock } from '@/components/live-clock';
@@ -17,6 +17,7 @@ import {
    
     ArrowRight,
     TrendingDown,
+    Wallet,
 } from 'lucide-react';
 
 import {
@@ -29,7 +30,19 @@ import {
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
+import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -57,6 +70,24 @@ export default function MemberActiveLoan({
     const [expandedLoan, setExpandedLoan] = useState<number | null>(
         defaultExpandedLoan
     );
+    const [settlementLoanId, setSettlementLoanId] = useState<number | null>(null);
+    const settlementForm = useForm({ confirm: true });
+    const [advanceLoanId, setAdvanceLoanId] = useState<number | null>(null);
+    const advanceForm = useForm<{
+        requested_amount: string;
+        payment_method: string;
+        expected_payment_date: string;
+        reference_number: string;
+        payment_proof: File | null;
+        remarks: string;
+    }>({
+        requested_amount: '',
+        payment_method: 'cash',
+        expected_payment_date: '',
+        reference_number: '',
+        payment_proof: null,
+        remarks: '',
+    });
 
     function formatDate(dateStr: string | null): string {
         if (!dateStr) return 'N/A';
@@ -123,6 +154,41 @@ export default function MemberActiveLoan({
 
     function toggleExpand(loanId: number) {
         setExpandedLoan(expandedLoan === loanId ? null : loanId);
+    }
+
+    function submitSettlementRequest(loanId: number) {
+        settlementForm.post(`/dashboards/Member/active-loans/${loanId}/settlement-request`, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setSettlementLoanId(null);
+                settlementForm.reset();
+            },
+        });
+    }
+
+    function openAdvanceRequest(loan: (typeof activeLoans)[number]) {
+        setAdvanceLoanId(loan.id);
+        advanceForm.setData({
+            requested_amount: loan.advance_payment?.regular_deduction_amount
+                ? String(loan.advance_payment.regular_deduction_amount)
+                : '',
+            payment_method: 'cash',
+            expected_payment_date: new Date().toISOString().slice(0, 10),
+            reference_number: '',
+            payment_proof: null,
+            remarks: '',
+        });
+    }
+
+    function submitAdvanceRequest(loanId: number) {
+        advanceForm.post(`/dashboards/Member/active-loans/${loanId}/advance-payment-request`, {
+            forceFormData: true,
+            preserveScroll: true,
+            onSuccess: () => {
+                setAdvanceLoanId(null);
+                advanceForm.reset();
+            },
+        });
     }
 
     // Calculate overall progress
@@ -346,6 +412,190 @@ export default function MemberActiveLoan({
                                             </p>
                                         </div>
                                     </div>
+
+                                    {loan.advance_payment && (
+                                        <div className="mt-4 rounded-md border border-emerald-200 bg-background p-4">
+                                            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                                                <div>
+                                                    <p className="text-sm font-semibold">Advance Payment</p>
+                                                    <p className="text-sm text-muted-foreground">
+                                                        Regular deduction: <span className="font-semibold text-slate-900">{formatCurrency(loan.advance_payment.regular_deduction_amount)}</span>
+                                                    </p>
+                                                    {loan.advance_payment.latest_request && (
+                                                        <div className="mt-2">
+                                                            <Badge variant="outline">
+                                                                Request {loan.advance_payment.latest_request.status.replace(/_/g, ' ')}
+                                                            </Badge>
+                                                            <span className="ml-2 text-xs text-muted-foreground">
+                                                                {formatCurrency(loan.advance_payment.latest_request.requested_amount)} / {loan.advance_payment.latest_request.installments_covered} installment(s)
+                                                            </span>
+                                                            {loan.advance_payment.latest_request.rejection_reason && (
+                                                                <p className="mt-1 text-xs text-red-600">{loan.advance_payment.latest_request.rejection_reason}</p>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <Dialog open={advanceLoanId === loan.id} onOpenChange={(open) => setAdvanceLoanId(open ? loan.id : null)}>
+                                                    <DialogTrigger asChild>
+                                                        <Button
+                                                            type="button"
+                                                            className="min-h-[44px] bg-emerald-600 hover:bg-emerald-700"
+                                                            disabled={!loan.advance_payment.is_eligible}
+                                                            onClick={(event) => {
+                                                                event.stopPropagation();
+                                                                openAdvanceRequest(loan);
+                                                            }}
+                                                        >
+                                                            <Wallet className="h-4 w-4" />
+                                                            Request Advance Payment
+                                                        </Button>
+                                                    </DialogTrigger>
+                                                    <DialogContent className="max-w-2xl">
+                                                        <DialogHeader>
+                                                            <DialogTitle>Request Advance Payment</DialogTitle>
+                                                            <DialogDescription>
+                                                                This request pays future scheduled installments after approval and verified payment.
+                                                            </DialogDescription>
+                                                        </DialogHeader>
+                                                        <div className="grid gap-4 py-2">
+                                                            <div className="grid gap-3 rounded-md border p-4 text-sm md:grid-cols-2">
+                                                                <div><span className="text-muted-foreground">Outstanding Balance</span><p className="font-mono font-semibold">{formatCurrency(loan.advance_payment.outstanding_balance)}</p></div>
+                                                                <div><span className="text-muted-foreground">Regular Deduction</span><p className="font-mono font-semibold">{formatCurrency(loan.advance_payment.regular_deduction_amount)}</p></div>
+                                                                <div><span className="text-muted-foreground">Next Deduction Date</span><p className="font-semibold">{formatDate(loan.advance_payment.next_due_date)}</p></div>
+                                                                <div><span className="text-muted-foreground">Remaining Installments</span><p className="font-semibold">{loan.advance_payment.remaining_installments}</p></div>
+                                                            </div>
+                                                            <div className="grid gap-3 md:grid-cols-2">
+                                                                <div>
+                                                                    <Label htmlFor={`advance_amount_${loan.id}`}>Amount to Advance</Label>
+                                                                    <Input id={`advance_amount_${loan.id}`} value={advanceForm.data.requested_amount} onChange={(event) => advanceForm.setData('requested_amount', event.target.value)} />
+                                                                    {advanceForm.errors.requested_amount && <p className="text-sm text-red-600">{advanceForm.errors.requested_amount}</p>}
+                                                                </div>
+                                                                <div>
+                                                                    <Label>Installments Covered</Label>
+                                                                    <div className="flex h-9 items-center rounded-md border px-3 text-sm font-semibold">
+                                                                        {loan.advance_payment.regular_deduction_amount > 0
+                                                                            ? Math.floor(Number(advanceForm.data.requested_amount || 0) / loan.advance_payment.regular_deduction_amount)
+                                                                            : 0}
+                                                                    </div>
+                                                                </div>
+                                                                <div>
+                                                                    <Label htmlFor={`advance_method_${loan.id}`}>Payment Method</Label>
+                                                                    <select id={`advance_method_${loan.id}`} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs" value={advanceForm.data.payment_method} onChange={(event) => advanceForm.setData('payment_method', event.target.value)}>
+                                                                        <option value="cash">Cash</option>
+                                                                        <option value="bank_transfer">Bank Transfer</option>
+                                                                        <option value="salary_deduction">Salary Deduction</option>
+                                                                    </select>
+                                                                </div>
+                                                                <div>
+                                                                    <Label htmlFor={`advance_date_${loan.id}`}>Payment Date</Label>
+                                                                    <Input id={`advance_date_${loan.id}`} type="date" value={advanceForm.data.expected_payment_date} onChange={(event) => advanceForm.setData('expected_payment_date', event.target.value)} />
+                                                                </div>
+                                                                <div>
+                                                                    <Label htmlFor={`advance_ref_${loan.id}`}>Reference Number</Label>
+                                                                    <Input id={`advance_ref_${loan.id}`} value={advanceForm.data.reference_number} onChange={(event) => advanceForm.setData('reference_number', event.target.value)} />
+                                                                </div>
+                                                                <div>
+                                                                    <Label htmlFor={`advance_proof_${loan.id}`}>Payment Proof</Label>
+                                                                    <Input id={`advance_proof_${loan.id}`} type="file" accept=".jpg,.jpeg,.png,.pdf" onChange={(event) => advanceForm.setData('payment_proof', event.target.files?.[0] ?? null)} />
+                                                                </div>
+                                                            </div>
+                                                            <div>
+                                                                <Label htmlFor={`advance_remarks_${loan.id}`}>Remarks</Label>
+                                                                <Textarea id={`advance_remarks_${loan.id}`} value={advanceForm.data.remarks} onChange={(event) => advanceForm.setData('remarks', event.target.value)} />
+                                                            </div>
+                                                        </div>
+                                                        <DialogFooter>
+                                                            <Button variant="outline" onClick={() => setAdvanceLoanId(null)}>Cancel</Button>
+                                                            <Button disabled={advanceForm.processing} onClick={() => submitAdvanceRequest(loan.id)}>Submit Advance Payment Request</Button>
+                                                        </DialogFooter>
+                                                    </DialogContent>
+                                                </Dialog>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {loan.settlement && (
+                                        <div className="mt-4 rounded-md border border-slate-200 bg-background p-4">
+                                            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                                                <div>
+                                                    <p className="text-sm font-semibold">Full Settlement</p>
+                                                    <p className="text-sm text-muted-foreground">
+                                                        Settlement amount: <span className="font-semibold text-slate-900">{formatCurrency(loan.settlement.settlement_amount)}</span>
+                                                    </p>
+                                                    {loan.settlement.latest_request && (
+                                                        <div className="mt-2">
+                                                            <Badge variant="outline">
+                                                                Request {loan.settlement.latest_request.status.replace(/_/g, ' ')}
+                                                            </Badge>
+                                                            {loan.settlement.latest_request.rejection_reason && (
+                                                                <p className="mt-1 text-xs text-red-600">{loan.settlement.latest_request.rejection_reason}</p>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <Dialog open={settlementLoanId === loan.id} onOpenChange={(open) => setSettlementLoanId(open ? loan.id : null)}>
+                                                    <DialogTrigger asChild>
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            className="min-h-[44px]"
+                                                            disabled={!loan.settlement.is_eligible}
+                                                            onClick={(event) => {
+                                                                event.stopPropagation();
+                                                                setSettlementLoanId(loan.id);
+                                                            }}
+                                                        >
+                                                            <Wallet className="h-4 w-4" />
+                                                            Request Full Settlement
+                                                        </Button>
+                                                    </DialogTrigger>
+                                                    <DialogContent>
+                                                        <DialogHeader>
+                                                            <DialogTitle>Request Full Settlement</DialogTitle>
+                                                            <DialogDescription>
+                                                                This sends your request to the General Manager for validation. Your loan remains active until payment is verified.
+                                                            </DialogDescription>
+                                                        </DialogHeader>
+                                                        <div className="space-y-4 py-2">
+                                                            <div className="rounded-md border p-4">
+                                                                <div className="flex items-center justify-between text-sm">
+                                                                    <span className="text-muted-foreground">Current balance</span>
+                                                                    <span className="font-mono font-semibold">{formatCurrency(loan.settlement.outstanding_balance)}</span>
+                                                                </div>
+                                                                <div className="mt-2 flex items-center justify-between text-sm">
+                                                                    <span className="text-muted-foreground">Settlement amount</span>
+                                                                    <span className="font-mono text-base font-bold">{formatCurrency(loan.settlement.settlement_amount)}</span>
+                                                                </div>
+                                                            </div>
+                                                            <div className="space-y-2">
+                                                                {loan.settlement.eligibility_checks.map((check) => (
+                                                                    <div key={check.label} className="flex items-center gap-2 text-sm">
+                                                                        <Badge variant={check.passed ? 'default' : 'destructive'}>{check.passed ? 'Passed' : 'Failed'}</Badge>
+                                                                        <span>{check.label}</span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                            <p className="text-xs text-muted-foreground">{loan.settlement.calculation_basis}</p>
+                                                            {settlementForm.errors.confirm && (
+                                                                <p className="text-sm text-red-600">{settlementForm.errors.confirm}</p>
+                                                            )}
+                                                        </div>
+                                                        <DialogFooter>
+                                                            <Button variant="outline" onClick={() => setSettlementLoanId(null)}>
+                                                                Cancel
+                                                            </Button>
+                                                            <Button
+                                                                onClick={() => submitSettlementRequest(loan.id)}
+                                                                disabled={settlementForm.processing}
+                                                            >
+                                                                Submit Request
+                                                            </Button>
+                                                        </DialogFooter>
+                                                    </DialogContent>
+                                                </Dialog>
+                                            </div>
+                                        </div>
+                                    )}
 
                                     {/* Progress Bar */}
                                     <div className="mt-4">

@@ -202,9 +202,9 @@ MemberProfile::create([
     'permanent_address' => 'Barangay Parian, Calamba City, Laguna',
 
     'position' => 'HR Assistant',
-    'basic_salary' => 23000.00,
+    'basic_salary' => 90000.00,
 
-    'share_capital_balance' => 21000.00,
+    'share_capital_balance' => 90000.00,
     'bank_account_number' => '1000000004',
     'tin_number' => '222-333-444',
 ]);

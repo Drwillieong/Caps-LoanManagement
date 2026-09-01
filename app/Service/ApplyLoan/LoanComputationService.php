@@ -5,6 +5,7 @@ namespace App\Service\ApplyLoan;
 class LoanComputationService
 {
     public const PAYMENTS_PER_YEAR = 24;
+    public const PAYMENTS_PER_MONTH = 2;
 
     public function compute(
         float $principal,
@@ -27,9 +28,9 @@ class LoanComputationService
             ];
         }
 
-        $numberOfPayments = (int) round(($months / 12) * $paymentsPerYear);
+        $numberOfPayments = $this->numberOfPayments($months);
         $annualRate = $interestRate / 100;
-        $periodicRate = $annualRate / $paymentsPerYear;
+        $periodicRate = $annualRate / $numberOfPayments;
 
         $scheduledPayment = $periodicRate <= 0
             ? $principal / $numberOfPayments
@@ -38,7 +39,7 @@ class LoanComputationService
         $schedule = $this->schedule($principal, $periodicRate, $numberOfPayments, $scheduledPayment, $extraPayment);
         $interest = array_sum(array_column($schedule, 'interest'));
         $total = array_sum(array_column($schedule, 'total_payment'));
-        $monthly = $scheduledPayment * ($paymentsPerYear / 12);
+        $monthly = $scheduledPayment * self::PAYMENTS_PER_MONTH;
 
         return [
             'interest' => round($interest, 2),
@@ -47,10 +48,15 @@ class LoanComputationService
             'payment_per_schedule' => round($scheduledPayment, 2),
             'payment_per_schedule_raw' => $scheduledPayment,
             'periodic_rate' => $periodicRate,
-            'payments_per_year' => $paymentsPerYear,
+            'payments_per_year' => $numberOfPayments,
             'number_of_payments' => $numberOfPayments,
             'schedule' => $schedule,
         ];
+    }
+
+    private function numberOfPayments(int $months): int
+    {
+        return $months * self::PAYMENTS_PER_MONTH;
     }
 
     private function payment(float $periodicRate, int $numberOfPayments, float $principal): float
@@ -72,11 +78,14 @@ class LoanComputationService
         for ($paymentNumber = 1; $paymentNumber <= $numberOfPayments && $balance > 0.0000001; $paymentNumber++) {
             $beginningBalance = $balance;
             $interest = $periodicRate > 0 ? $beginningBalance * $periodicRate : 0.0;
-            $normalPrincipal = max(0.0, $scheduledPayment - $interest);
-            $principalPayment = min($beginningBalance, $normalPrincipal + $extraPayment);
-            $appliedExtraPayment = max(0.0, $principalPayment - $normalPrincipal);
-            $totalPayment = $principalPayment + $interest;
-            $endingBalance = max(0.0, $beginningBalance - $principalPayment);
+            $appliedExtraPayment = ($scheduledPayment + $extraPayment) < $beginningBalance
+                ? $extraPayment
+                : max(0.0, $beginningBalance - $scheduledPayment);
+            $totalPayment = min($beginningBalance, $scheduledPayment + $appliedExtraPayment);
+            $principalPayment = max(0.0, $totalPayment - $interest);
+            $endingBalance = ($scheduledPayment + $appliedExtraPayment) < $beginningBalance
+                ? $beginningBalance - $principalPayment
+                : 0.0;
             $cumulativeInterest += $interest;
 
             $rows[] = [

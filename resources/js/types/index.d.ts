@@ -320,6 +320,29 @@ export interface MemberActiveLoanPayment {
     reference_number: string | null;
     paid_by: string;
     payment_method?: string | null;
+    type?: string;
+}
+
+export interface MemberAdvancePaymentInfo {
+    outstanding_balance: number;
+    regular_deduction_amount: number;
+    next_due_date: string | null;
+    remaining_installments: number;
+    maximum_advance_amount: number;
+    is_eligible: boolean;
+    eligibility_checks: Array<{ label: string; passed: boolean }>;
+    latest_request: {
+        id: number;
+        status: string;
+        requested_amount: number;
+        installments_covered: number;
+        payment_method: string;
+        rejection_reason: string | null;
+        created_at: string | null;
+        approved_at: string | null;
+        verified_at: string | null;
+        applied_at: string | null;
+    } | null;
 }
 
 export interface MemberActiveLoanTransaction {
@@ -368,6 +391,7 @@ export interface MemberActiveLoan {
             verified_at: string | null;
         } | null;
     };
+    advance_payment?: MemberAdvancePaymentInfo;
     amortizations: MemberActiveLoanAmortization[];
     payments: MemberActiveLoanPayment[];
     transactions?: MemberActiveLoanTransaction[];

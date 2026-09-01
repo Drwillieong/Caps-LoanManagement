@@ -4,8 +4,9 @@ namespace App\Http\Controllers\Member;
 
 use App\Http\Controllers\Controller;
 use App\Models\Loan;
-use App\Services\LoanSettlementService;
+use App\Services\LoanAdvancePaymentService;
 use App\Services\LoanService;
+use App\Services\LoanSettlementService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -16,6 +17,7 @@ class MemberController extends Controller
     public function __construct(
         protected LoanService $loanService,
         protected LoanSettlementService $settlementService,
+        protected LoanAdvancePaymentService $advancePaymentService,
     ) {}
 
     /**
@@ -40,7 +42,14 @@ class MemberController extends Controller
 
         $activeLoans = Loan::where('user_id', $user->id)
             ->active()
-            ->with(['loanType', 'amortizations', 'payments', 'transactions.processor', 'settlementRequests' => fn ($query) => $query->latest()])
+            ->with([
+                'loanType',
+                'amortizations',
+                'payments',
+                'transactions.processor',
+                'settlementRequests' => fn ($query) => $query->latest(),
+                'advancePaymentRequests' => fn ($query) => $query->latest(),
+            ])
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($loan) {
@@ -63,6 +72,8 @@ class MemberController extends Controller
                     : 'paid_off';
                 $settlementCalculation = $this->settlementService->calculate($loan);
                 $latestSettlementRequest = $loan->settlementRequests->first();
+                $advanceCalculation = $this->advancePaymentService->calculate($loan);
+                $latestAdvanceRequest = $loan->advancePaymentRequests->first();
 
                 return [
                     'id' => $loan->id,
@@ -100,6 +111,27 @@ class MemberController extends Controller
                             'verified_at' => $latestSettlementRequest->verified_at?->format('Y-m-d H:i:s'),
                         ] : null,
                     ],
+                    'advance_payment' => [
+                        'outstanding_balance' => $advanceCalculation['outstanding_balance'],
+                        'regular_deduction_amount' => $advanceCalculation['regular_deduction_amount'],
+                        'next_due_date' => $advanceCalculation['next_due_date'],
+                        'remaining_installments' => $advanceCalculation['remaining_installments'],
+                        'maximum_advance_amount' => $advanceCalculation['maximum_advance_amount'],
+                        'is_eligible' => $advanceCalculation['is_eligible'],
+                        'eligibility_checks' => $advanceCalculation['eligibility_checks'],
+                        'latest_request' => $latestAdvanceRequest ? [
+                            'id' => $latestAdvanceRequest->id,
+                            'status' => $latestAdvanceRequest->status,
+                            'requested_amount' => (float) $latestAdvanceRequest->requested_amount,
+                            'installments_covered' => $latestAdvanceRequest->installments_covered,
+                            'payment_method' => $latestAdvanceRequest->payment_method,
+                            'rejection_reason' => $latestAdvanceRequest->rejection_reason,
+                            'created_at' => $latestAdvanceRequest->created_at?->format('Y-m-d H:i:s'),
+                            'approved_at' => $latestAdvanceRequest->approved_at?->format('Y-m-d H:i:s'),
+                            'verified_at' => $latestAdvanceRequest->verified_at?->format('Y-m-d H:i:s'),
+                            'applied_at' => $latestAdvanceRequest->applied_at?->format('Y-m-d H:i:s'),
+                        ] : null,
+                    ],
                     'amortizations' => $loan->amortizations->map(fn ($a) => [
                         'id' => $a->id,
                         'installment_number' => $a->installment_number,
@@ -119,6 +151,9 @@ class MemberController extends Controller
                         'reference_number' => $p->reference_number,
                         'paid_by' => $p->paid_by,
                         'payment_method' => $p->payment_method,
+                        'type' => $p->remarks && str_contains(strtolower($p->remarks), 'full')
+                            ? 'Full Settlement Payment'
+                            : ($p->payment_method === 'salary_deduction' ? 'Regular Payment' : 'Advance/Manual Payment'),
                     ])->sortByDesc('payment_date')->values(),
                     'transactions' => $loan->transactions->map(fn ($t) => [
                         'id' => $t->id,
@@ -272,7 +307,6 @@ class MemberController extends Controller
             'unread_notifications_count' => $this->getMemberUnreadNotificationCount($request),
         ]);
     }
-
 
     /**
      * API Search members for admin create application

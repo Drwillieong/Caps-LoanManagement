@@ -27,6 +27,8 @@ interface Computed {
   monthly: string;
 }
 
+const PAYMENTS_PER_MONTH = 2;
+
 export function useLoanCalculator({
   loanTypes,
   principalAmount,
@@ -46,9 +48,16 @@ export function useLoanCalculator({
 
     if (principal <= 0 || terms <= 0) return null;
 
-    const interest = (principal * (rate / 100)) * (terms / 12);
-    const total = principal + interest;
-    const monthly = total / terms;
+    const numberOfPayments = Math.round(terms * PAYMENTS_PER_MONTH);
+    const periodicRate = (rate / 100) / numberOfPayments;
+    const paymentPerSchedule =
+      periodicRate <= 0
+        ? principal / numberOfPayments
+        : (principal * periodicRate) / (1 - Math.pow(1 + periodicRate, -numberOfPayments));
+
+    const total = paymentPerSchedule * numberOfPayments;
+    const interest = total - principal;
+    const monthly = paymentPerSchedule * PAYMENTS_PER_MONTH;
 
     const maxLoanAllowed = selectedMember.share_capital_balance * 2;
     const exceedsShareCapital = principal > maxLoanAllowed;
@@ -72,4 +81,3 @@ export function useLoanCalculator({
     };
   }, [loanTypes, principalAmount, termsMonths, loanTypeId, selectedMember]);
 }
-

@@ -32,52 +32,39 @@ class LoanAmortizationScheduleService
             (float) ($loan->loanType?->interest_rate_per_annum ?? 0),
         );
 
-        $periodicRate = ((float) ($loan->loanType?->interest_rate_per_annum ?? 0) / 100) / $computed['payments_per_year'];
-        $scheduledPayment = (float) $computed['payment_per_schedule'];
-        $balance = (float) $loan->principal_amount;
+        $schedule = $computed['schedule'];
+        $dueDates = $this->dueDates($effectiveDate ?? now(), count($schedule));
         $totalPrincipalPosted = 0.0;
         $totalInterestPosted = 0.0;
-        $dueDates = $this->dueDates($effectiveDate ?? now(), (int) $computed['number_of_payments']);
+        $totalAmountPosted = 0.0;
 
-        foreach ($dueDates as $index => $dueDate) {
-            $installmentNumber = $index + 1;
-            $beginningBalance = round($balance, 2);
-            $isFinal = $installmentNumber === count($dueDates);
-
-            if ($periodicRate > 0) {
-                $interest = round($beginningBalance * $periodicRate, 2);
-            } else {
-                $interest = 0.0;
-            }
-
-            $principal = round($scheduledPayment - $interest, 2);
-
-            if ($isFinal) {
-                $principal = round((float) $loan->principal_amount - $totalPrincipalPosted, 2);
-                $interest = round((float) $loan->interest_amount - $totalInterestPosted, 2);
-                $amountDue = round($principal + $interest, 2);
-                $endingBalance = 0.0;
-            } else {
-                $principal = min($principal, $beginningBalance);
-                $amountDue = round($principal + $interest, 2);
-                $endingBalance = round($beginningBalance - $principal, 2);
-            }
+        foreach ($schedule as $index => $row) {
+            $isFinal = $index === count($schedule) - 1;
+            $principal = $isFinal
+                ? round((float) $loan->principal_amount - $totalPrincipalPosted, 2)
+                : round($row['principal'], 2);
+            $interest = $isFinal
+                ? round((float) $loan->interest_amount - $totalInterestPosted, 2)
+                : round($row['interest'], 2);
+            $amountDue = $isFinal
+                ? round((float) $loan->total_amount_due - $totalAmountPosted, 2)
+                : round($row['total_payment'], 2);
 
             LoanAmortization::create([
                 'loan_id' => $loan->id,
-                'installment_number' => $installmentNumber,
-                'due_date' => $dueDate->toDateString(),
+                'installment_number' => $row['payment_number'],
+                'due_date' => $dueDates[$index]->toDateString(),
                 'amount_due' => $amountDue,
                 'principal_amount' => $principal,
                 'interest_amount' => $interest,
-                'beginning_balance' => $beginningBalance,
-                'ending_balance' => $endingBalance,
+                'beginning_balance' => round($row['beginning_balance'], 2),
+                'ending_balance' => $isFinal ? 0.0 : round($row['ending_balance'], 2),
                 'status' => 'pending',
             ]);
 
             $totalPrincipalPosted = round($totalPrincipalPosted + $principal, 2);
             $totalInterestPosted = round($totalInterestPosted + $interest, 2);
-            $balance = $endingBalance;
+            $totalAmountPosted = round($totalAmountPosted + $amountDue, 2);
         }
     }
 

@@ -1,5 +1,5 @@
 import { Head, useForm } from '@inertiajs/react';
-import { CheckCircle2, Clock, CreditCard, Eye, Search, XCircle } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Clock, CreditCard, Eye, Search, XCircle } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import { LiveClock } from '@/components/live-clock';
@@ -77,6 +77,14 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Settlement Requests', href: '/dashboards/Gm/SettlementRequests' },
 ];
 
+const STATUS_CONFIG: Record<string, { label: string; icon: typeof Clock; className: string }> = {
+    pending: { label: 'Pending', icon: Clock, className: 'border-amber-200 bg-amber-50 text-amber-700' },
+    approved: { label: 'Approved', icon: CheckCircle2, className: 'border-indigo-200 bg-indigo-50 text-indigo-700' },
+    for_payment: { label: 'For Payment', icon: CreditCard, className: 'border-blue-200 bg-blue-50 text-blue-700' },
+    completed: { label: 'Completed', icon: CheckCircle2, className: 'border-emerald-200 bg-emerald-50 text-emerald-700' },
+    rejected: { label: 'Rejected', icon: XCircle, className: 'border-red-200 bg-red-50 text-red-700' },
+};
+
 export default function SettlementRequests({ settlementRequests = [], stats }: Props) {
     const [search, setSearch] = useState('');
     const [selected, setSelected] = useState<SettlementRequest | null>(null);
@@ -103,8 +111,14 @@ export default function SettlementRequests({ settlementRequests = [], stats }: P
     }
 
     function statusBadge(status: string) {
-        const variant = status === 'rejected' ? 'destructive' : status === 'completed' ? 'default' : 'secondary';
-        return <Badge variant={variant}>{status.replace(/_/g, ' ')}</Badge>;
+        const config = STATUS_CONFIG[status] ?? { label: status.replace(/_/g, ' '), icon: Clock, className: 'border-slate-200 bg-slate-50 text-slate-700' };
+        const Icon = config.icon;
+        return (
+            <Badge variant="outline" className={`gap-1 font-medium capitalize ${config.className}`}>
+                <Icon className="h-3 w-3" />
+                {config.label}
+            </Badge>
+        );
     }
 
     const filteredRequests = useMemo(() => {
@@ -116,6 +130,11 @@ export default function SettlementRequests({ settlementRequests = [], stats }: P
             || request.status.toLowerCase().includes(term)
         );
     }, [search, settlementRequests]);
+
+    const rejectedCount = useMemo(
+        () => settlementRequests.filter((request) => request.status === 'rejected').length,
+        [settlementRequests],
+    );
 
     function approve(request: SettlementRequest) {
         approveForm.post(`/dashboards/Gm/SettlementRequests/${request.id}/approve`, { preserveScroll: true });
@@ -151,72 +170,96 @@ export default function SettlementRequests({ settlementRequests = [], stats }: P
             <Head title="Settlement Requests" />
 
             <div className="flex flex-1 flex-col gap-6 p-6">
-                <div>
-                    <h1 className="text-2xl font-bold tracking-tight">Settlement Requests</h1>
-                    <p className="text-muted-foreground">Validate, approve, and verify full loan settlement payments.</p>
+                <div className="border-b border-slate-200 pb-4">
+                    <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Settlement Requests</h1>
+                    <p className="mt-1 text-sm text-slate-500">Validate, approve, and verify full loan settlement payments.</p>
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-3">
-                    <Card>
+                <div className="grid gap-4 md:grid-cols-4">
+                    <Card className="border-slate-200 shadow-sm">
                         <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-sm font-medium">Pending</CardTitle>
-                            <Clock className="h-4 w-4 text-slate-500" />
+                            <CardTitle className="text-sm font-medium text-slate-600">Pending</CardTitle>
+                            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-50">
+                                <Clock className="h-4 w-4 text-amber-600" />
+                            </div>
                         </CardHeader>
-                        <CardContent><div className="text-2xl font-bold">{stats.pending}</div></CardContent>
+                        <CardContent><div className="text-2xl font-semibold text-slate-900">{stats.pending}</div></CardContent>
                     </Card>
-                    <Card>
+                    <Card className="border-slate-200 shadow-sm">
                         <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-sm font-medium">For Payment</CardTitle>
-                            <CreditCard className="h-4 w-4 text-slate-500" />
+                            <CardTitle className="text-sm font-medium text-slate-600">For Payment</CardTitle>
+                            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50">
+                                <CreditCard className="h-4 w-4 text-blue-600" />
+                            </div>
                         </CardHeader>
-                        <CardContent><div className="text-2xl font-bold">{stats.for_payment}</div></CardContent>
+                        <CardContent><div className="text-2xl font-semibold text-slate-900">{stats.for_payment}</div></CardContent>
                     </Card>
-                    <Card>
+                    <Card className="border-slate-200 shadow-sm">
                         <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-sm font-medium">Completed</CardTitle>
-                            <CheckCircle2 className="h-4 w-4 text-slate-500" />
+                            <CardTitle className="text-sm font-medium text-slate-600">Completed</CardTitle>
+                            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50">
+                                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                            </div>
                         </CardHeader>
-                        <CardContent><div className="text-2xl font-bold">{stats.completed}</div></CardContent>
+                        <CardContent><div className="text-2xl font-semibold text-slate-900">{stats.completed}</div></CardContent>
+                    </Card>
+                    <Card className="border-slate-200 shadow-sm">
+                        <CardHeader className="flex flex-row items-center justify-between pb-2">
+                            <CardTitle className="text-sm font-medium text-slate-600">Rejected</CardTitle>
+                            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-50">
+                                <XCircle className="h-4 w-4 text-red-600" />
+                            </div>
+                        </CardHeader>
+                        <CardContent><div className="text-2xl font-semibold text-slate-900">{rejectedCount}</div></CardContent>
                     </Card>
                 </div>
 
-                <Card>
-                    <CardHeader className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                        <CardTitle>Requests</CardTitle>
+                <Card className="border-slate-200 shadow-sm">
+                    <CardHeader className="flex flex-col gap-3 border-b border-slate-100 md:flex-row md:items-center md:justify-between">
+                        <CardTitle className="text-slate-900">Requests</CardTitle>
                         <div className="flex items-center gap-2">
-                            <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search requests..." className="w-72" />
-                            <Search className="h-4 w-4 text-muted-foreground" />
+                            <Search className="h-4 w-4 text-slate-400" />
+                            <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by member, loan, or status..." className="w-72" />
                         </div>
                     </CardHeader>
-                    <CardContent>
-                        <div className="overflow-x-auto rounded-md border">
+                    <CardContent className="p-0">
+                        <div className="overflow-x-auto">
                             <Table>
                                 <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Member</TableHead>
-                                        <TableHead>Loan</TableHead>
-                                        <TableHead className="text-right">Balance</TableHead>
-                                        <TableHead className="text-right">Settlement</TableHead>
-                                        <TableHead>Status</TableHead>
-                                        <TableHead>Requested</TableHead>
-                                        <TableHead className="text-right">Actions</TableHead>
+                                    <TableRow className="bg-slate-50/80 hover:bg-slate-50/80">
+                                        <TableHead className="text-xs font-semibold uppercase tracking-wide text-slate-500">Member</TableHead>
+                                        <TableHead className="text-xs font-semibold uppercase tracking-wide text-slate-500">Loan</TableHead>
+                                        <TableHead className="text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Balance</TableHead>
+                                        <TableHead className="text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Settlement</TableHead>
+                                        <TableHead className="text-xs font-semibold uppercase tracking-wide text-slate-500">Status</TableHead>
+                                        <TableHead className="text-xs font-semibold uppercase tracking-wide text-slate-500">Requested</TableHead>
+                                        <TableHead className="text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {filteredRequests.length > 0 ? filteredRequests.map((request) => (
-                                        <TableRow key={request.id}>
+                                        <TableRow key={request.id} className="transition-colors hover:bg-slate-50/60">
                                             <TableCell>
-                                                <div className="font-medium">{request.member.name}</div>
-                                                <div className="text-xs text-muted-foreground">{request.member.member_id}</div>
+                                                <div className="font-medium text-slate-900">{request.member.name}</div>
+                                                <div className="text-xs text-slate-500">{request.member.member_id}</div>
                                             </TableCell>
                                             <TableCell>
-                                                <div>{request.loan.loan_type}</div>
-                                                <div className="text-xs text-muted-foreground">Loan #{request.loan.id}</div>
+                                                <div className="text-slate-800">{request.loan.loan_type}</div>
+                                                <div className="text-xs text-slate-500">Loan #{request.loan.id}</div>
                                             </TableCell>
-                                            <TableCell className="text-right font-mono">{formatCurrency(request.outstanding_balance)}</TableCell>
-                                            <TableCell className="text-right font-mono font-semibold">{formatCurrency(request.current_settlement_amount)}</TableCell>
-                                            <TableCell>{statusBadge(request.status)}</TableCell>
-                                            <TableCell>{formatDate(request.created_at)}</TableCell>
+                                            <TableCell className="text-right font-mono text-slate-700">{formatCurrency(request.outstanding_balance)}</TableCell>
+                                            <TableCell className="text-right font-mono font-semibold text-slate-900">{formatCurrency(request.current_settlement_amount)}</TableCell>
+                                            <TableCell>
+                                                <div className="flex flex-col gap-1">
+                                                    {statusBadge(request.status)}
+                                                    {request.status === 'rejected' && request.rejection_reason && (
+                                                        <span className="max-w-[200px] truncate text-xs italic text-red-600" title={request.rejection_reason}>
+                                                            {request.rejection_reason}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="text-slate-700">{formatDate(request.created_at)}</TableCell>
                                             <TableCell>
                                                 <div className="flex justify-end gap-2">
                                                     <Button variant="outline" size="sm" onClick={() => setSelected(request)}>
@@ -245,7 +288,7 @@ export default function SettlementRequests({ settlementRequests = [], stats }: P
                                         </TableRow>
                                     )) : (
                                         <TableRow>
-                                            <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">No settlement requests found.</TableCell>
+                                            <TableCell colSpan={7} className="h-24 text-center text-slate-500">No settlement requests found.</TableCell>
                                         </TableRow>
                                     )}
                                 </TableBody>
@@ -258,66 +301,87 @@ export default function SettlementRequests({ settlementRequests = [], stats }: P
             <Dialog open={!!selected} onOpenChange={(open) => !open && setSelected(null)}>
                 <DialogContent className="max-w-3xl">
                     <DialogHeader>
-                        <DialogTitle>Settlement Details</DialogTitle>
+                        <DialogTitle className="text-slate-900">Settlement Details</DialogTitle>
                         <DialogDescription>Review member, loan, payment history, and eligibility checks.</DialogDescription>
                     </DialogHeader>
                     {selected && (
                         <div className="max-h-[70vh] space-y-5 overflow-y-auto pr-2">
+                            <div className="flex items-center justify-between rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
+                                <span className="text-sm font-medium text-slate-600">Current Status</span>
+                                {statusBadge(selected.status)}
+                            </div>
+
+                            {selected.status === 'rejected' && selected.rejection_reason && (
+                                <div className="rounded-md border border-red-200 bg-red-50 p-3">
+                                    <div className="flex items-center gap-2 text-sm font-semibold text-red-800">
+                                        <AlertTriangle className="h-4 w-4" />
+                                        Rejection Reason
+                                    </div>
+                                    <p className="mt-1 text-sm text-red-700">{selected.rejection_reason}</p>
+                                </div>
+                            )}
+
                             <div className="grid gap-4 md:grid-cols-2">
                                 <div>
-                                    <h3 className="mb-2 text-sm font-semibold">Member Information</h3>
-                                    <p className="text-sm">{selected.member.name}</p>
-                                    <p className="text-sm text-muted-foreground">{selected.member.email}</p>
-                                    <p className="text-sm text-muted-foreground">Member ID: {selected.member.member_id}</p>
+                                    <h3 className="mb-2 text-sm font-semibold text-slate-900">Member Information</h3>
+                                    <p className="text-sm text-slate-800">{selected.member.name}</p>
+                                    <p className="text-sm text-slate-500">{selected.member.email}</p>
+                                    <p className="text-sm text-slate-500">Member ID: {selected.member.member_id}</p>
                                 </div>
                                 <div>
-                                    <h3 className="mb-2 text-sm font-semibold">Loan Information</h3>
-                                    <p className="text-sm">{selected.loan.loan_type} #{selected.loan.id}</p>
-                                    <p className="text-sm text-muted-foreground">Status: {selected.loan.status}</p>
-                                    <p className="text-sm text-muted-foreground">Released: {formatDate(selected.loan.release_date)}</p>
+                                    <h3 className="mb-2 text-sm font-semibold text-slate-900">Loan Information</h3>
+                                    <p className="text-sm text-slate-800">{selected.loan.loan_type} #{selected.loan.id}</p>
+                                    <p className="text-sm text-slate-500">Status: {selected.loan.status}</p>
+                                    <p className="text-sm text-slate-500">Released: {formatDate(selected.loan.release_date)}</p>
                                 </div>
                             </div>
                             <Separator />
                             <div className="grid gap-3 md:grid-cols-4">
-                                <div><p className="text-xs text-muted-foreground">Principal</p><p className="font-mono font-semibold">{formatCurrency(selected.loan.principal_amount)}</p></div>
-                                <div><p className="text-xs text-muted-foreground">Total Due</p><p className="font-mono font-semibold">{formatCurrency(selected.loan.total_amount_due)}</p></div>
-                                <div><p className="text-xs text-muted-foreground">Paid</p><p className="font-mono font-semibold">{formatCurrency(selected.loan.total_paid)}</p></div>
-                                <div><p className="text-xs text-muted-foreground">Settlement</p><p className="font-mono font-semibold">{formatCurrency(selected.current_settlement_amount)}</p></div>
+                                <div><p className="text-xs uppercase tracking-wide text-slate-500">Principal</p><p className="font-mono font-semibold text-slate-900">{formatCurrency(selected.loan.principal_amount)}</p></div>
+                                <div><p className="text-xs uppercase tracking-wide text-slate-500">Total Due</p><p className="font-mono font-semibold text-slate-900">{formatCurrency(selected.loan.total_amount_due)}</p></div>
+                                <div><p className="text-xs uppercase tracking-wide text-slate-500">Paid</p><p className="font-mono font-semibold text-slate-900">{formatCurrency(selected.loan.total_paid)}</p></div>
+                                <div><p className="text-xs uppercase tracking-wide text-slate-500">Settlement</p><p className="font-mono font-semibold text-slate-900">{formatCurrency(selected.current_settlement_amount)}</p></div>
                             </div>
                             <div className="space-y-2">
-                                <h3 className="text-sm font-semibold">Eligibility Checks</h3>
+                                <h3 className="text-sm font-semibold text-slate-900">Eligibility Checks</h3>
                                 {selected.eligibility_checks.map((check) => (
-                                    <div key={check.label} className="flex items-center gap-2 text-sm">
-                                        <Badge variant={check.passed ? 'default' : 'destructive'}>{check.passed ? 'Passed' : 'Failed'}</Badge>
+                                    <div key={check.label} className="flex items-center gap-2 text-sm text-slate-700">
+                                        <Badge
+                                            variant="outline"
+                                            className={check.passed ? 'gap-1 border-emerald-200 bg-emerald-50 text-emerald-700' : 'gap-1 border-red-200 bg-red-50 text-red-700'}
+                                        >
+                                            {check.passed ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
+                                            {check.passed ? 'Passed' : 'Failed'}
+                                        </Badge>
                                         <span>{check.label}</span>
                                     </div>
                                 ))}
                             </div>
-                            <div className="rounded-md border p-3 text-xs text-muted-foreground">
+                            <div className="rounded-md border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
                                 {selected.calculation_breakdown?.calculation_basis}
                             </div>
                             <div>
-                                <h3 className="mb-2 text-sm font-semibold">Payment History</h3>
-                                <div className="rounded-md border">
+                                <h3 className="mb-2 text-sm font-semibold text-slate-900">Payment History</h3>
+                                <div className="rounded-md border border-slate-200">
                                     <Table>
                                         <TableHeader>
-                                            <TableRow>
-                                                <TableHead>Date</TableHead>
-                                                <TableHead>Method</TableHead>
-                                                <TableHead>Reference</TableHead>
-                                                <TableHead className="text-right">Amount</TableHead>
+                                            <TableRow className="bg-slate-50/80 hover:bg-slate-50/80">
+                                                <TableHead className="text-xs font-semibold uppercase tracking-wide text-slate-500">Date</TableHead>
+                                                <TableHead className="text-xs font-semibold uppercase tracking-wide text-slate-500">Method</TableHead>
+                                                <TableHead className="text-xs font-semibold uppercase tracking-wide text-slate-500">Reference</TableHead>
+                                                <TableHead className="text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Amount</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
                                             {selected.payments.length > 0 ? selected.payments.map((payment) => (
                                                 <TableRow key={payment.id}>
-                                                    <TableCell>{formatDate(payment.payment_date)}</TableCell>
-                                                    <TableCell>{payment.payment_method?.replace(/_/g, ' ')}</TableCell>
-                                                    <TableCell>{payment.reference_number || 'N/A'}</TableCell>
-                                                    <TableCell className="text-right font-mono">{formatCurrency(payment.amount)}</TableCell>
+                                                    <TableCell className="text-slate-700">{formatDate(payment.payment_date)}</TableCell>
+                                                    <TableCell className="capitalize text-slate-700">{payment.payment_method?.replace(/_/g, ' ')}</TableCell>
+                                                    <TableCell className="text-slate-700">{payment.reference_number || 'N/A'}</TableCell>
+                                                    <TableCell className="text-right font-mono text-slate-900">{formatCurrency(payment.amount)}</TableCell>
                                                 </TableRow>
                                             )) : (
-                                                <TableRow><TableCell colSpan={4} className="h-16 text-center text-muted-foreground">No payments recorded.</TableCell></TableRow>
+                                                <TableRow><TableCell colSpan={4} className="h-16 text-center text-slate-500">No payments recorded.</TableCell></TableRow>
                                             )}
                                         </TableBody>
                                     </Table>
@@ -331,7 +395,7 @@ export default function SettlementRequests({ settlementRequests = [], stats }: P
             <Dialog open={!!rejecting} onOpenChange={(open) => !open && setRejecting(null)}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Reject Settlement Request</DialogTitle>
+                        <DialogTitle className="text-slate-900">Reject Settlement Request</DialogTitle>
                         <DialogDescription>A rejection reason is required and will be visible to the member.</DialogDescription>
                     </DialogHeader>
                     <Label htmlFor="rejection_reason">Reason</Label>
@@ -347,13 +411,13 @@ export default function SettlementRequests({ settlementRequests = [], stats }: P
             <Dialog open={!!verifying} onOpenChange={(open) => !open && setVerifying(null)}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Verify Settlement Payment</DialogTitle>
+                        <DialogTitle className="text-slate-900">Verify Settlement Payment</DialogTitle>
                         <DialogDescription>Record only after the full settlement payment has been received.</DialogDescription>
                     </DialogHeader>
                     {verifying && (
                         <div className="space-y-4">
-                            <div className="rounded-md border p-3 text-sm">
-                                Required settlement amount: <span className="font-mono font-semibold">{formatCurrency(verifying.current_settlement_amount)}</span>
+                            <div className="rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+                                Required settlement amount: <span className="font-mono font-semibold text-slate-900">{formatCurrency(verifying.current_settlement_amount)}</span>
                             </div>
                             <div className="grid gap-3 md:grid-cols-2">
                                 <div>

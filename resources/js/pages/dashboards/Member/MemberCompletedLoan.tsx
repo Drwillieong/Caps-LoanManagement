@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Head, Link } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { LiveClock } from '@/components/live-clock';
@@ -9,6 +9,8 @@ import {
     CheckCircle2,
     FileText,
     Calendar,
+    ChevronLeft,
+    ChevronRight,
 } from 'lucide-react';
 
 import {
@@ -40,6 +42,96 @@ interface Props {
     avgLoanAmount: number;
 }
 
+const ITEMS_PER_PAGE = 10;
+
+/**
+ * Reusable pagination control (shadcn Button-based).
+ * Renders numbered pages with ellipses for large ranges, plus
+ * Previous / Next controls. Returns null when there's nothing to page.
+ */
+function PaginationControls({
+    currentPage,
+    totalPages,
+    totalItems,
+    itemsPerPage,
+    onPageChange,
+}: {
+    currentPage: number;
+    totalPages: number;
+    totalItems: number;
+    itemsPerPage: number;
+    onPageChange: (page: number) => void;
+}) {
+    if (totalPages <= 1) return null;
+
+    const startItem = (currentPage - 1) * itemsPerPage + 1;
+    const endItem = Math.min(currentPage * itemsPerPage, totalItems);
+
+    function getPageNumbers(): (number | 'ellipsis')[] {
+        const pages: (number | 'ellipsis')[] = [];
+        const delta = 1;
+        for (let i = 1; i <= totalPages; i++) {
+            if (i === 1 || i === totalPages || (i >= currentPage - delta && i <= currentPage + delta)) {
+                pages.push(i);
+            } else if (pages[pages.length - 1] !== 'ellipsis') {
+                pages.push('ellipsis');
+            }
+        }
+        return pages;
+    }
+
+    return (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-2 py-4">
+            <p className="text-sm text-muted-foreground">
+                Showing {startItem}-{endItem} of {totalItems}
+            </p>
+            <div className="flex items-center gap-1">
+                <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-1"
+                    onClick={() => onPageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                >
+                    <ChevronLeft className="h-4 w-4" />
+                    <span className="hidden sm:inline">Previous</span>
+                </Button>
+
+                <div className="flex items-center gap-1">
+                    {getPageNumbers().map((page, idx) =>
+                        page === 'ellipsis' ? (
+                            <span key={`ellipsis-${idx}`} className="px-2 text-sm text-muted-foreground">
+                                …
+                            </span>
+                        ) : (
+                            <Button
+                                key={page}
+                                variant={currentPage === page ? 'default' : 'outline'}
+                                size="sm"
+                                className={cn('h-8 w-8 p-0', currentPage === page && 'bg-emerald-600 hover:bg-emerald-700')}
+                                onClick={() => onPageChange(page)}
+                            >
+                                {page}
+                            </Button>
+                        ),
+                    )}
+                </div>
+
+                <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-1"
+                    onClick={() => onPageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                >
+                    <span className="hidden sm:inline">Next</span>
+                    <ChevronRight className="h-4 w-4" />
+                </Button>
+            </div>
+        </div>
+    );
+}
+
 export default function MemberCompletedLoan({
     completedLoans = [],
     hasCompletedLoans = false,
@@ -48,6 +140,15 @@ export default function MemberCompletedLoan({
     totalInterestPaid = 0,
     avgLoanAmount = 0,
 }: Props) {
+    const [currentPage, setCurrentPage] = useState(1);
+
+    const totalPages = Math.max(1, Math.ceil(completedLoans.length / ITEMS_PER_PAGE));
+    const safePage = Math.min(currentPage, totalPages);
+    const paginatedLoans = completedLoans.slice(
+        (safePage - 1) * ITEMS_PER_PAGE,
+        safePage * ITEMS_PER_PAGE,
+    );
+
     function formatCurrency(amount: number | string): string {
         if (amount === null || amount === undefined || amount === '') return '₱0.00';
         const number = typeof amount === 'string' ? Number(amount) : amount;
@@ -155,7 +256,7 @@ export default function MemberCompletedLoan({
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-border">
-                                    {completedLoans.length > 0 ? completedLoans.map((loan: any) => {
+                                    {completedLoans.length > 0 ? paginatedLoans.map((loan: any) => {
                                         const { variant, label, color } = getStatusConfig(loan.status || 'completed');
                                         return (
                                             <tr key={loan.id} className="hover:bg-emerald-50/50 transition-colors">
@@ -189,10 +290,17 @@ export default function MemberCompletedLoan({
                                 </tbody>
                             </table>
                         </div>
+
+                        <PaginationControls
+                            currentPage={safePage}
+                            totalPages={totalPages}
+                            totalItems={completedLoans.length}
+                            itemsPerPage={ITEMS_PER_PAGE}
+                            onPageChange={setCurrentPage}
+                        />
                     </CardContent>
                 </Card>
             </div>
         </AppLayout>
     );
 }
-

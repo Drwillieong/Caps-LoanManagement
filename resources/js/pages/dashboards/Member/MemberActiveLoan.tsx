@@ -10,11 +10,13 @@ import {
     CheckCircle2,
     AlertCircle,
     Calendar,
-   
+
     FileText,
     ChevronDown,
     ChevronUp,
-   
+    ChevronLeft,
+    ChevronRight,
+
     ArrowRight,
     TrendingDown,
     Wallet,
@@ -52,6 +54,96 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
+const ITEMS_PER_PAGE = 10;
+
+/**
+ * Reusable pagination control (shadcn Button-based).
+ * Renders numbered pages with ellipses for large ranges, plus
+ * Previous / Next controls. Returns null when there's nothing to page.
+ */
+function PaginationControls({
+    currentPage,
+    totalPages,
+    totalItems,
+    itemsPerPage,
+    onPageChange,
+}: {
+    currentPage: number;
+    totalPages: number;
+    totalItems: number;
+    itemsPerPage: number;
+    onPageChange: (page: number) => void;
+}) {
+    if (totalPages <= 1) return null;
+
+    const startItem = (currentPage - 1) * itemsPerPage + 1;
+    const endItem = Math.min(currentPage * itemsPerPage, totalItems);
+
+    function getPageNumbers(): (number | 'ellipsis')[] {
+        const pages: (number | 'ellipsis')[] = [];
+        const delta = 1;
+        for (let i = 1; i <= totalPages; i++) {
+            if (i === 1 || i === totalPages || (i >= currentPage - delta && i <= currentPage + delta)) {
+                pages.push(i);
+            } else if (pages[pages.length - 1] !== 'ellipsis') {
+                pages.push('ellipsis');
+            }
+        }
+        return pages;
+    }
+
+    return (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-1 py-3">
+            <p className="text-xs text-muted-foreground">
+                Showing {startItem}-{endItem} of {totalItems}
+            </p>
+            <div className="flex items-center gap-1">
+                <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-1"
+                    onClick={() => onPageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                >
+                    <ChevronLeft className="h-4 w-4" />
+                    <span className="hidden sm:inline">Previous</span>
+                </Button>
+
+                <div className="flex items-center gap-1">
+                    {getPageNumbers().map((page, idx) =>
+                        page === 'ellipsis' ? (
+                            <span key={`ellipsis-${idx}`} className="px-2 text-sm text-muted-foreground">
+                                …
+                            </span>
+                        ) : (
+                            <Button
+                                key={page}
+                                variant={currentPage === page ? 'default' : 'outline'}
+                                size="sm"
+                                className={cn('h-8 w-8 p-0', currentPage === page && 'bg-emerald-600 hover:bg-emerald-700')}
+                                onClick={() => onPageChange(page)}
+                            >
+                                {page}
+                            </Button>
+                        ),
+                    )}
+                </div>
+
+                <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-1"
+                    onClick={() => onPageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                >
+                    <span className="hidden sm:inline">Next</span>
+                    <ChevronRight className="h-4 w-4" />
+                </Button>
+            </div>
+        </div>
+    );
+}
+
 export default function MemberActiveLoan({
     activeLoans,
     hasActiveLoan,
@@ -88,6 +180,23 @@ export default function MemberActiveLoan({
         payment_proof: null,
         remarks: '',
     });
+
+    // Per-loan, per-table pagination state (keyed by loan id)
+    const [amortizationPages, setAmortizationPages] = useState<Record<number, number>>({});
+    const [paymentPages, setPaymentPages] = useState<Record<number, number>>({});
+    const [transactionPages, setTransactionPages] = useState<Record<number, number>>({});
+
+    function setAmortizationPage(loanId: number, page: number) {
+        setAmortizationPages((prev) => ({ ...prev, [loanId]: page }));
+    }
+
+    function setPaymentPage(loanId: number, page: number) {
+        setPaymentPages((prev) => ({ ...prev, [loanId]: page }));
+    }
+
+    function setTransactionPage(loanId: number, page: number) {
+        setTransactionPages((prev) => ({ ...prev, [loanId]: page }));
+    }
 
     function formatDate(dateStr: string | null): string {
         if (!dateStr) return 'N/A';
@@ -265,7 +374,7 @@ export default function MemberActiveLoan({
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                             <CardTitle className="text-sm font-medium">Total Paid</CardTitle>
                             <div className="h-4 w-4 text-emerald-600">₱</div>
-                           
+
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold text-emerald-600">
@@ -327,6 +436,33 @@ export default function MemberActiveLoan({
                         const { variant: statusVariant, label: statusLabel } = getStatusConfig(loan.status);
                         const { variant: paymentVariant, label: paymentLabel, color: paymentColor } =
                             getPaymentStatusConfig(loan.payment_status);
+
+                        // Amortization pagination
+                        const amortizationPage = amortizationPages[loan.id] ?? 1;
+                        const amortizationTotalPages = Math.max(1, Math.ceil(loan.amortizations.length / ITEMS_PER_PAGE));
+                        const safeAmortizationPage = Math.min(amortizationPage, amortizationTotalPages);
+                        const paginatedAmortizations = loan.amortizations.slice(
+                            (safeAmortizationPage - 1) * ITEMS_PER_PAGE,
+                            safeAmortizationPage * ITEMS_PER_PAGE,
+                        );
+
+                        // Payment history pagination
+                        const paymentPage = paymentPages[loan.id] ?? 1;
+                        const paymentTotalPages = Math.max(1, Math.ceil((loan.payments?.length ?? 0) / ITEMS_PER_PAGE));
+                        const safePaymentPage = Math.min(paymentPage, paymentTotalPages);
+                        const paginatedPayments = (loan.payments ?? []).slice(
+                            (safePaymentPage - 1) * ITEMS_PER_PAGE,
+                            safePaymentPage * ITEMS_PER_PAGE,
+                        );
+
+                        // Loan ledger pagination
+                        const transactionPage = transactionPages[loan.id] ?? 1;
+                        const transactionTotalPages = Math.max(1, Math.ceil((loan.transactions?.length ?? 0) / ITEMS_PER_PAGE));
+                        const safeTransactionPage = Math.min(transactionPage, transactionTotalPages);
+                        const paginatedTransactions = (loan.transactions ?? []).slice(
+                            (safeTransactionPage - 1) * ITEMS_PER_PAGE,
+                            safeTransactionPage * ITEMS_PER_PAGE,
+                        );
 
                         return (
                             <Card key={loan.id} className="border-emerald-100 shadow-sm overflow-hidden">
@@ -672,7 +808,7 @@ export default function MemberActiveLoan({
                                                 Loan Details
                                             </h4>
                                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                                               
+
                                                 <div className="p-3 rounded-lg bg-background border">
                                                     <p className="text-sm text-muted-foreground">Release Date</p>
                                                     <p className="font-medium">{formatDate(loan.release_date)}</p>
@@ -692,7 +828,7 @@ export default function MemberActiveLoan({
                                                 <Calendar className="h-4 w-4 text-emerald-600" />
                                                 Amortization Schedule
                                             </h4>
-                                            <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
+                                            <div className="overflow-x-auto">
                                                 <table className="w-full min-w-[600px]">
                                                     <thead className="bg-muted/60 border-b">
                                                         <tr>
@@ -714,7 +850,7 @@ export default function MemberActiveLoan({
                                                         </tr>
                                                     </thead>
                                                     <tbody className="divide-y divide-border">
-                                                        {loan.amortizations.map((amortization) => {
+                                                        {paginatedAmortizations.map((amortization) => {
                                                             const { variant, label, color } = getStatusConfig(
                                                                 amortization.status
                                                             );
@@ -756,6 +892,13 @@ export default function MemberActiveLoan({
                                                     </tbody>
                                                 </table>
                                             </div>
+                                            <PaginationControls
+                                                currentPage={safeAmortizationPage}
+                                                totalPages={amortizationTotalPages}
+                                                totalItems={loan.amortizations.length}
+                                                itemsPerPage={ITEMS_PER_PAGE}
+                                                onPageChange={(page) => setAmortizationPage(loan.id, page)}
+                                            />
                                         </div>
 
                                         <Separator />
@@ -763,52 +906,61 @@ export default function MemberActiveLoan({
                                         {/* Payment History */}
                                         <div className="p-6">
                                             <h4 className="font-semibold mb-4 flex items-center gap-2">
-                                               
+
                                                ₱ Payment History
                                             </h4>
                                             {loan.payments && loan.payments.length > 0 ? (
-                                                <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
-                                                    <table className="w-full min-w-[500px]">
-                                                        <thead className="bg-muted/60 border-b">
-                                                            <tr>
-                                                                <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase">
-                                                                    Payment Date
-                                                                </th>
-                                                                <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase">
-                                                                    Reference No.
-                                                                </th>
-                                                                <th className="px-3 py-2 text-right text-xs font-semibold text-muted-foreground uppercase">
-                                                                    Amount
-                                                                </th>
-                                                                <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase">
-                                                                    Method
-                                                                </th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody className="divide-y divide-border">
-                                                            {loan.payments.map((payment) => (
-                                                                <tr key={payment.id} className="hover:bg-muted/30">
-                                                                    <td className="px-3 py-3 text-sm">
-                                                                        {formatDate(payment.payment_date)}
-                                                                    </td>
-                                                                    <td className="px-3 py-3 text-sm font-medium">
-                                                                        {payment.reference_number || 'N/A'}
-                                                                    </td>
-                                                                    <td className="px-3 py-3 text-sm text-right font-medium tabular-nums text-emerald-600">
-                                                                        {formatCurrency(payment.amount)}
-                                                                    </td>
-                                                                    <td className="px-3 py-3 text-sm">
-                                                                        {payment.payment_method?.replace(/_/g, ' ') || payment.paid_by}
-                                                                    </td>
+                                                <>
+                                                    <div className="overflow-x-auto">
+                                                        <table className="w-full min-w-[500px]">
+                                                            <thead className="bg-muted/60 border-b">
+                                                                <tr>
+                                                                    <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase">
+                                                                        Payment Date
+                                                                    </th>
+                                                                    <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase">
+                                                                        Reference No.
+                                                                    </th>
+                                                                    <th className="px-3 py-2 text-right text-xs font-semibold text-muted-foreground uppercase">
+                                                                        Amount
+                                                                    </th>
+                                                                    <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase">
+                                                                        Method
+                                                                    </th>
                                                                 </tr>
-                                                            ))}
-                                                        </tbody>
-                                                    </table>
-                                                </div>
+                                                            </thead>
+                                                            <tbody className="divide-y divide-border">
+                                                                {paginatedPayments.map((payment) => (
+                                                                    <tr key={payment.id} className="hover:bg-muted/30">
+                                                                        <td className="px-3 py-3 text-sm">
+                                                                            {formatDate(payment.payment_date)}
+                                                                        </td>
+                                                                        <td className="px-3 py-3 text-sm font-medium">
+                                                                            {payment.reference_number || 'N/A'}
+                                                                        </td>
+                                                                        <td className="px-3 py-3 text-sm text-right font-medium tabular-nums text-emerald-600">
+                                                                            {formatCurrency(payment.amount)}
+                                                                        </td>
+                                                                        <td className="px-3 py-3 text-sm">
+                                                                            {payment.payment_method?.replace(/_/g, ' ') || payment.paid_by}
+                                                                        </td>
+                                                                    </tr>
+                                                                ))}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                    <PaginationControls
+                                                        currentPage={safePaymentPage}
+                                                        totalPages={paymentTotalPages}
+                                                        totalItems={loan.payments.length}
+                                                        itemsPerPage={ITEMS_PER_PAGE}
+                                                        onPageChange={(page) => setPaymentPage(loan.id, page)}
+                                                    />
+                                                </>
                                             ) : (
                                                 <div className="text-center py-8 text-muted-foreground">
                                                     <div className="h-8 w-8 mx-auto mb-2 opacity-50">₱</div>
-                                                
+
                                                     <p>No payments recorded yet</p>
                                                 </div>
                                             )}
@@ -821,42 +973,51 @@ export default function MemberActiveLoan({
                                                 Loan Ledger
                                             </h4>
                                             {loan.transactions && loan.transactions.length > 0 ? (
-                                                <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
-                                                    <table className="w-full min-w-[760px]">
-                                                        <thead className="bg-muted/60 border-b">
-                                                            <tr>
-                                                                <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase">Date</th>
-                                                                <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase">Type</th>
-                                                                <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase">Remarks</th>
-                                                                <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase">Processed By</th>
-                                                                <th className="px-3 py-2 text-right text-xs font-semibold text-muted-foreground uppercase">Amount</th>
-                                                                <th className="px-3 py-2 text-right text-xs font-semibold text-muted-foreground uppercase">Balance</th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody className="divide-y divide-border">
-                                                            {loan.transactions.map((transaction) => (
-                                                                <tr key={transaction.id} className="hover:bg-muted/30">
-                                                                    <td className="px-3 py-3 text-sm">{formatDate(transaction.date)}</td>
-                                                                    <td className="px-3 py-3 text-sm">
-                                                                        <Badge variant="outline">
-                                                                            {transaction.type.replace(/_/g, ' ')}
-                                                                        </Badge>
-                                                                    </td>
-                                                                    <td className="px-3 py-3 text-sm text-muted-foreground">
-                                                                        {transaction.remarks || 'N/A'}
-                                                                    </td>
-                                                                    <td className="px-3 py-3 text-sm">{transaction.processed_by}</td>
-                                                                    <td className="px-3 py-3 text-sm text-right font-medium tabular-nums">
-                                                                        {formatCurrency(transaction.amount)}
-                                                                    </td>
-                                                                    <td className="px-3 py-3 text-sm text-right font-semibold tabular-nums">
-                                                                        {formatCurrency(transaction.balance_after)}
-                                                                    </td>
+                                                <>
+                                                    <div className="overflow-x-auto">
+                                                        <table className="w-full min-w-[760px]">
+                                                            <thead className="bg-muted/60 border-b">
+                                                                <tr>
+                                                                    <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase">Date</th>
+                                                                    <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase">Type</th>
+                                                                    <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase">Remarks</th>
+                                                                    <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground uppercase">Processed By</th>
+                                                                    <th className="px-3 py-2 text-right text-xs font-semibold text-muted-foreground uppercase">Amount</th>
+                                                                    <th className="px-3 py-2 text-right text-xs font-semibold text-muted-foreground uppercase">Balance</th>
                                                                 </tr>
-                                                            ))}
-                                                        </tbody>
-                                                    </table>
-                                                </div>
+                                                            </thead>
+                                                            <tbody className="divide-y divide-border">
+                                                                {paginatedTransactions.map((transaction) => (
+                                                                    <tr key={transaction.id} className="hover:bg-muted/30">
+                                                                        <td className="px-3 py-3 text-sm">{formatDate(transaction.date)}</td>
+                                                                        <td className="px-3 py-3 text-sm">
+                                                                            <Badge variant="outline">
+                                                                                {transaction.type.replace(/_/g, ' ')}
+                                                                            </Badge>
+                                                                        </td>
+                                                                        <td className="px-3 py-3 text-sm text-muted-foreground">
+                                                                            {transaction.remarks || 'N/A'}
+                                                                        </td>
+                                                                        <td className="px-3 py-3 text-sm">{transaction.processed_by}</td>
+                                                                        <td className="px-3 py-3 text-sm text-right font-medium tabular-nums">
+                                                                            {formatCurrency(transaction.amount)}
+                                                                        </td>
+                                                                        <td className="px-3 py-3 text-sm text-right font-semibold tabular-nums">
+                                                                            {formatCurrency(transaction.balance_after)}
+                                                                        </td>
+                                                                    </tr>
+                                                                ))}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                    <PaginationControls
+                                                        currentPage={safeTransactionPage}
+                                                        totalPages={transactionTotalPages}
+                                                        totalItems={loan.transactions.length}
+                                                        itemsPerPage={ITEMS_PER_PAGE}
+                                                        onPageChange={(page) => setTransactionPage(loan.id, page)}
+                                                    />
+                                                </>
                                             ) : (
                                                 <div className="text-center py-8 text-muted-foreground">
                                                     <p>No ledger transactions recorded yet</p>

@@ -10,23 +10,7 @@ class DeductionRecord extends Model
 {
     use HasFactory;
 
-    protected $fillable = [
-        'loan_id',
-        'loan_amortization_id',
-        'payroll_upload_id',
-        'payroll_upload_row_id',
-        'member_profile_id',
-        'processed_by',
-        'cutoff_date',
-        'expected_amount',
-        'deducted_amount',
-        'status',
-        'payment_method',
-        'balance_after',
-        'reference_number',
-        'remarks',
-        'processed_at',
-    ];
+    protected $fillable = ['loan_id', 'loan_amortization_id', 'payroll_upload_id', 'payroll_upload_row_id', 'member_profile_id', 'processed_by', 'cutoff_date', 'expected_amount', 'deducted_amount', 'status', 'payment_method', 'balance_after', 'reference_number', 'remarks', 'processed_at'];
 
     protected function casts(): array
     {

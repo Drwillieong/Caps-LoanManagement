@@ -48,30 +48,7 @@ class LoanAdvancePaymentRequest extends Model
         self::STATUS_PAYMENT_APPLIED,
     ];
 
-    protected $fillable = [
-        'loan_id',
-        'requested_by',
-        'reviewed_by',
-        'verified_by',
-        'outstanding_balance',
-        'regular_deduction_amount',
-        'requested_amount',
-        'installments_covered',
-        'payment_method',
-        'expected_payment_date',
-        'payment_date',
-        'reference_number',
-        'payment_proof_path',
-        'remarks',
-        'status',
-        'rejection_reason',
-        'calculation_snapshot',
-        'approved_at',
-        'rejected_at',
-        'payment_submitted_at',
-        'verified_at',
-        'applied_at',
-    ];
+    protected $fillable = ['loan_id', 'requested_by', 'reviewed_by', 'verified_by', 'outstanding_balance', 'regular_deduction_amount', 'requested_amount', 'installments_covered', 'payment_method', 'expected_payment_date', 'payment_date', 'reference_number', 'payment_proof_path', 'remarks', 'status', 'rejection_reason', 'calculation_snapshot', 'approved_at', 'rejected_at', 'payment_submitted_at', 'verified_at', 'applied_at'];
 
     protected function casts(): array
     {

@@ -11,26 +11,7 @@ class PayrollUploadRow extends Model
 {
     use HasFactory;
 
-    protected $fillable = [
-        'payroll_upload_id',
-        'matched_user_id',
-        'matched_member_profile_id',
-        'row_number',
-        'members_id',
-        'payroll_id',
-        'member_id',
-        'employee_name',
-        'cutoff_date',
-        'deduction_amount',
-        'applied_amount',
-        'unapplied_amount',
-        'status',
-        'deduction_status',
-        'errors',
-        'raw_payload',
-        'remarks',
-        'processed_at',
-    ];
+    protected $fillable = ['payroll_upload_id', 'matched_user_id', 'matched_member_profile_id', 'row_number', 'members_id', 'payroll_id', 'member_id', 'employee_name', 'cutoff_date', 'deduction_amount', 'applied_amount', 'unapplied_amount', 'status', 'deduction_status', 'errors', 'raw_payload', 'remarks', 'processed_at'];
 
     protected function casts(): array
     {

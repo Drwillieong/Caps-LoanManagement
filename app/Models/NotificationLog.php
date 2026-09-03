@@ -11,16 +11,7 @@ class NotificationLog extends Model
 {
     use HasFactory;
 
-    protected $fillable = [
-        'user_id',
-        'title',
-        'message',
-        'type',
-        'related_id',
-        'related_type',
-        'is_read',
-        'read_at',
-    ];
+    protected $fillable = ['user_id', 'title', 'message', 'type', 'related_id', 'related_type', 'is_read', 'read_at'];
 
     protected $casts = [
         'is_read' => 'boolean',

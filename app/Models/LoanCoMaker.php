@@ -27,12 +27,7 @@ class LoanCoMaker extends Model
      *
      * @var array<int, string>
      */
-    protected $fillable = [
-        'loan_id',
-        'user_id',
-        'status',
-        'responded_at',
-    ];
+    protected $fillable = ['loan_id', 'user_id', 'status', 'responded_at'];
 
     /**
      * The attributes that should be cast.

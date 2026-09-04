@@ -1,8 +1,9 @@
 import { Head, Link } from '@inertiajs/react';
 import { Search } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { LiveClock } from '@/components/live-clock';
+import { LoanTablePagination } from '@/components/loan-table-pagination';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -56,6 +57,8 @@ export default function ShowActiveLoans({
     hasActiveLoan = activeLoans.length > 0,
 }: Partial<MemberActiveLoanProps>) {
     const [search, setSearch] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const [rowsPerPage, setRowsPerPage] = useState(10);
 
     const filteredLoans = useMemo(() => {
         const query = search.trim().toLowerCase();
@@ -68,6 +71,16 @@ export default function ShowActiveLoans({
                 .some((value) => value.toLowerCase().includes(query)),
         );
     }, [activeLoans, search]);
+    const totalPages = Math.max(1, Math.ceil(filteredLoans.length / rowsPerPage));
+    const paginatedLoans = filteredLoans.slice(
+        (currentPage - 1) * rowsPerPage,
+        currentPage * rowsPerPage,
+    );
+
+    useEffect(() => setCurrentPage(1), [search, rowsPerPage]);
+    useEffect(() => {
+        setCurrentPage((page) => Math.min(page, totalPages));
+    }, [totalPages]);
 
     return (
         <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
@@ -140,7 +153,7 @@ export default function ShowActiveLoans({
                             </TableHeader>
                             <TableBody>
                                 {filteredLoans.length > 0 ? (
-                                    filteredLoans.map((loan) => {
+                                    paginatedLoans.map((loan) => {
                                         const interestRate =
                                             loan.principal_amount > 0
                                                 ? (Number(
@@ -204,7 +217,7 @@ export default function ShowActiveLoans({
                                                         size="sm"
                                                     >
                                                         <Link
-                                                            href={`/dashboards/Member/active-loans/${loan.id}/view`}
+                                                            href="/dashboards/Member/MemberActiveLoan"
                                                         >
                                                             View Loan
                                                         </Link>
@@ -268,6 +281,15 @@ export default function ShowActiveLoans({
                                 )}
                             </TableBody>
                         </Table>
+                        {filteredLoans.length > 0 && (
+                            <LoanTablePagination
+                                currentPage={currentPage}
+                                rowsPerPage={rowsPerPage}
+                                totalItems={filteredLoans.length}
+                                onPageChange={setCurrentPage}
+                                onRowsPerPageChange={setRowsPerPage}
+                            />
+                        )}
                     </CardContent>
                 </Card>
             </div>

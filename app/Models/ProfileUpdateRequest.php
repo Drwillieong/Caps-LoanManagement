@@ -12,18 +12,7 @@ class ProfileUpdateRequest extends Model
      *
      * @var array<int, string>
      */
-    protected $fillable = [
-        'member_id',
-        'request_type',
-        'proposed_status',
-        'reason',
-        'requested_by',
-        'original_data',
-        'pending_data',
-        'status',
-        'rejection_reason',
-        'reviewed_by',
-    ];
+    protected $fillable = ['member_id', 'request_type', 'proposed_status', 'reason', 'requested_by', 'original_data', 'pending_data', 'status', 'rejection_reason', 'reviewed_by'];
 
     /**
      * The attributes that should be cast.

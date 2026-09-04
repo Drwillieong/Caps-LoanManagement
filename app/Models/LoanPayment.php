@@ -15,18 +15,7 @@ class LoanPayment extends Model
      *
      * @var array<int, string>
      */
-    protected $fillable = [
-        'loan_id',
-        'loan_amortization_id',
-        'payroll_upload_id',
-        'amount',
-        'payment_method',
-        'payment_date',
-        'reference_number',
-        'paid_by',
-        'processed_by',
-        'remarks',
-    ];
+    protected $fillable = ['loan_id', 'loan_amortization_id', 'payroll_upload_id', 'amount', 'payment_method', 'payment_date', 'reference_number', 'paid_by', 'processed_by', 'remarks'];
 
     /**
      * The attributes that should be cast.

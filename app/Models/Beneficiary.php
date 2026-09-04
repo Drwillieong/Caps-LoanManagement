@@ -15,12 +15,7 @@ class Beneficiary extends Model
      *
      * @var array<int, string>
      */
-    protected $fillable = [
-        'member_profile_id',
-        'full_name',
-        'relationship',
-        'date_of_birth',
-    ];
+    protected $fillable = ['member_profile_id', 'full_name', 'relationship', 'date_of_birth'];
 
     /**
      * The attributes that should be cast.

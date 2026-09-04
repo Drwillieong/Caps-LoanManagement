@@ -10,11 +10,7 @@ class SidebarNotificationRead extends Model
 {
     use HasFactory;
 
-    protected $fillable = [
-        'user_id',
-        'badge_key',
-        'read_at',
-    ];
+    protected $fillable = ['user_id', 'badge_key', 'read_at'];
 
     protected function casts(): array
     {

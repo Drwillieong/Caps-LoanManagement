@@ -10,20 +10,7 @@ class LoanTransaction extends Model
 {
     use HasFactory;
 
-    protected $fillable = [
-        'loan_id',
-        'loan_amortization_id',
-        'payroll_upload_id',
-        'payroll_upload_row_id',
-        'processed_by',
-        'transaction_type',
-        'amount',
-        'transaction_date',
-        'balance_after',
-        'reference_number',
-        'remarks',
-        'meta',
-    ];
+    protected $fillable = ['loan_id', 'loan_amortization_id', 'payroll_upload_id', 'payroll_upload_row_id', 'processed_by', 'transaction_type', 'amount', 'transaction_date', 'balance_after', 'reference_number', 'remarks', 'meta'];
 
     protected function casts(): array
     {

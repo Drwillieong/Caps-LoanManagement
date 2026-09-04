@@ -15,12 +15,7 @@ class LoanType extends Model
      *
      * @var array<int, string>
      */
-    protected $fillable = [
-        'name',
-        'interest_rate_per_annum',
-        'max_term_months',
-        'requires_comaker',
-    ];
+    protected $fillable = ['name', 'interest_rate_per_annum', 'max_term_months', 'requires_comaker'];
 
     /**
      * The attributes that should be cast.

@@ -6,14 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class ActivityLog extends Model
 {
-    protected $fillable = [
-        'user_id',
-        'loan_id',
-        'action_type',
-        'description',
-        'reject_reason',
-        'ip_address',
-    ];
+    protected $fillable = ['user_id', 'loan_id', 'action_type', 'description', 'reject_reason', 'ip_address'];
 
     protected $casts = [
         'user_id' => 'integer',

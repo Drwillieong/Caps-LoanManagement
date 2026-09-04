@@ -16,18 +16,7 @@ class LoanAmortization extends Model
      *
      * @var array<int, string>
      */
-    protected $fillable = [
-        'loan_id',
-        'installment_number',
-        'due_date',
-        'amount_due',
-        'principal_amount',
-        'interest_amount',
-        'beginning_balance',
-        'ending_balance',
-        'amount_paid',
-        'status',
-    ];
+    protected $fillable = ['loan_id', 'installment_number', 'due_date', 'amount_due', 'principal_amount', 'interest_amount', 'beginning_balance', 'ending_balance', 'amount_paid', 'status'];
 
     /**
      * The attributes that should be cast.

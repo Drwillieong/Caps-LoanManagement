@@ -11,28 +11,7 @@ class PayrollUpload extends Model
 {
     use HasFactory;
 
-    protected $fillable = [
-        'uploaded_by',
-        'original_file_name',
-        'stored_file_name',
-        'file_hash',
-        'cutoff_date',
-        'status',
-        'total_rows',
-        'processed_rows',
-        'failed_rows',
-        'duplicate_rows',
-        'paid_count',
-        'partial_count',
-        'missed_count',
-        'deferred_count',
-        'total_expected_amount',
-        'total_deducted_amount',
-        'remarks',
-        'error_message',
-        'started_at',
-        'finished_at',
-    ];
+    protected $fillable = ['uploaded_by', 'original_file_name', 'stored_file_name', 'file_hash', 'cutoff_date', 'status', 'total_rows', 'processed_rows', 'failed_rows', 'duplicate_rows', 'paid_count', 'partial_count', 'missed_count', 'deferred_count', 'total_expected_amount', 'total_deducted_amount', 'remarks', 'error_message', 'started_at', 'finished_at'];
 
     protected function casts(): array
     {

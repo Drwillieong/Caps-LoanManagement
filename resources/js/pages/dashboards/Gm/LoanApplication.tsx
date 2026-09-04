@@ -1,6 +1,7 @@
 import { Head, Link } from '@inertiajs/react';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
+import { LoanTablePagination } from '@/components/loan-table-pagination';
 import AppLayout from '@/layouts/app-layout';
 import { LiveClock } from '@/components/live-clock';
 import { type BreadcrumbItem, type GmLoanApplicationProps } from '@/types';
@@ -31,13 +32,26 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 export default function LoanApplication({ pendingLoans }: GmLoanApplicationProps) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
-  // Filter loans by search term
-  const filteredLoans = pendingLoans.filter((loan) => 
-    loan.member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    loan.member.member_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    loan.loan_type_name.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredLoans = useMemo(
+    () =>
+      pendingLoans.filter((loan) => {
+        const term = searchTerm.toLowerCase();
+        return (
+          loan.member.name.toLowerCase().includes(term) ||
+          loan.member.member_id.toLowerCase().includes(term) ||
+          loan.loan_type_name.toLowerCase().includes(term)
+        );
+      }),
+    [pendingLoans, searchTerm],
   );
+  const totalPages = Math.max(1, Math.ceil(filteredLoans.length / rowsPerPage));
+  const paginatedLoans = filteredLoans.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
+
+  useEffect(() => setCurrentPage(1), [searchTerm, rowsPerPage]);
+  useEffect(() => setCurrentPage((page) => Math.min(page, totalPages)), [totalPages]);
 
   function formatDate(dateStr: string): string {
     return new Date(dateStr).toLocaleDateString('en-PH', {
@@ -119,8 +133,9 @@ export default function LoanApplication({ pendingLoans }: GmLoanApplicationProps
 
         {/* Content */}
         {filteredLoans.length > 0 ? (
-          <div className="border rounded-md">
-            <table className="w-full text-sm">
+          <div className="space-y-4">
+            <div className="border rounded-md">
+              <table className="w-full text-sm">
               <thead className="bg-emerald-50">
                 <tr>
                   <th className="px-4 py-3 text-left font-medium">Member ID</th>
@@ -134,7 +149,7 @@ export default function LoanApplication({ pendingLoans }: GmLoanApplicationProps
                 </tr>
               </thead>
               <tbody>
-                {filteredLoans.map((loan, index) => {
+                {paginatedLoans.map((loan, index) => {
                   const { variant, label } = getStatusConfig(loan.status);
 
                   return (
@@ -167,7 +182,15 @@ export default function LoanApplication({ pendingLoans }: GmLoanApplicationProps
                   );
                 })}
               </tbody>
-            </table>
+              </table>
+            </div>
+            <LoanTablePagination
+              currentPage={currentPage}
+              rowsPerPage={rowsPerPage}
+              totalItems={filteredLoans.length}
+              onPageChange={setCurrentPage}
+              onRowsPerPageChange={setRowsPerPage}
+            />
           </div>
         ) : (
           /* EMPTY STATE */

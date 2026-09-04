@@ -1,6 +1,7 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
+import { LoanTablePagination } from '@/components/loan-table-pagination';
 import AppLayout from '@/layouts/app-layout';
 import { LiveClock } from '@/components/live-clock';
 import { type BreadcrumbItem } from '@/types';
@@ -25,12 +26,13 @@ import {
 } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [
-
     {
         title: 'GM Loan Decision History',
         href: '/dashboards/Gm/ApprovedLoan',
     },
 ];
+
+const PAGE_SIZE = 10;
 
 interface LoanMember {
     id: number;
@@ -66,15 +68,27 @@ export default function ApprovedLoan() {
     
     const [activeTab, setActiveTab] = useState<'approved' | 'disapproved'>('approved');
     const [searchTerm, setSearchTerm] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const [rowsPerPage, setRowsPerPage] = useState(10);
 
     const loans = activeTab === 'approved' ? approvedLoans : disapprovedLoans;
-    
-    // Filter loans by search term
-    const filteredLoans = loans.filter(loan => 
-        loan.member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        loan.member.member_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        loan.loan_type_name.toLowerCase().includes(searchTerm.toLowerCase())
+    const filteredLoans = useMemo(
+        () =>
+            loans.filter((loan) => {
+                const term = searchTerm.toLowerCase();
+                return (
+                    loan.member.name.toLowerCase().includes(term) ||
+                    loan.member.member_id.toLowerCase().includes(term) ||
+                    loan.loan_type_name.toLowerCase().includes(term)
+                );
+            }),
+        [loans, searchTerm],
     );
+    const totalPages = Math.max(1, Math.ceil(filteredLoans.length / rowsPerPage));
+    const paginatedLoans = filteredLoans.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
+
+    useEffect(() => setCurrentPage(1), [activeTab, searchTerm, rowsPerPage]);
+    useEffect(() => setCurrentPage((page) => Math.min(page, totalPages)), [totalPages]);
 
     function formatDate(dateStr: string): string {
         return new Date(dateStr).toLocaleDateString('en-PH', {
@@ -85,28 +99,22 @@ export default function ApprovedLoan() {
     }
 
     function formatCurrency(amount: number): string {
-        const num = typeof amount === 'number' ? amount : parseFloat(amount) || 0;
-        return `₱${num.toLocaleString('en-US', {
+        return `₱${(amount || 0).toLocaleString('en-US', {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
         })}`;
     }
 
     function getStatusBadge(status: string) {
-        const pendingCCReviewStatusMap: Record<string, { variant: 'default' | 'secondary' | 'outline'; label: string }> = {
-            'pending_cc_review': { variant: 'secondary', label: 'Pending CC Review' },
-            'approved': { variant: 'default', label: 'Approved' },
-            'released': { variant: 'default', label: 'Released' },
-            'paid_off': { variant: 'outline', label: 'Paid Off' },
+        const statusMap: Record<string, { variant: 'default' | 'secondary' | 'outline' | 'destructive'; label: string }> = {
+            pending_cc_review: { variant: 'secondary', label: 'Pending CC Review' },
+            approved: { variant: 'default', label: 'Approved' },
+            released: { variant: 'default', label: 'Released' },
+            paid_off: { variant: 'outline', label: 'Paid Off' },
+            rejected_by_gm: { variant: 'destructive', label: 'Rejected by GM' },
+            rejected: { variant: 'destructive', label: 'Rejected' },
         };
-
-        const rejectedByGMStatusMap: Record<string, { variant: 'destructive' | 'secondary'; label: string }> = {
-            'rejected_by_gm': { variant: 'destructive', label: 'Rejected by GM' },
-            'rejected': { variant: 'destructive', label: 'Rejected' },
-        };
-
-        const map = activeTab === 'approved' ? pendingCCReviewStatusMap : rejectedByGMStatusMap;
-        const config = map[status] || { variant: 'secondary' as const, label: status };
+        const config = statusMap[status] || { variant: 'secondary' as const, label: status };
 
         return (
             <Badge variant={config.variant}>
@@ -185,43 +193,51 @@ export default function ApprovedLoan() {
 
                 {/* Table */}
 {filteredLoans.length > 0 ? (
-                    <div className="rounded-md border border-emerald-100 overflow-hidden">
-                        <Table>
-                            <TableHeader>
-                                <TableRow className="hover:bg-transparent border-b border-emerald-200">
-                                    <TableHead className="w-16 font-semibold text-emerald-800">Member ID</TableHead>
-                                    <TableHead className="font-semibold text-emerald-800">Member Name</TableHead>
-                                    <TableHead className="font-semibold text-emerald-800">Loan Type</TableHead>
-                                    <TableHead className="font-semibold text-emerald-800 text-right">Principal</TableHead>
-                                    <TableHead className="w-20 font-semibold text-emerald-800 text-right">Terms</TableHead>
-                                    <TableHead className="font-semibold text-emerald-800 text-right">Total Due</TableHead>
-                                    <TableHead className="w-28 font-semibold text-emerald-800">Date</TableHead>
-                                    <TableHead className="w-24 font-semibold text-emerald-800">Status</TableHead>
-                                    <TableHead className="w-24 font-semibold text-emerald-800 text-right">Action</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {filteredLoans.map((loanItem) => (
-                                    <TableRow key={loanItem.id} className="hover:bg-emerald-50/50 border-b border-emerald-50 transition-colors">
-                                        <TableCell className="font-mono text-sm font-medium">{loanItem.member.member_id}</TableCell>
-                                        <TableCell className="font-medium">{loanItem.member.name}</TableCell>
-                                        <TableCell>{loanItem.loan_type_name}</TableCell>
-                                        <TableCell className="text-right font-mono">{formatCurrency(loanItem.principal_amount)}</TableCell>
-                                        <TableCell className="text-right">{loanItem.terms_months} mo</TableCell>
-                                        <TableCell className="text-right font-mono font-semibold">{formatCurrency(loanItem.total_amount_due)}</TableCell>
-                                        <TableCell>{formatDate(loanItem.created_at)}</TableCell>
-                                        <TableCell>{getStatusBadge(loanItem.status)}</TableCell>
-                                        <TableCell className="text-right">
-                                            <Link href={`/dashboards/Gm/Loan/${loanItem.id}/viewDecision`}>
-                                                <Button variant="outline" size="sm">
-                                                    View
-                                                </Button>
-                                            </Link>
-                                        </TableCell>
+                    <div className="space-y-4">
+                        <div className="rounded-md border border-emerald-100 overflow-hidden">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow className="hover:bg-transparent border-b border-emerald-200">
+                                        <TableHead className="w-16 font-semibold text-emerald-800">Member ID</TableHead>
+                                        <TableHead className="font-semibold text-emerald-800">Member Name</TableHead>
+                                        <TableHead className="font-semibold text-emerald-800">Loan Type</TableHead>
+                                        <TableHead className="font-semibold text-emerald-800 text-right">Principal</TableHead>
+                                        <TableHead className="w-20 font-semibold text-emerald-800 text-right">Terms</TableHead>
+                                        <TableHead className="font-semibold text-emerald-800 text-right">Total Due</TableHead>
+                                        <TableHead className="w-28 font-semibold text-emerald-800">Date</TableHead>
+                                        <TableHead className="w-24 font-semibold text-emerald-800">Status</TableHead>
+                                        <TableHead className="w-24 font-semibold text-emerald-800 text-right">Action</TableHead>
                                     </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
+                                </TableHeader>
+                                <TableBody>
+                                    {paginatedLoans.map((loanItem) => (
+                                        <TableRow key={loanItem.id} className="hover:bg-emerald-50/50 border-b border-emerald-50 transition-colors">
+                                            <TableCell className="font-mono text-sm font-medium">{loanItem.member.member_id}</TableCell>
+                                            <TableCell className="font-medium">{loanItem.member.name}</TableCell>
+                                            <TableCell>{loanItem.loan_type_name}</TableCell>
+                                            <TableCell className="text-right font-mono">{formatCurrency(loanItem.principal_amount)}</TableCell>
+                                            <TableCell className="text-right">{loanItem.terms_months} mo</TableCell>
+                                            <TableCell className="text-right font-mono font-semibold">{formatCurrency(loanItem.total_amount_due)}</TableCell>
+                                            <TableCell>{formatDate(loanItem.created_at)}</TableCell>
+                                            <TableCell>{getStatusBadge(loanItem.status)}</TableCell>
+                                            <TableCell className="text-right">
+                                                <Link href={`/dashboards/Gm/Loan/${loanItem.id}/viewDecision`}>
+                                                    <Button variant="outline" size="sm">View</Button>
+                                                </Link>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
+
+                        <LoanTablePagination
+                            currentPage={currentPage}
+                            rowsPerPage={rowsPerPage}
+                            totalItems={filteredLoans.length}
+                            onPageChange={setCurrentPage}
+                            onRowsPerPageChange={setRowsPerPage}
+                        />
                     </div>
                 ) : (
                     <Card className="border-dashed">

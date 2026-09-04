@@ -16,7 +16,7 @@ class LoanAdvancePaymentService
         protected LoanPaymentPostingService $postingService,
     ) {}
 
-    public function calculate(Loan $loan): array
+    public function calculate(Loan $loan, ?int $ignoreAdvancePaymentRequestId = null): array
     {
         $loan->loadMissing(['payments', 'amortizations', 'advancePaymentRequests']);
 
@@ -30,6 +30,7 @@ class LoanAdvancePaymentService
         $hasBlockingRequest = LoanAdvancePaymentRequest::query()
             ->where('loan_id', $loan->id)
             ->whereIn('status', LoanAdvancePaymentRequest::BLOCKING_STATUSES)
+            ->when($ignoreAdvancePaymentRequestId, fn ($query) => $query->whereKeyNot($ignoreAdvancePaymentRequestId))
             ->exists();
 
         return [
@@ -181,7 +182,7 @@ class LoanAdvancePaymentService
                 throw ValidationException::withMessages(['amount' => 'The verified amount must match the approved advance payment amount.']);
             }
 
-            $current = $this->calculate($advance->loan);
+            $current = $this->calculate($advance->loan, $advance->id);
             $this->validateRequestedAmount($amount, $current);
 
             $advance->update([

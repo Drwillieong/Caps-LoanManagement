@@ -120,7 +120,7 @@ function PaginationControls({
                                 key={page}
                                 variant={currentPage === page ? 'default' : 'outline'}
                                 size="sm"
-                                className={cn('h-8 w-8 p-0', currentPage === page && 'bg-emerald-600 hover:bg-emerald-700')}
+                                className={cn('h-8 w-8 p-0', currentPage === page)}
                                 onClick={() => onPageChange(page)}
                             >
                                 {page}
@@ -310,26 +310,26 @@ export default function MemberActiveLoan({
             <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
                 <Head title="Active Loan" />
 
-                <div className="flex flex-1 flex-col gap-6 p-6">
+                <div className="flex flex-1 flex-col gap-6 bg-slate-50/60 p-4 sm:p-6">
                     {/* Header */}
                     <div className="flex flex-col gap-1">
-                        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Active Loan</h1>
-                        <p className="text-muted-foreground">
-                            View your current loan status and payment progress
+                        <h1 className="text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">Active Loan</h1>
+                        <p className="text-sm text-slate-600">
+                            Monitor balances, payment progress, and scheduled obligations.
                         </p>
                     </div>
 
                     <Separator />
 
                     {/* Empty State */}
-                    <Card className="border-emerald-100 bg-white/50 dark:bg-emerald-950/10 shadow-sm">
+                    <Card className="border-slate-200 bg-white shadow-sm">
                         <CardContent className="flex flex-col items-center justify-center py-24 text-center">
                             <div className="w-full max-w-3xl flex flex-col items-center">
-                                <div className="rounded-full bg-emerald-100 p-4 mb-6">
-                                    <CheckCircle2 className="h-10 w-10 text-emerald-600" />
+                                <div className="mb-6 rounded-full bg-slate-100 p-4">
+                                    <CheckCircle2 className="h-10 w-10 text-slate-600" />
                                 </div>
 
-                                <h3 className="text-2xl font-semibold mb-3 text-emerald-900 dark:text-emerald-100">
+                                <h3 className="mb-3 text-2xl font-semibold text-slate-950">
                                     No Active Loan
                                 </h3>
 
@@ -340,7 +340,7 @@ export default function MemberActiveLoan({
                                 <Button
                                     asChild
                                     size="lg"
-                                    className="min-w-[300px] h-12 text-base font-semibold bg-emerald-600 hover:bg-emerald-700"
+                                    className="h-12 min-w-[300px] bg-slate-950 text-base font-semibold text-white hover:bg-slate-800"
                                 >
                                     <Link href="/dashboards/Member/ApplyLoan">Apply for Loan</Link>
                                 </Button>
@@ -356,12 +356,12 @@ export default function MemberActiveLoan({
         <AppLayout breadcrumbs={breadcrumbs} headerRight={<LiveClock />}>
             <Head title="Active Loan" />
 
-            <div className="flex flex-1 flex-col gap-6 p-6">
+            <div className="flex flex-1 flex-col gap-6 bg-slate-50/60 p-4 sm:p-6">
                 {/* Header */}
                 <div className="flex flex-col gap-1">
-                    <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Active Loan</h1>
-                    <p className="text-muted-foreground">
-                        View your current loan status and payment progress
+                        <h1 className="text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">Active Loan</h1>
+                    <p className="text-sm text-slate-600">
+                        Monitor balances, payment progress, and scheduled obligations.
                     </p>
                 </div>
 
@@ -370,14 +370,14 @@ export default function MemberActiveLoan({
                 {/* Overall Summary Cards */}
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                     {/* Total Paid */}
-                    <Card className="border-emerald-100 shadow-sm">
+                    <Card className="border-slate-200 bg-white shadow-sm">
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Total Paid</CardTitle>
-                            <div className="h-4 w-4 text-emerald-600">₱</div>
+                            <CardTitle className="text-sm font-medium text-slate-600">Total Paid</CardTitle>
+                            <div className="h-4 w-4 text-slate-500">₱</div>
 
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold text-emerald-600">
+                            <div className="text-2xl font-semibold text-slate-950">
                                 {formatCurrency(totalAmountPaid)}
                             </div>
                             <p className="text-xs text-muted-foreground">Amount paid so far</p>
@@ -385,13 +385,13 @@ export default function MemberActiveLoan({
                     </Card>
 
                     {/* Remaining Balance */}
-                    <Card className="border-red-100 shadow-sm">
+                    <Card className="border-slate-200 bg-white shadow-sm">
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Remaining Balance</CardTitle>
-                            <TrendingDown className="h-4 w-4 text-red-500" />
+                            <CardTitle className="text-sm font-medium text-slate-600">Remaining Balance</CardTitle>
+                            <TrendingDown className="h-4 w-4 text-slate-500" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold text-red-600">
+                            <div className="text-2xl font-semibold text-slate-950">
                                 {formatCurrency(totalLoanBalance)}
                             </div>
                             <p className="text-xs text-muted-foreground">Outstanding amount</p>
@@ -399,16 +399,16 @@ export default function MemberActiveLoan({
                     </Card>
 
                     {/* Overall Progress */}
-                    <Card className="border-emerald-100 shadow-sm">
+                    <Card className="border-slate-200 bg-white shadow-sm">
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Overall Progress</CardTitle>
-                            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                            <CardTitle className="text-sm font-medium text-slate-600">Overall Progress</CardTitle>
+                            <CheckCircle2 className="h-4 w-4 text-blue-600" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold text-emerald-600">{overallProgress}%</div>
-                            <div className="mt-2 h-2 w-full rounded-full bg-emerald-100">
+                            <div className="text-2xl font-semibold text-slate-950">{overallProgress}%</div>
+                            <div className="mt-2 h-2 w-full rounded-full bg-slate-200">
                                 <div
-                                    className="h-2 rounded-full bg-emerald-500 transition-all"
+                                    className="h-2 rounded-full bg-blue-600 transition-all"
                                     style={{ width: `${overallProgress}%` }}
                                 />
                             </div>
@@ -416,13 +416,13 @@ export default function MemberActiveLoan({
                     </Card>
 
                     {/* Active Loans Count */}
-                    <Card className="border-emerald-100 shadow-sm">
+                    <Card className="border-slate-200 bg-white shadow-sm">
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Active Loans</CardTitle>
-                            <FileText className="h-4 w-4 text-emerald-600" />
+                            <CardTitle className="text-sm font-medium text-slate-600">Active Loans</CardTitle>
+                            <FileText className="h-4 w-4 text-slate-500" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">{activeLoans.length}</div>
+                            <div className="text-2xl font-semibold text-slate-950">{activeLoans.length}</div>
                             <p className="text-xs text-muted-foreground">
                                 {activeLoans.length === 1 ? 'Loan in progress' : 'Loans in progress'}
                             </p>
@@ -465,32 +465,32 @@ export default function MemberActiveLoan({
                         );
 
                         return (
-                            <Card key={loan.id} className="border-emerald-100 shadow-sm overflow-hidden">
+                            <Card key={loan.id} className="overflow-hidden border-slate-200 bg-white shadow-sm">
                                 {/* Loan Header - Always Visible */}
                                 <div
-                                    className="p-6 cursor-pointer hover:bg-emerald-50/50 transition-colors"
+                                    className="cursor-pointer p-5 transition-colors hover:bg-slate-50 sm:p-6"
                                     onClick={() => toggleExpand(loan.id)}
                                 >
                                     <div className="flex items-start justify-between">
                                         <div className="flex-1">
                                             <div className="flex items-center gap-3 mb-2">
-                                                <h3 className="text-xl font-bold text-emerald-900 dark:text-emerald-100">
+                                                <h3 className="text-xl font-semibold text-slate-950">
                                                     {loan.loan_type_name}
                                                 </h3>
                                                 <Badge variant={statusVariant}>{statusLabel}</Badge>
-                                                <Badge variant={paymentVariant} className={cn(paymentColor === 'bg-green-500' ? 'bg-green-100 text-green-700' : paymentColor === 'bg-orange-500' ? 'bg-orange-100 text-orange-700' : paymentColor === 'bg-red-500' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700')}>
+                                                <Badge variant={paymentVariant} className={cn(paymentColor === 'bg-green-500' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : paymentColor === 'bg-orange-500' ? 'border-amber-200 bg-amber-50 text-amber-700' : paymentColor === 'bg-red-500' ? 'border-red-200 bg-red-50 text-red-700' : 'border-slate-200 bg-slate-50 text-slate-700')}>
                                                     {paymentLabel}
                                                 </Badge>
                                             </div>
-                                            <p className="text-sm text-muted-foreground">
-                                                Loan #{loan.id} • {loan.terms_months} months term
+                                            <p className="text-sm text-slate-500">
+                                                Account #{loan.id} <span className="px-1 text-slate-300">|</span> {loan.terms_months} month term
                                             </p>
                                         </div>
 
                                         <div className="flex items-center gap-4">
                                             {/* Progress Circle */}
                                             <div className="relative w-16 h-16">
-                                                <svg className="w-16 h-16 transform -rotate-90">
+                                                <svg className="h-16 w-16 -rotate-90 transform">
                                                     <circle
                                                         cx="32"
                                                         cy="32"
@@ -498,7 +498,7 @@ export default function MemberActiveLoan({
                                                         stroke="currentColor"
                                                         strokeWidth="4"
                                                         fill="none"
-                                                        className="text-emerald-100"
+                                                        className="text-slate-200"
                                                     />
                                                     <circle
                                                         cx="32"
@@ -507,13 +507,13 @@ export default function MemberActiveLoan({
                                                         stroke="currentColor"
                                                         strokeWidth="4"
                                                         fill="none"
-                                                        className="text-emerald-500"
+                                                        className="text-blue-600"
                                                         strokeDasharray={`${loan.progress_percentage * 1.76} 176`}
                                                         strokeLinecap="round"
                                                     />
                                                 </svg>
                                                 <div className="absolute inset-0 flex items-center justify-center">
-                                                    <span className="text-sm font-bold text-emerald-700">
+                                                    <span className="text-sm font-semibold text-slate-800">
                                                         {loan.progress_percentage}%
                                                     </span>
                                                 </div>
@@ -528,29 +528,29 @@ export default function MemberActiveLoan({
                                     </div>
 
                                     {/* Quick Stats Row */}
-                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 pt-4 border-t">
+                                    <div className="mt-5 grid grid-cols-2 gap-4 border-t border-slate-200 pt-4 md:grid-cols-4">
                                         <div>
-                                            <p className="text-sm text-muted-foreground">Principal Amount</p>
-                                            <p className="font-semibold">{formatCurrency(loan.principal_amount)}</p>
+                                            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Principal Amount</p>
+                                            <p className="mt-1 font-semibold text-slate-950">{formatCurrency(loan.principal_amount)}</p>
                                         </div>
                                         <div>
-                                            <p className="text-sm text-muted-foreground">Total Amount Due</p>
-                                            <p className="font-semibold">{formatCurrency(loan.total_amount_due)}</p>
+                                            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Total Amount Due</p>
+                                            <p className="mt-1 font-semibold text-slate-950">{formatCurrency(loan.total_amount_due)}</p>
                                         </div>
                                         <div>
-                                            <p className="text-sm text-muted-foreground">Monthly Payment</p>
-                                            <p className="font-semibold">{formatCurrency(loan.monthly_amortization)}</p>
+                                            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Monthly Payment</p>
+                                            <p className="mt-1 font-semibold text-slate-950">{formatCurrency(loan.monthly_amortization)}</p>
                                         </div>
                                         <div>
-                                            <p className="text-sm text-muted-foreground">Payments Completed</p>
-                                            <p className="font-semibold">
+                                            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Payments Completed</p>
+                                            <p className="mt-1 font-semibold text-slate-950">
                                                 {loan.paid_amortizations} of {loan.total_amortizations}
                                             </p>
                                         </div>
                                     </div>
 
                                     {loan.advance_payment && (
-                                        <div className="mt-4 rounded-md border border-emerald-200 bg-background p-4">
+                                        <div className="mt-5 rounded-md border border-slate-200 bg-slate-50/70 p-4">
                                             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                                                 <div>
                                                     <p className="text-sm font-semibold">Advance Payment</p>
@@ -651,7 +651,7 @@ export default function MemberActiveLoan({
                                     )}
 
                                     {loan.settlement && (
-                                        <div className="mt-4 rounded-md border border-slate-200 bg-background p-4">
+                                        <div className="mt-5 rounded-md border border-slate-200 bg-slate-50/70 p-4">
                                             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                                                 <div>
                                                     <p className="text-sm font-semibold">Full Settlement</p>
@@ -734,18 +734,18 @@ export default function MemberActiveLoan({
                                     )}
 
                                     {/* Progress Bar */}
-                                    <div className="mt-4">
-                                        <div className="flex justify-between text-sm mb-1">
-                                            <span className="text-emerald-600 font-medium">
+                                    <div className="mt-5">
+                                        <div className="mb-1 flex justify-between text-sm">
+                                            <span className="font-medium text-slate-700">
                                                 {formatCurrency(loan.total_paid)} paid
                                             </span>
                                             <span className="text-muted-foreground">
                                                 {formatCurrency(loan.remaining_balance)} remaining
                                             </span>
                                         </div>
-                                        <div className="h-3 w-full rounded-full bg-emerald-100 overflow-hidden">
+                                        <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
                                             <div
-                                                className="h-full bg-gradient-to-r from-emerald-400 to-emerald-600 rounded-full transition-all duration-500"
+                                                className="h-full rounded-full bg-blue-600 transition-all duration-500"
                                                 style={{ width: `${loan.progress_percentage}%` }}
                                             />
                                         </div>
@@ -754,7 +754,7 @@ export default function MemberActiveLoan({
 
                                 {/* Expanded Content */}
                                 {expandedLoan === loan.id && (
-                                    <div className="border-t bg-muted/30">
+                                    <div className="border-t border-slate-200 bg-slate-50/70">
                                         {/* Next Payment Alert */}
                                         {loan.next_due_date && loan.payment_status !== 'paid_off' && (
                                             <div
@@ -802,20 +802,20 @@ export default function MemberActiveLoan({
                                         )}
 
                                         {/* Loan Details Grid */}
-                                        <div className="p-6">
-                                            <h4 className="font-semibold mb-4 flex items-center gap-2">
-                                                <FileText className="h-4 w-4 text-emerald-600" />
+                                            <div className="p-5 sm:p-6">
+                                            <h4 className="mb-4 flex items-center gap-2 font-semibold text-slate-950">
+                                                <FileText className="h-4 w-4 text-slate-500" />
                                                 Loan Details
                                             </h4>
-                                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                                            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
 
-                                                <div className="p-3 rounded-lg bg-background border">
-                                                    <p className="text-sm text-muted-foreground">Release Date</p>
-                                                    <p className="font-medium">{formatDate(loan.release_date)}</p>
+                                                <div className="rounded-md border border-slate-200 bg-white p-3">
+                                                    <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Release Date</p>
+                                                    <p className="mt-1 font-medium text-slate-900">{formatDate(loan.release_date)}</p>
                                                 </div>
-                                                <div className="p-3 rounded-lg bg-background border">
-                                                    <p className="text-sm text-muted-foreground">Interest Amount</p>
-                                                    <p className="font-medium">{formatCurrency(loan.interest_amount)}</p>
+                                                <div className="rounded-md border border-slate-200 bg-white p-3">
+                                                    <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Interest Amount</p>
+                                                    <p className="mt-1 font-medium text-slate-900">{formatCurrency(loan.interest_amount)}</p>
                                                 </div>
                                             </div>
                                         </div>
@@ -823,9 +823,9 @@ export default function MemberActiveLoan({
                                         <Separator />
 
                                         {/* Amortization Schedule */}
-                                        <div className="p-6">
-                                            <h4 className="font-semibold mb-4 flex items-center gap-2">
-                                                <Calendar className="h-4 w-4 text-emerald-600" />
+                                        <div className="p-5 sm:p-6">
+                                            <h4 className="mb-4 flex items-center gap-2 font-semibold text-slate-950">
+                                                <Calendar className="h-4 w-4 text-slate-500" />
                                                 Amortization Schedule
                                             </h4>
                                             <div className="overflow-x-auto">
@@ -904,8 +904,8 @@ export default function MemberActiveLoan({
                                         <Separator />
 
                                         {/* Payment History */}
-                                        <div className="p-6">
-                                            <h4 className="font-semibold mb-4 flex items-center gap-2">
+                                        <div className="p-5 sm:p-6">
+                                            <h4 className="mb-4 flex items-center gap-2 font-semibold text-slate-950">
 
                                                ₱ Payment History
                                             </h4>
@@ -968,8 +968,8 @@ export default function MemberActiveLoan({
 
                                         <Separator />
 
-                                        <div className="p-6">
-                                            <h4 className="font-semibold mb-4 flex items-center gap-2">
+                                        <div className="p-5 sm:p-6">
+                                            <h4 className="mb-4 flex items-center gap-2 font-semibold text-slate-950">
                                                 Loan Ledger
                                             </h4>
                                             {loan.transactions && loan.transactions.length > 0 ? (

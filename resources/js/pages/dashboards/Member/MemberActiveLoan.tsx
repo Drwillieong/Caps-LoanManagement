@@ -575,7 +575,7 @@ export default function MemberActiveLoan({
                                                     <DialogTrigger asChild>
                                                         <Button
                                                             type="button"
-                                                            className="min-h-[44px] bg-emerald-600 hover:bg-emerald-700"
+                         className="min-h-[44px] bg-black text-white hover:bg-gray-800 hover:text-white"
                                                             disabled={!loan.advance_payment.is_eligible}
                                                             onClick={(event) => {
                                                                 event.stopPropagation();
@@ -674,7 +674,7 @@ export default function MemberActiveLoan({
                                                         <Button
                                                             type="button"
                                                             variant="outline"
-                                                            className="min-h-[44px]"
+                                                            className="min-h-[44px] border-black bg-black text-white hover:bg-gray-800 hover:text-white"
                                                             disabled={!loan.settlement.is_eligible}
                                                             onClick={(event) => {
                                                                 event.stopPropagation();

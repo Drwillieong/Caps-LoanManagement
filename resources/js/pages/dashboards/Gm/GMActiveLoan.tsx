@@ -109,7 +109,7 @@ export default function GMActiveLoan({
 
                 <Card className="print-card border-slate-200 shadow-sm">
                     <CardHeader className="no-print flex flex-col gap-4 pb-4 lg:flex-row lg:items-center lg:justify-between">
-                        <CardTitle className="text-lg font-bold text-slate-900">Active Loans</CardTitle>
+                        
                         <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
                             <Input placeholder="Search member ID or name..." value={search} onChange={(event) => setSearch(event.target.value)} className="w-full border-slate-300 sm:w-64 sm:max-w-sm" />
                             <Button variant="outline" size="sm" onClick={() => setSearch('')} className="min-h-[44px] sm:min-h-9">

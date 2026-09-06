@@ -2,12 +2,12 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\Loan;
-use App\Models\LoanCoMaker;
 use App\Models\LoanAmortization;
+use App\Models\LoanCoMaker;
 use App\Models\LoanPayment;
 use Carbon\Carbon;
+use Illuminate\Database\Seeder;
 
 class LoanSeeder extends Seeder
 {
@@ -40,29 +40,26 @@ class LoanSeeder extends Seeder
         $this->createAmortizations($loan1, 12, true);
         $this->createPayments($loan1, 12);
 
-
         // ===============================
         // 2. ACTIVE LOAN (Jairus)
         // ===============================
-       
 
         // ===============================
         // 3. REJECTED (Jairus)
         // ===============================
-       Loan::create([
-    'user_id' => 4,
-    'loan_type_id' => 1,
-    'principal_amount' => 30000.00,
-    'terms_months' => 24,
-    'interest_amount' => 0.00,
-    'total_amount_due' => 0.00,
-    'monthly_amortization' => 0.00,
-    'status' => 'rejected_by_gm',
-    'remarks' => 'High DSR',
-    'rejected_by' => 'gm',
-    'rejected_at' => Carbon::now()->subMonth(),
-]);
-
+        Loan::create([
+            'user_id' => 4,
+            'loan_type_id' => 1,
+            'principal_amount' => 30000.00,
+            'terms_months' => 24,
+            'interest_amount' => 0.00,
+            'total_amount_due' => 0.00,
+            'monthly_amortization' => 0.00,
+            'status' => 'rejected_by_gm',
+            'remarks' => 'High DSR',
+            'rejected_by' => 'gm',
+            'rejected_at' => Carbon::now()->subMonth(),
+        ]);
 
         // ===============================
         // 4. COMPLETED (Kevin)
@@ -91,7 +88,6 @@ class LoanSeeder extends Seeder
         $this->createAmortizations($loan4, 6, true);
         $this->createPayments($loan4, 6);
 
-
         // ===============================
         // 5. ACTIVE (Kevin)
         // ===============================
@@ -119,25 +115,23 @@ class LoanSeeder extends Seeder
         $this->createAmortizations($loan5, 12, false);
         $this->createPayments($loan5, null);
 
-
         // ===============================
         // 6. REJECTED (Kevin)
         // ===============================
-       Loan::create([
-    'user_id' => 5,
-    'loan_type_id' => 1,
-    'principal_amount' => 25000.00,
-    'terms_months' => 18,
-    'interest_amount' => 0.00,
-    'total_amount_due' => 0.00,
-    'monthly_amortization' => 0.00,
-    'status' => 'rejected_by_credit_com',
-    'remarks' => 'Insufficient capital',
-    'rejected_by' => 'credit_com',
-    'rejected_at' => Carbon::now()->subDays(5),
-]);
+        Loan::create([
+            'user_id' => 5,
+            'loan_type_id' => 1,
+            'principal_amount' => 25000.00,
+            'terms_months' => 18,
+            'interest_amount' => 0.00,
+            'total_amount_due' => 0.00,
+            'monthly_amortization' => 0.00,
+            'status' => 'rejected_by_credit_com',
+            'remarks' => 'Insufficient capital',
+            'rejected_by' => 'credit_com',
+            'rejected_at' => Carbon::now()->subDays(5),
+        ]);
     }
-
 
     // =========================================
     // FIXED AMORTIZATION (10 & 25 ONLY)
@@ -185,7 +179,6 @@ class LoanSeeder extends Seeder
         }
     }
 
-
     // =========================================
     // FIXED PAYMENTS (NO FUTURE PAID)
     // =========================================
@@ -205,8 +198,8 @@ class LoanSeeder extends Seeder
                 'loan_id' => $loan->id,
                 'amount' => $loan->monthly_amortization,
                 'payment_date' => $amort->due_date, // EXACT 10 or 25
-                'reference_number' => 'PAY-' . $loan->voucher_number . '-' . str_pad($i + 1, 3, '0', STR_PAD_LEFT),
-                'paid_by' => $loan->user->first_name . ' ' . $loan->user->last_name,
+                'reference_number' => 'PAY-'.$loan->voucher_number.'-'.str_pad($i + 1, 3, '0', STR_PAD_LEFT),
+                'paid_by' => $loan->user->first_name.' '.$loan->user->last_name,
             ]);
         }
     }

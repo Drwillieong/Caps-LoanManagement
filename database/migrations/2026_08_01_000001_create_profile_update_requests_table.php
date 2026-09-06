@@ -26,9 +26,9 @@ return new class extends Migration
             $table->timestamps();
 
             $table->foreign('member_id')
-                  ->references('members_id')
-                  ->on('member_profiles')
-                  ->onDelete('cascade');
+                ->references('members_id')
+                ->on('member_profiles')
+                ->onDelete('cascade');
 
             $table->index('status');
             $table->index('member_id');

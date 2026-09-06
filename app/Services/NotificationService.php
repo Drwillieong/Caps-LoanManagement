@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
-use App\Models\NotificationLog;
 use App\Models\Loan;
+use App\Models\NotificationLog;
 use App\Models\User;
 use Illuminate\Pagination\LengthAwarePaginator;
 
@@ -44,7 +44,7 @@ class NotificationService
                 'is_read' => $notif->is_read,
                 'target_url' => $this->getTargetUrl($notif),
             ]);
-            
+
         return new LengthAwarePaginator($notifications, $notifications->count(), $limit);
     }
 

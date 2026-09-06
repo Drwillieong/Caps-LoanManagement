@@ -3,19 +3,17 @@
 namespace App\Http\Controllers\GmController;
 
 use App\Http\Controllers\Controller;
+use App\Mail\GmApplicationDecision;
+use App\Mail\SendMembersPass;
 use App\Models\Loan;
 use App\Models\LoanPayment;
 use App\Models\User;
 use App\Service\ApplyLoan\LoanComputationService;
 use App\Service\ApplyLoan\LoanEligibilityService;
 use App\Services\ActivityLogService;
-use App\Mail\SendMembersPass;
-use App\Mail\MemberRejectedMail;
-use App\Mail\GmApplicationDecision;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 class GmController extends Controller
@@ -625,6 +623,7 @@ class GmController extends Controller
             ->get()
             ->map(function ($user) {
                 $profile = $user->memberProfile;
+
                 return [
                     'id' => $user->id,
                     'first_name' => $user->first_name,
@@ -745,7 +744,7 @@ class GmController extends Controller
             'ABCDEFGHJKLMNPQRSTUVWXYZ',
             'abcdefghijkmnopqrstuvwxyz',
             '23456789',
-           
+
         ];
 
         $characters = implode('', $groups);

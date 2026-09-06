@@ -13,7 +13,9 @@ class SendMembersPass extends Mailable
     use Queueable, SerializesModels;
 
     public $email;
+
     public $password;
+
     public $name;
 
     public function __construct($email, $password, $name = null)

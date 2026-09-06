@@ -10,17 +10,18 @@ use App\Models\LoanCoMaker;
 use App\Models\LoanType;
 use App\Models\MemberProfile;
 use App\Models\User;
+use App\Service\ApplyLoan\LoanComputationService;
+use App\Service\ApplyLoan\LoanEligibilityService;
+use App\Services\LoanService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
-use App\Service\ApplyLoan\LoanComputationService;
-use App\Service\ApplyLoan\LoanEligibilityService;
-use App\Services\LoanService;
 
 class LoanController extends Controller
 {
     use \App\Traits\HasNotificationCount;
+
     public function create()
     {
         $user = Auth::user();
@@ -28,16 +29,16 @@ class LoanController extends Controller
         $memberProfile = MemberProfile::where('user_id', $user->id)
             ->first();
 
-        if (!$memberProfile) {
-        return Inertia::render('dashboards/Member/ApplyLoan', [
-            'memberProfile' => null,
-            'loanTypes' => [],
-            'eligibleCoMakers' => [],
-            'previousLoans' => [],
-            'error' => 'Your profile is not yet completed. Please complete your profile.',
-            'rejectedAt' => null,
-            'unread_notifications_count' => $this->getMemberUnreadNotificationCount(request()),
-        ]);
+        if (! $memberProfile) {
+            return Inertia::render('dashboards/Member/ApplyLoan', [
+                'memberProfile' => null,
+                'loanTypes' => [],
+                'eligibleCoMakers' => [],
+                'previousLoans' => [],
+                'error' => 'Your profile is not yet completed. Please complete your profile.',
+                'rejectedAt' => null,
+                'unread_notifications_count' => $this->getMemberUnreadNotificationCount(request()),
+            ]);
         }
 
         // Check if user has ANY pending loan application
@@ -55,8 +56,8 @@ class LoanController extends Controller
         $rejectedAt = $recentRejection?->rejected_at?->format('c');
 
         // Check new eligibility rules using service helpers
-        $loanService = new LoanService();
-        $hasActiveLoan = !$loanService->canApplyForNewLoan($user);
+        $loanService = new LoanService;
+        $hasActiveLoan = ! $loanService->canApplyForNewLoan($user);
         $activeLoansTotalMonthly = $loanService->getActiveLoansTotalMonthlyPayment($user);
 
         // Fetch previous loans with amortizations for "Previous Loan" display
@@ -64,13 +65,13 @@ class LoanController extends Controller
             ->whereIn('status', ['approved', 'released', 'paid_off'])
             ->with(['loanType', 'amortizations' => function ($q) {
                 $q->where('status', '!=', 'paid')
-                  ->orderBy('due_date', 'asc');
+                    ->orderBy('due_date', 'asc');
             }])
             ->withCount([
                 'amortizations as total_amortizations',
                 'amortizations as paid_amortizations' => function ($q) {
                     $q->where('status', 'paid');
-                }
+                },
             ])
             ->get()
             ->map(function ($loan) {
@@ -78,16 +79,16 @@ class LoanController extends Controller
                 $totalPaid = $loan->amortizations()
                     ->where('status', 'paid')
                     ->sum('amount_paid');
-                
+
                 // Calculate remaining balance
                 $balance = $loan->total_amount_due - $totalPaid;
-                
+
                 // Get next due date from unpaid amortizations
                 $nextDue = $loan->amortizations()
                     ->where('status', '!=', 'paid')
                     ->orderBy('due_date', 'asc')
                     ->first();
-                
+
                 return [
                     'id' => $loan->id,
                     'loan_type_name' => $loan->loanType->name ?? 'N/A',
@@ -120,16 +121,16 @@ class LoanController extends Controller
                 ->where('id', '!=', $user->id)
                 ->whereDoesntHave('coMakerLoans', function ($q) {
                     $q->whereIn('status', ['accepted', 'pending'])
-                      ->whereHas('loan', function ($q2) {
-                          $q2->whereNotIn('status', ['rejected', 'paid_off']);
-                      });
+                        ->whereHas('loan', function ($q2) {
+                            $q2->whereNotIn('status', ['rejected', 'paid_off']);
+                        });
                 })
                 ->select('id', 'first_name', 'middle_name', 'last_name', 'email')
                 ->get()
                 ->map(function ($user) {
                     return [
                         'id' => $user->id,
-                        'name' => trim($user->first_name . ($user->middle_name ? ' ' . $user->middle_name : '') . ' ' . $user->last_name),
+                        'name' => trim($user->first_name.($user->middle_name ? ' '.$user->middle_name : '').' '.$user->last_name),
                         'email' => $user->email,
                     ];
                 }),
@@ -150,7 +151,7 @@ class LoanController extends Controller
             'loan_type_id' => 'required|exists:loan_types,id',
             'principal_amount' => 'required|numeric|min:1000',
             'terms_months' => 'required|integer|min:1',
-            'co_maker_user_id' => 'nullable|exists:users,id|different:' . auth()->id(),
+            'co_maker_user_id' => 'nullable|exists:users,id|different:'.auth()->id(),
             'disbursement_method' => 'required|in:cash,bank_transfer',
         ]);
 
@@ -168,7 +169,7 @@ class LoanController extends Controller
 
         if ($hasPendingLoan) {
             return back()->withErrors([
-                'principal_amount' => 'You have a pending loan application. Please wait for it to be processed before applying for a new loan.'
+                'principal_amount' => 'You have a pending loan application. Please wait for it to be processed before applying for a new loan.',
             ]);
         }
 
@@ -181,13 +182,14 @@ class LoanController extends Controller
 
         if ($recentRejection) {
             $lockoutEnd = $recentRejection->rejected_at->addHours(3);
+
             return back()->withErrors([
-                'principal_amount' => "You cannot submit a new loan application yet. Please wait until {$lockoutEnd->format('h:i A, F j, Y')}."
+                'principal_amount' => "You cannot submit a new loan application yet. Please wait until {$lockoutEnd->format('h:i A, F j, Y')}.",
             ]);
         }
 
         // Comprehensive eligibility checks
-        $eligibilityService = new LoanEligibilityService();
+        $eligibilityService = new LoanEligibilityService;
         $eligibilityService->check(
             $user,
             $validated['principal_amount'],
@@ -198,7 +200,7 @@ class LoanController extends Controller
 
         $loanType = LoanType::findOrFail($validated['loan_type_id']); // Needed for create
 
-        $computationService = new LoanComputationService();
+        $computationService = new LoanComputationService;
         $computed = $computationService->compute(
             $validated['principal_amount'],
             $validated['terms_months'],
@@ -222,25 +224,25 @@ class LoanController extends Controller
 
         if ($duplicatePending) {
             return back()->withErrors([
-                'principal_amount' => 'A similar loan application was just submitted. Please wait a moment before trying again.'
+                'principal_amount' => 'A similar loan application was just submitted. Please wait a moment before trying again.',
             ])->withInput();
         }
 
-         $loan = Loan::create([
-              'user_id' => $user->id,
-              'loan_type_id' => $validated['loan_type_id'],
-             'principal_amount' => $validated['principal_amount'],
-             'terms_months' => $validated['terms_months'],
-             'interest_amount' => $computed['interest'],
-             'total_amount_due' => $computed['total'],
-             'monthly_amortization' => $computed['monthly'],
-             'disbursement_method' => $validated['disbursement_method'],
-             'status' => $loanType->requires_comaker
-                 ? 'awaiting_comaker'
-                 : 'pending_gm_review',
-         ]);
+        $loan = Loan::create([
+            'user_id' => $user->id,
+            'loan_type_id' => $validated['loan_type_id'],
+            'principal_amount' => $validated['principal_amount'],
+            'terms_months' => $validated['terms_months'],
+            'interest_amount' => $computed['interest'],
+            'total_amount_due' => $computed['total'],
+            'monthly_amortization' => $computed['monthly'],
+            'disbursement_method' => $validated['disbursement_method'],
+            'status' => $loanType->requires_comaker
+                ? 'awaiting_comaker'
+                : 'pending_gm_review',
+        ]);
 
-        if (!empty($validated['co_maker_user_id'])) {
+        if (! empty($validated['co_maker_user_id'])) {
             LoanCoMaker::create([
                 'loan_id' => $loan->id,
                 'user_id' => $validated['co_maker_user_id'],
@@ -254,7 +256,7 @@ class LoanController extends Controller
             $notificationService->createNotification(
                 $coMaker,
                 'Co-Maker Request',
-                $borrower->first_name . ' ' . $borrower->last_name . ' selected you as co-maker for ' . $loanTypeName . ' loan of ₱' . number_format($loan->principal_amount) . '. Please review.',
+                $borrower->first_name.' '.$borrower->last_name.' selected you as co-maker for '.$loanTypeName.' loan of ₱'.number_format($loan->principal_amount).'. Please review.',
                 'comaker_request',
                 $loan->id,
                 Loan::class
@@ -263,8 +265,8 @@ class LoanController extends Controller
             // Send email notification to co-maker
             if ($coMaker && $coMaker->email) {
                 Mail::to($coMaker->email)->send(new SendEmailCoMaker(
-                    trim($coMaker->first_name . ($coMaker->middle_name ? ' ' . $coMaker->middle_name : '') . ' ' . $coMaker->last_name),
-                    trim($borrower->first_name . ($borrower->middle_name ? ' ' . $borrower->middle_name : '') . ' ' . $borrower->last_name),
+                    trim($coMaker->first_name.($coMaker->middle_name ? ' '.$coMaker->middle_name : '').' '.$coMaker->last_name),
+                    trim($borrower->first_name.($borrower->middle_name ? ' '.$borrower->middle_name : '').' '.$borrower->last_name),
                     $loanTypeName,
                     $loan->principal_amount,
                     $borrower,
@@ -284,7 +286,7 @@ class LoanController extends Controller
             'loan_type_id' => 'required|exists:loan_types,id',
             'principal_amount' => 'required|numeric|min:1000',
             'terms_months' => 'required|integer|min:1',
-            'co_maker_user_id' => 'nullable|exists:users,id|different:' . auth()->id(),
+            'co_maker_user_id' => 'nullable|exists:users,id|different:'.auth()->id(),
             'disbursement_method' => 'required|in:cash,bank_transfer',
         ]);
 
@@ -296,7 +298,7 @@ class LoanController extends Controller
         // Only allow editing if not yet approved/released
         if (in_array($loan->status, ['approved', 'released', 'paid_off'])) {
             return back()->withErrors([
-                'error' => 'This loan application cannot be edited as it has already been approved.'
+                'error' => 'This loan application cannot be edited as it has already been approved.',
             ]);
         }
 
@@ -304,7 +306,7 @@ class LoanController extends Controller
 
         $loanType = LoanType::findOrFail($validated['loan_type_id']);
 
-        $eligibilityService = new LoanEligibilityService();
+        $eligibilityService = new LoanEligibilityService;
         $eligibilityService->check(
             $user,
             $validated['principal_amount'],
@@ -320,7 +322,7 @@ class LoanController extends Controller
             $loanType->interest_rate_per_annum
         );
 
- // Update loan
+        // Update loan
         $loan->update([
             'loan_type_id' => $loanType->id,
             'principal_amount' => $validated['principal_amount'],
@@ -336,10 +338,10 @@ class LoanController extends Controller
         ]);
 
         // Update co-maker
-        if (!empty($validated['co_maker_user_id'])) {
+        if (! empty($validated['co_maker_user_id'])) {
             // Remove existing co-makers
             LoanCoMaker::where('loan_id', $loan->id)->delete();
-            
+
             // Add new co-maker
             LoanCoMaker::create([
                 'loan_id' => $loan->id,
@@ -353,8 +355,8 @@ class LoanController extends Controller
 
             if ($coMaker && $coMaker->email) {
                 Mail::to($coMaker->email)->send(new SendEmailCoMaker(
-                    trim($coMaker->first_name . ($coMaker->middle_name ? ' ' . $coMaker->middle_name : '') . ' ' . $coMaker->last_name),
-                    trim($borrower->first_name . ($borrower->middle_name ? ' ' . $borrower->middle_name : '') . ' ' . $borrower->last_name),
+                    trim($coMaker->first_name.($coMaker->middle_name ? ' '.$coMaker->middle_name : '').' '.$coMaker->last_name),
+                    trim($borrower->first_name.($borrower->middle_name ? ' '.$borrower->middle_name : '').' '.$borrower->last_name),
                     $loanTypeName,
                     $loan->principal_amount,
                     $borrower,
@@ -428,67 +430,67 @@ class LoanController extends Controller
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($loanItem) {
-                 return [
-                     'id' => $loanItem->id,
-                     'loan_type_name' => $loanItem->loanType->name ?? 'N/A',
-                     'principal_amount' => $loanItem->principal_amount,
-                     'terms_months' => $loanItem->terms_months,
-                     'interest_amount' => $loanItem->interest_amount,
-                     'total_amount_due' => $loanItem->total_amount_due,
-                     'monthly_amortization' => $loanItem->monthly_amortization,
-                     'disbursement_method' => $loanItem->disbursement_method,
-                     'status' => $loanItem->status,
-                     'remarks' => $loanItem->remarks,
-                     'rejected_by' => $loanItem->rejected_by,
-                     'rejected_at' => $loanItem->rejected_at?->format('c'),
-                     'co_maker_rejection_reason' => $loanItem->co_maker_rejection_reason,
-                     'created_at' => $loanItem->created_at->format('Y-m-d H:i:s'),
-                     'co_makers' => $loanItem->coMakers->map(function ($coMaker) {
-                         return [
-                             'id' => $coMaker->user->id,
-                             'name' => trim($coMaker->user->first_name . ($coMaker->user->middle_name ? ' ' . $coMaker->user->middle_name : '') . ' ' . $coMaker->user->last_name),
-                             'email' => $coMaker->user->email,
-                             'status' => $coMaker->status,
-                         ];
-                     }),
-                 ];
+                return [
+                    'id' => $loanItem->id,
+                    'loan_type_name' => $loanItem->loanType->name ?? 'N/A',
+                    'principal_amount' => $loanItem->principal_amount,
+                    'terms_months' => $loanItem->terms_months,
+                    'interest_amount' => $loanItem->interest_amount,
+                    'total_amount_due' => $loanItem->total_amount_due,
+                    'monthly_amortization' => $loanItem->monthly_amortization,
+                    'disbursement_method' => $loanItem->disbursement_method,
+                    'status' => $loanItem->status,
+                    'remarks' => $loanItem->remarks,
+                    'rejected_by' => $loanItem->rejected_by,
+                    'rejected_at' => $loanItem->rejected_at?->format('c'),
+                    'co_maker_rejection_reason' => $loanItem->co_maker_rejection_reason,
+                    'created_at' => $loanItem->created_at->format('Y-m-d H:i:s'),
+                    'co_makers' => $loanItem->coMakers->map(function ($coMaker) {
+                        return [
+                            'id' => $coMaker->user->id,
+                            'name' => trim($coMaker->user->first_name.($coMaker->user->middle_name ? ' '.$coMaker->user->middle_name : '').' '.$coMaker->user->last_name),
+                            'email' => $coMaker->user->email,
+                            'status' => $coMaker->status,
+                        ];
+                    }),
+                ];
             });
 
-        if (!$loan) {
-        return Inertia::render('dashboards/Member/PendingApplication', [
-            'loan' => null,
-            'hasPendingLoan' => false,
-            'loanHistory' => $loanHistory,
-            'unread_notifications_count' => $this->getMemberUnreadNotificationCount(request()),
-        ]);
+        if (! $loan) {
+            return Inertia::render('dashboards/Member/PendingApplication', [
+                'loan' => null,
+                'hasPendingLoan' => false,
+                'loanHistory' => $loanHistory,
+                'unread_notifications_count' => $this->getMemberUnreadNotificationCount(request()),
+            ]);
         }
 
- return Inertia::render('dashboards/Member/PendingApplication', [
-             'loan' => [
-                 'id' => $loan->id,
-                 'loan_type_name' => $loan->loanType->name ?? 'N/A',
-                 'principal_amount' => $loan->principal_amount,
-                 'terms_months' => $loan->terms_months,
-                 'interest_amount' => $loan->interest_amount,
-                 'total_amount_due' => $loan->total_amount_due,
-                 'monthly_amortization' => $loan->monthly_amortization,
-                 'disbursement_method' => $loan->disbursement_method,
-                 'status' => $loan->status,
-                 'remarks' => $loan->remarks,
-                 'rejected_by' => $loan->rejected_by,
-                 'rejected_at' => $loan->rejected_at?->format('c'),
-                 'co_maker_rejection_reason' => $loan->co_maker_rejection_reason,
-                 'created_at' => $loan->created_at->format('Y-m-d H:i:s'),
-                 'has_edited' => $loan->has_edited,
-                 'co_makers' => $loan->coMakers->map(function ($coMaker) {
-                     return [
-                         'id' => $coMaker->user->id,
-                         'name' => trim($coMaker->user->first_name . ($coMaker->user->middle_name ? ' ' . $coMaker->user->middle_name : '') . ' ' . $coMaker->user->last_name),
-                         'email' => $coMaker->user->email,
-                         'status' => $coMaker->status,
-                     ];
-                 }),
-             ],
+        return Inertia::render('dashboards/Member/PendingApplication', [
+            'loan' => [
+                'id' => $loan->id,
+                'loan_type_name' => $loan->loanType->name ?? 'N/A',
+                'principal_amount' => $loan->principal_amount,
+                'terms_months' => $loan->terms_months,
+                'interest_amount' => $loan->interest_amount,
+                'total_amount_due' => $loan->total_amount_due,
+                'monthly_amortization' => $loan->monthly_amortization,
+                'disbursement_method' => $loan->disbursement_method,
+                'status' => $loan->status,
+                'remarks' => $loan->remarks,
+                'rejected_by' => $loan->rejected_by,
+                'rejected_at' => $loan->rejected_at?->format('c'),
+                'co_maker_rejection_reason' => $loan->co_maker_rejection_reason,
+                'created_at' => $loan->created_at->format('Y-m-d H:i:s'),
+                'has_edited' => $loan->has_edited,
+                'co_makers' => $loan->coMakers->map(function ($coMaker) {
+                    return [
+                        'id' => $coMaker->user->id,
+                        'name' => trim($coMaker->user->first_name.($coMaker->user->middle_name ? ' '.$coMaker->user->middle_name : '').' '.$coMaker->user->last_name),
+                        'email' => $coMaker->user->email,
+                        'status' => $coMaker->status,
+                    ];
+                }),
+            ],
             'hasPendingLoan' => true,
             'loanHistory' => $loanHistory,
             'unread_notifications_count' => $this->getMemberUnreadNotificationCount(request()),
@@ -525,16 +527,16 @@ class LoanController extends Controller
             ->where('id', '!=', $user->id)
             ->whereDoesntHave('coMakerLoans', function ($q) {
                 $q->whereIn('status', ['accepted', 'pending'])
-                  ->whereHas('loan', function ($q2) {
-                      $q2->whereNotIn('status', ['rejected', 'paid_off']);
-                  });
+                    ->whereHas('loan', function ($q2) {
+                        $q2->whereNotIn('status', ['rejected', 'paid_off']);
+                    });
             })
             ->select('id', 'first_name', 'middle_name', 'last_name', 'email')
             ->get()
             ->map(function ($user) {
                 return [
                     'id' => $user->id,
-                    'name' => trim($user->first_name . ($user->middle_name ? ' ' . $user->middle_name : '') . ' ' . $user->last_name),
+                    'name' => trim($user->first_name.($user->middle_name ? ' '.$user->middle_name : '').' '.$user->last_name),
                     'email' => $user->email,
                 ];
             });
@@ -577,15 +579,15 @@ class LoanController extends Controller
             ->whereHas('loan', function ($query) {
                 $query->where('status', 'awaiting_comaker');
             })
-                ->with([
-                    'loan.loanType',
-                    'loan.user.memberProfile'
-                ])
+            ->with([
+                'loan.loanType',
+                'loan.user.memberProfile',
+            ])
             ->get()
             ->map(function ($coMaker) {
                 $loan = $coMaker->loan;
                 $loanUser = $loan->user;
-                
+
                 return [
                     'id' => $coMaker->id,
                     'loan_id' => $loan->id,
@@ -603,7 +605,7 @@ class LoanController extends Controller
                         : null,
                     'requester' => [
                         'id' => $loanUser->id,
-                        'name' => trim($loanUser->first_name . ($loanUser->middle_name ? ' ' . $loanUser->middle_name : '') . ' ' . $loanUser->last_name),
+                        'name' => trim($loanUser->first_name.($loanUser->middle_name ? ' '.$loanUser->middle_name : '').' '.$loanUser->last_name),
                         'email' => $loanUser->email,
                         'members_id' => $loanUser->memberProfile?->members_id ?? 'N/A',
                         'position' => $loanUser->memberProfile?->position ?? 'N/A',
@@ -643,7 +645,7 @@ class LoanController extends Controller
             ->where('status', 'pending')
             ->first();
 
-        if (!$coMaker) {
+        if (! $coMaker) {
             return back()->withErrors(['loan_id' => 'Co-maker request not found or already responded.']);
         }
 
@@ -653,10 +655,10 @@ class LoanController extends Controller
         $loanType = $loan->loanType;
 
         // Co-maker name
-        $coMakerName = trim($user->first_name . ($user->middle_name ? ' ' . $user->middle_name : '') . ' ' . $user->last_name);
-        
+        $coMakerName = trim($user->first_name.($user->middle_name ? ' '.$user->middle_name : '').' '.$user->last_name);
+
         // Borrower name and email
-        $borrowerName = trim($borrower->first_name . ($borrower->middle_name ? ' ' . $borrower->middle_name : '') . ' ' . $borrower->last_name);
+        $borrowerName = trim($borrower->first_name.($borrower->middle_name ? ' '.$borrower->middle_name : '').' '.$borrower->last_name);
         $borrowerEmail = $borrower->email;
 
         // Update the co-maker status - use 'accepted' to match the enum in migration
@@ -672,7 +674,7 @@ class LoanController extends Controller
             $notificationService->createNotification(
                 $borrower,
                 'Co-Maker Request Accepted',
-                'Your co-maker ' . $coMakerName . ' has accepted your loan application. Now pending GM review.',
+                'Your co-maker '.$coMakerName.' has accepted your loan application. Now pending GM review.',
                 'comaker_request',
                 $loan->id,
                 Loan::class
@@ -680,7 +682,7 @@ class LoanController extends Controller
             // If accepted, check if loan can proceed (if co-maker was required)
             $requiredCoMakers = $loanType->requires_comaker ? 1 : 0;
             $acceptedCoMakers = $loan->coMakers()->whereIn('status', ['accepted', 'pending'])->count();
-            
+
             // If co-maker is accepted and no more co-makers needed, update loan status
             if ($acceptedCoMakers >= $requiredCoMakers) {
                 $loan->update(['status' => 'pending_gm_review']);
@@ -689,7 +691,7 @@ class LoanController extends Controller
             $notificationService->createNotification(
                 $borrower,
                 'Co-Maker Request Rejected',
-                'Your co-maker ' . $coMakerName . ' has rejected your loan application.',
+                'Your co-maker '.$coMakerName.' has rejected your loan application.',
                 'comaker_request',
                 $loan->id,
                 Loan::class
@@ -722,11 +724,11 @@ class LoanController extends Controller
             ));
         } catch (\Exception $e) {
             // Log error but don't fail the request
-            \Log::error('Failed to send co-maker decision email: ' . $e->getMessage());
+            \Log::error('Failed to send co-maker decision email: '.$e->getMessage());
         }
 
-        $message = $validated['action'] === 'accept' 
-            ? 'You have accepted the co-maker request.' 
+        $message = $validated['action'] === 'accept'
+            ? 'You have accepted the co-maker request.'
             : 'You have declined the co-maker request.';
 
         return redirect()
@@ -762,7 +764,7 @@ class LoanController extends Controller
     {
         $user = Auth::user();
 
-        $loanService = new LoanService();
+        $loanService = new LoanService;
 
         $coMakerLoans = LoanCoMaker::where('user_id', $user->id)
             ->where('status', 'accepted')
@@ -792,7 +794,7 @@ class LoanController extends Controller
                     'loan_id' => $loan->id,
                     'loan_type' => $loan->loanType->name ?? 'N/A',
                     'borrower' => [
-                        'name' => trim($borrower->first_name . ($borrower->middle_name ? ' ' . $borrower->middle_name : '') . ' ' . $borrower->last_name),
+                        'name' => trim($borrower->first_name.($borrower->middle_name ? ' '.$borrower->middle_name : '').' '.$borrower->last_name),
                         'member_id' => $borrower->memberProfile?->members_id ?? 'N/A',
                     ],
                     'principal_amount' => $loan->principal_amount,
@@ -835,16 +837,16 @@ class LoanController extends Controller
                 // - released: loan is active and being paid
                 $isBoundToLoan = Loan::whereHas('coMakers', function ($q) use ($member) {
                     $q->where('user_id', $member->id)
-                      ->whereIn('status', ['accepted', 'pending']);
+                        ->whereIn('status', ['accepted', 'pending']);
                 })
-                ->whereNotIn('status', ['rejected', 'paid_off'])
-                ->exists();
+                    ->whereNotIn('status', ['rejected', 'paid_off'])
+                    ->exists();
 
                 return [
                     'id' => $member->id,
-                    'name' => trim($member->first_name . ($member->middle_name ? ' ' . $member->middle_name : '') . ' ' . $member->last_name),
+                    'name' => trim($member->first_name.($member->middle_name ? ' '.$member->middle_name : '').' '.$member->last_name),
                     'email' => $member->email,
-                    'member_id' => 'MEM-' . str_pad($member->id, 4, '0', STR_PAD_LEFT),
+                    'member_id' => 'MEM-'.str_pad($member->id, 4, '0', STR_PAD_LEFT),
                     'status' => $isBoundToLoan ? 'unavailable' : 'available',
                     'share_capital' => $member->memberProfile?->share_capital_balance ?? 0,
                     'date_joined' => $member->created_at->format('Y-m-d'),

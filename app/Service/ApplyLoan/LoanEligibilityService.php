@@ -3,8 +3,8 @@
 namespace App\Service\ApplyLoan;
 
 use App\Models\Loan;
-use App\Models\User;
 use App\Models\LoanType;
+use App\Models\User;
 use App\Services\LoanService;
 
 class LoanEligibilityService
@@ -13,7 +13,7 @@ class LoanEligibilityService
     {
         $profile = $borrower->memberProfile;
 
-        if (!$profile) {
+        if (! $profile) {
             abort(422, 'Your profile is not yet completed.');
         }
 
@@ -35,7 +35,7 @@ class LoanEligibilityService
 
         // Monthly payment must not exceed 50% of basic salary
         $loanType = LoanType::findOrFail($loanTypeId);
-        $computationService = new LoanComputationService();
+        $computationService = new LoanComputationService;
         $computed = $computationService->compute(
             $amount,
             $termsMonths,
@@ -49,8 +49,8 @@ class LoanEligibilityService
         }
 
         // Check existing loans are all >=50% paid
-        $loanService = new LoanService();
-        if (!$loanService->canApplyForNewLoan($borrower)) {
+        $loanService = new LoanService;
+        if (! $loanService->canApplyForNewLoan($borrower)) {
             abort(422, 'Cannot apply: One or more active loans must be at least 50% paid.');
         }
 
@@ -58,9 +58,9 @@ class LoanEligibilityService
         $existingMonthly = $loanService->getActiveLoansTotalMonthlyPayment($borrower);
         $combinedMonthly = $existingMonthly + $computed['monthly'];
         $maxMonthlyPayment = $profile->basic_salary / 2;
-        
+
         if ($combinedMonthly > $maxMonthlyPayment) {
-            abort(422, 'Combined monthly payments (₱' . number_format($combinedMonthly, 2) . ') exceed 50% of salary (₱' . number_format($maxMonthlyPayment, 2) . '). Please adjust amount or term.');
+            abort(422, 'Combined monthly payments (₱'.number_format($combinedMonthly, 2).') exceed 50% of salary (₱'.number_format($maxMonthlyPayment, 2).'). Please adjust amount or term.');
         }
 
         // Co-maker validation

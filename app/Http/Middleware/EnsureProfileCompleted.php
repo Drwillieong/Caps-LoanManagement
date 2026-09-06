@@ -20,9 +20,9 @@ class EnsureProfileCompleted
         if ($user && $user->role === 'member') {
             // Load the memberProfile relationship to ensure it's available
             $user->load('memberProfile');
-            
+
             // Check if profile is not completed
-            if (!$user->hasCompletedProfile()) {
+            if (! $user->hasCompletedProfile()) {
                 // Allow access only to profile page and profile store
                 $allowedRoutes = [
                     'member.user-profile',
@@ -33,7 +33,7 @@ class EnsureProfileCompleted
                 $currentRoute = $request->route()->getName();
 
                 // If not on an allowed route, redirect to profile
-                if (!in_array($currentRoute, $allowedRoutes)) {
+                if (! in_array($currentRoute, $allowedRoutes)) {
                     return redirect()->route('member.user-profile')
                         ->with('warning', 'Please complete your profile before accessing other pages.');
                 }

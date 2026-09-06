@@ -49,8 +49,6 @@ class MemberProfileController extends Controller
             'spouse_income_type' => 'required_with:spouse_occupation|nullable|in:monthly,daily,yearly',
             'spouse_net_income' => 'required_with:spouse_occupation|nullable|numeric|min:0',
             'real_properties_owned' => 'nullable|string|max:2000',
-            'bank_account_number' => 'nullable|string|max:50',
-            'tin_number' => 'nullable|string|max:50',
             'beneficiaries' => 'nullable|array',
             'beneficiaries.*.full_name' => 'nullable|string|max:255',
             'beneficiaries.*.relationship' => 'nullable|string|max:255',

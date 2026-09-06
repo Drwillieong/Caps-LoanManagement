@@ -39,4 +39,3 @@ class LoanType extends Model
         return $this->hasMany(Loan::class);
     }
 }
-

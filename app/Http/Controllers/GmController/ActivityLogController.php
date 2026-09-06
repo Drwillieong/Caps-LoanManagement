@@ -12,7 +12,7 @@ class ActivityLogController extends Controller
      */
     public function __invoke(Request $request)
     {
-$activityLogService = new \App\Services\ActivityLogService();
+        $activityLogService = new \App\Services\ActivityLogService;
 
         $activities = $activityLogService->getGmActivityLogs(100);
 
@@ -20,5 +20,4 @@ $activityLogService = new \App\Services\ActivityLogService();
             'activities' => $activities,
         ]);
     }
-
 }

@@ -88,8 +88,6 @@ class MemberExportController extends Controller
                             'spouse_net_income' => $user->memberProfile->spouse_net_income,
                             'legal_beneficiary_1_name' => $user->memberProfile->legal_beneficiary_1_name,
                             'real_properties_owned' => $user->memberProfile->real_properties_owned,
-                            'bank_account_number' => $user->memberProfile->bank_account_number,
-                            'tin_number' => $user->memberProfile->tin_number,
                         ] : null,
                     ];
                 }),

@@ -20,6 +20,7 @@ class LoanCoMaker extends Model
     }
 
     public const STATUS_PENDING = 'pending';
+
     public const STATUS_EXPIRED = 'expired';
 
     /**
@@ -93,4 +94,3 @@ class LoanCoMaker extends Model
         return $this->created_at?->copy()->addHours(Loan::COMAKER_EXPIRATION_HOURS);
     }
 }
-

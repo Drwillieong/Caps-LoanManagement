@@ -11,7 +11,7 @@ class LoanAmortizationScheduleService
     public const CUTOFF_DAYS = [10, 25];
 
     public function __construct(
-        private readonly LoanComputationService $computationService = new LoanComputationService()
+        private readonly LoanComputationService $computationService = new LoanComputationService
     ) {}
 
     public function generate(Loan $loan, ?CarbonInterface $effectiveDate = null, bool $replaceExisting = false): void

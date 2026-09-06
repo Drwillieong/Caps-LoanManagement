@@ -13,10 +13,15 @@ class SendEmailCoMaker extends Mailable
     use Queueable, SerializesModels;
 
     public $comakerName;
+
     public $borrowerName;
+
     public $loanType;
+
     public $loanAmount;
+
     public $borrower;
+
     public $loan;
 
     public function __construct(

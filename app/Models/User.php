@@ -4,12 +4,12 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Laravel\Fortify\TwoFactorAuthenticatable;
 use Illuminate\Support\Facades\Storage;
+use Laravel\Fortify\TwoFactorAuthenticatable;
 
 class User extends Authenticatable
 {
@@ -71,11 +71,11 @@ class User extends Authenticatable
     {
         // Ensure memberProfile is loaded
         $profile = $this->memberProfile;
-        
-        if (!$profile) {
+
+        if (! $profile) {
             return false;
         }
-        
+
         // Check all required fields are filled (spouse_name and beneficiaries are optional)
         $requiredFields = [
             'members_id',
@@ -89,13 +89,13 @@ class User extends Authenticatable
             'position',
             'basic_salary',
         ];
-        
+
         foreach ($requiredFields as $field) {
             if (empty($profile->{$field})) {
                 return false;
             }
         }
-        
+
         return true;
     }
 
@@ -131,7 +131,7 @@ class User extends Authenticatable
     {
         return $this->hasMany(Loan::class, 'id')
             ->join('loan_co_makers', 'loans.id', '=', 'loan_co_makers.loan_id')
-            ->whereColumn('loan_co_makers.user_id', $this->getTable() . '.id');
+            ->whereColumn('loan_co_makers.user_id', $this->getTable().'.id');
     }
 
     /**

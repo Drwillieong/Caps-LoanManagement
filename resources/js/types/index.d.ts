@@ -101,8 +101,6 @@ export interface MemberProfile {
     spouse_net_income?: number | null;
     legal_beneficiary_1_name?: string | null;
     real_properties_owned?: string | null;
-    bank_account_number?: string;
-    tin_number?: string;
     profile_picture?: string;
     account_status?: 'active' | 'inactive';
 }

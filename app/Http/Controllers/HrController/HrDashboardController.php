@@ -33,7 +33,6 @@ class HrDashboardController extends Controller
                     'status' => $loan->status,
                 ];
             });
-            
 
         $stats = [
             'total_active' => $loans->count(),

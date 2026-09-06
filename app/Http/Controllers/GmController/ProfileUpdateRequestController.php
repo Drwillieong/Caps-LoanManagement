@@ -26,7 +26,7 @@ class ProfileUpdateRequestController extends Controller
         'mobile_number', 'permanent_mobile_number',
         'present_address', 'present_zip_code', 'permanent_address', 'permanent_zip_code',
         'position', 'basic_salary', 'income_type', 'net_income',
-        'share_capital_balance', 'other_source_of_income', 
+        'share_capital_balance', 'other_source_of_income',
         'facebook_account_name',
         'spouse_occupation', 'spouse_gross_income', 'spouse_income_type', 'spouse_net_income',
         'legal_beneficiary_1_name', 'real_properties_owned',
@@ -70,6 +70,7 @@ class ProfileUpdateRequestController extends Controller
         if (in_array($key, self::CURRENCY_FIELDS)) {
             // Remove ₱, commas, spaces, any non-numeric chars except dot and minus
             $cleaned = preg_replace('/[^0-9.\-]/', '', (string) $value);
+
             return round((float) $cleaned, 2);
         }
 
@@ -93,9 +94,9 @@ class ProfileUpdateRequestController extends Controller
         }
 
         if (str_starts_with($digits, '0')) {
-            $digits = '63' . substr($digits, 1);
+            $digits = '63'.substr($digits, 1);
         } elseif (! str_starts_with($digits, '63')) {
-            $digits = '63' . $digits;
+            $digits = '63'.$digits;
         }
 
         return $digits;
@@ -210,10 +211,10 @@ class ProfileUpdateRequestController extends Controller
 
         $originalUser = $memberProfile->user?->toArray() ?? [];
 
-        if (!array_key_exists('mobile_number', $pendingData)) {
+        if (! array_key_exists('mobile_number', $pendingData)) {
             $pendingData['mobile_number'] = $originalData['mobile_number'] ?? null;
         }
-        if (!array_key_exists('legal_beneficiary_1_name', $pendingData)) {
+        if (! array_key_exists('legal_beneficiary_1_name', $pendingData)) {
             $pendingData['legal_beneficiary_1_name'] = $originalData['legal_beneficiary_1_name'] ?? null;
         }
 
@@ -255,10 +256,10 @@ class ProfileUpdateRequestController extends Controller
         // that are part of the fillable member profile but not in our diff display
         foreach ($pendingData as $key => $value) {
             if (
-                !in_array($key, self::COMPARABLE_FIELDS)
-                && !in_array($key, self::USER_FIELDS)
-                && !in_array($key, self::IMMUTABLE_FIELDS)
-                && !is_null($value)
+                ! in_array($key, self::COMPARABLE_FIELDS)
+                && ! in_array($key, self::USER_FIELDS)
+                && ! in_array($key, self::IMMUTABLE_FIELDS)
+                && ! is_null($value)
                 && $value !== ''
                 && $key !== 'beneficiaries'
             ) {
@@ -363,29 +364,29 @@ class ProfileUpdateRequestController extends Controller
             'member.user',
             'requester',
         ])
-        ->where('status', 'pending')
-        ->orderBy('created_at', 'desc')
-        ->get()
-        ->map(function ($request) {
-            $member = $request->member;
-            $memberUser = $member?->user;
+            ->where('status', 'pending')
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($request) {
+                $member = $request->member;
+                $memberUser = $member?->user;
 
-            return [
-                'id' => $request->id,
-                'member_id' => $request->member_id,
-                'member_name' => $memberUser ? trim($memberUser->first_name.' '.($memberUser->middle_name ? $memberUser->middle_name.' ' : '').$memberUser->last_name) : 'Unknown',
-                'member_email' => $memberUser?->email ?? 'Unknown',
-                'requested_by_name' => $request->requester?->name ?? 'Unknown',
-                'requested_by_email' => $request->requester?->email ?? 'Unknown',
-                'request_type' => $request->request_type ?? 'profile_update',
-                'proposed_status' => $request->proposed_status,
-                'reason' => $request->reason,
-                'original_data' => $request->original_data,
-                'pending_data' => $request->pending_data,
-                'status' => $request->status,
-                'created_at' => $request->created_at->toIso8601String(),
-            ];
-        });
+                return [
+                    'id' => $request->id,
+                    'member_id' => $request->member_id,
+                    'member_name' => $memberUser ? trim($memberUser->first_name.' '.($memberUser->middle_name ? $memberUser->middle_name.' ' : '').$memberUser->last_name) : 'Unknown',
+                    'member_email' => $memberUser?->email ?? 'Unknown',
+                    'requested_by_name' => $request->requester?->name ?? 'Unknown',
+                    'requested_by_email' => $request->requester?->email ?? 'Unknown',
+                    'request_type' => $request->request_type ?? 'profile_update',
+                    'proposed_status' => $request->proposed_status,
+                    'reason' => $request->reason,
+                    'original_data' => $request->original_data,
+                    'pending_data' => $request->pending_data,
+                    'status' => $request->status,
+                    'created_at' => $request->created_at->toIso8601String(),
+                ];
+            });
 
         return Inertia::render('dashboards/Gm/PendingEdits', [
             'pendingEdits' => $pendingRequests,
@@ -430,6 +431,7 @@ class ProfileUpdateRequestController extends Controller
             // 1. Convert empty strings, dashes, or null to null
             if ($value === '' || $value === '—' || $value === '–' || $value === '-' || $value === null) {
                 $sanitized[$field] = null;
+
                 continue;
             }
 
@@ -442,6 +444,7 @@ class ProfileUpdateRequestController extends Controller
                     $cleaned = preg_replace('/[^\d.]/', '', str_replace(',', '', (string) $value));
                     $sanitized[$field] = $cleaned !== '' ? (float) $cleaned : null;
                 }
+
                 continue;
             }
 

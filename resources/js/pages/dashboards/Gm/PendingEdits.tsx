@@ -67,8 +67,6 @@ const DISPLAY_FIELDS: Record<string, { label: string; category: string }> = {
     net_income: { label: 'Net Income', category: 'Employment' },
     share_capital_balance: { label: 'Share Capital Balance', category: 'Financial' },
     other_source_of_income: { label: 'Other Source of Income', category: 'Financial' },
-    bank_account_number: { label: 'Bank Account Number', category: 'Financial' },
-    tin_number: { label: 'TIN Number', category: 'Financial' },
     account_status: { label: 'Account Status', category: 'Account' },
     facebook_account_name: { label: 'Facebook Account', category: 'Personal' },
     spouse_occupation: { label: 'Spouse Occupation', category: 'Family' },

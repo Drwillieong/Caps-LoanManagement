@@ -2,8 +2,8 @@
 
 namespace App\Console\Commands;
 
-use App\Models\LoanCoMaker;
 use App\Models\Loan;
+use App\Models\LoanCoMaker;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 

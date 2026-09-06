@@ -11,9 +11,13 @@ class LoanSettlementRequest extends Model
     use HasFactory;
 
     public const STATUS_PENDING = 'pending';
+
     public const STATUS_APPROVED = 'approved';
+
     public const STATUS_FOR_PAYMENT = 'for_payment';
+
     public const STATUS_COMPLETED = 'completed';
+
     public const STATUS_REJECTED = 'rejected';
 
     protected $fillable = ['loan_id', 'requested_by', 'reviewed_by', 'verified_by', 'outstanding_balance', 'settlement_amount', 'calculation_breakdown', 'eligibility_checks', 'status', 'rejection_reason', 'payment_method', 'reference_number', 'payment_date', 'approved_at', 'rejected_at', 'verified_at'];

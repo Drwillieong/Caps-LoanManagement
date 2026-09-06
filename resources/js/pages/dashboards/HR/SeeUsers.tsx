@@ -30,8 +30,6 @@ interface MemberProfile {
     position: string
     basic_salary: number
     share_capital_balance: number
-    bank_account_number: string
-    tin_number: string
     account_status?: 'active' | 'inactive'
 }
 
@@ -235,8 +233,6 @@ export default function SeeUsers({ users, filters }: Props) {
                         ['Position:', user.member_profile.position],
                         ['Basic Salary:', formatCurrency(user.member_profile.basic_salary)],
                         ['Share Capital Balance:', formatCurrency(user.member_profile.share_capital_balance)],
-                        ['Bank Account Number:', user.member_profile.bank_account_number || 'N/A'],
-                        ['TIN Number:', user.member_profile.tin_number || 'N/A'],
                     ]
 
                     details.forEach(([label, value]) => {

@@ -13,16 +13,27 @@ class CoMakerDecision extends Mailable
     use Queueable, SerializesModels;
 
     public string $borrowerName;
+
     public string $borrowerEmail;
+
     public string $coMakerName;
+
     public string $decision;
+
     public string $loanType;
+
     public float|int $loanAmount;
+
     public string $applicationDate;
+
     public int $terms;
+
     public float|int $interestAmount;
+
     public float|int $monthlyPayment;
+
     public float|int $totalAmountDue;
+
     public ?string $rejectionReason;
 
     public function __construct(
@@ -56,6 +67,7 @@ class CoMakerDecision extends Mailable
     public function envelope(): Envelope
     {
         $decisionText = $this->decision === 'accepted' ? 'Approved' : 'Declined';
+
         return new Envelope(
             subject: "Your Loan Application - Co-Maker {$decisionText}"
         );

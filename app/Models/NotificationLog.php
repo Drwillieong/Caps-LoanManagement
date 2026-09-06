@@ -2,10 +2,10 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Builder;
 
 class NotificationLog extends Model
 {
@@ -38,4 +38,3 @@ class NotificationLog extends Model
         return $query->orderBy('created_at', 'desc');
     }
 }
-

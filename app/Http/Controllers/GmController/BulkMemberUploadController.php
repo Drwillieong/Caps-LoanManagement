@@ -27,7 +27,7 @@ class BulkMemberUploadController extends Controller
     public function template()
     {
         return Excel::download(
-            new MemberTemplateExport(),
+            new MemberTemplateExport,
             'member_bulk_import_template.xlsx',
             ExcelFormat::XLSX
         );
@@ -42,7 +42,7 @@ class BulkMemberUploadController extends Controller
             'file' => 'required|file|mimes:xlsx,xls,csv,txt|max:10240',
         ]);
 
-        $import = new BulkMemberImport();
+        $import = new BulkMemberImport;
 
         try {
             Excel::import($import, $validated['file']);
@@ -76,4 +76,3 @@ class BulkMemberUploadController extends Controller
         ]);
     }
 }
-

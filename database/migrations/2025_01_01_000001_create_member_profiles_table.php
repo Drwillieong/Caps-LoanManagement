@@ -45,8 +45,6 @@ return new class extends Migration
             $table->string('legal_beneficiary_1_name')->nullable();
             $table->text('real_properties_owned')->nullable();
 
-            $table->string('bank_account_number')->nullable();
-            $table->string('tin_number')->nullable();
             $table->string('profile_picture')->nullable();
             $table->string('account_status')->default('active');
 

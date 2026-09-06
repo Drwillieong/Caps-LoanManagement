@@ -1,7 +1,7 @@
 <?php
-use App\Models\Loan;
-use App\Models\User;
+
 use App\Mail\GmApplicationDecision;
+use App\Models\Loan;
 use Illuminate\Support\Facades\Mail;
 
 require __DIR__.'/vendor/autoload.php';
@@ -9,7 +9,7 @@ $app = require_once __DIR__.'/bootstrap/app.php';
 $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
 
 $l = Loan::whereNotNull('loan_type_id')->whereHas('user')->latest()->first();
-if (!$l) {
+if (! $l) {
     echo "no pending loan\n";
     exit;
 }
@@ -27,7 +27,7 @@ try {
         'approved',
         null
     ));
-    echo "SENT OK to ".$u->email."\n";
+    echo 'SENT OK to '.$u->email."\n";
 } catch (\Throwable $e) {
-    echo "ERROR: ".$e->getMessage()."\n";
+    echo 'ERROR: '.$e->getMessage()."\n";
 }

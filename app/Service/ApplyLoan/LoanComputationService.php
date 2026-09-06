@@ -5,6 +5,7 @@ namespace App\Service\ApplyLoan;
 class LoanComputationService
 {
     public const PAYMENTS_PER_YEAR = 24;
+
     public const PAYMENTS_PER_MONTH = 2;
 
     public function compute(
@@ -13,8 +14,7 @@ class LoanComputationService
         float $interestRate,
         int $paymentsPerYear = self::PAYMENTS_PER_YEAR,
         float $extraPayment = 0.0,
-    ): array
-    {
+    ): array {
         if ($principal <= 0 || $months <= 0 || $paymentsPerYear <= 0 || $interestRate < 0 || $extraPayment < 0) {
             return [
                 'interest' => 0.0,

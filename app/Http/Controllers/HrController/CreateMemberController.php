@@ -100,7 +100,7 @@ class CreateMemberController extends Controller
                             'place_of_birth' => $user->memberProfile->place_of_birth,
                             'educational_attainment' => $user->memberProfile->educational_attainment,
                             'position' => $user->memberProfile->position,
-                            
+
                             'basic_salary' => $user->memberProfile->basic_salary,
                             'income_type' => $user->memberProfile->income_type,
                             'net_income' => $user->memberProfile->net_income,
@@ -113,8 +113,6 @@ class CreateMemberController extends Controller
                             'spouse_net_income' => $user->memberProfile->spouse_net_income,
                             'legal_beneficiary_1_name' => $user->memberProfile->legal_beneficiary_1_name,
                             'real_properties_owned' => $user->memberProfile->real_properties_owned,
-                            'bank_account_number' => $user->memberProfile->bank_account_number,
-                            'tin_number' => $user->memberProfile->tin_number,
                             'account_status' => $user->memberProfile->account_status ?? 'active',
                         ] : null,
                     ];
@@ -149,6 +147,7 @@ class CreateMemberController extends Controller
                 $user->has_rejected_update_request = true;
                 $user->update_request_rejection_reason = $rejectedUpdateRequests[$memberProfile->members_id];
             }
+
             return $user;
         });
 
@@ -353,7 +352,7 @@ class CreateMemberController extends Controller
             [$password[$i], $password[$j]] = [$password[$j], $password[$i]];
         }
 
-return implode('', $password);
+        return implode('', $password);
     }
 
     public function updateStatus(Request $request, User $user)

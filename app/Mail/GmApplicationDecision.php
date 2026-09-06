@@ -12,14 +12,23 @@ class GmApplicationDecision extends Mailable
     use SerializesModels;
 
     public string $borrowerName;
+
     public string $loanType;
+
     public string $applicationDate;
+
     public int $terms;
+
     public float|int $loanAmount;
+
     public float|int $interestAmount;
+
     public float|int $monthlyPayment;
+
     public float|int $totalAmountDue;
+
     public string $decision; // 'approved' | 'rejected'
+
     public ?string $remarks;
 
     public function __construct(

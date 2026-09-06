@@ -6,7 +6,7 @@ use App\Models\LoanType;
 use Illuminate\Database\Seeder;
 
 class LoanTypeSeeder extends Seeder
-{   
+{
     /**
      * Run the database seeds.
      */
